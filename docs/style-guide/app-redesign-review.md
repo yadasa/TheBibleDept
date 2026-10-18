@@ -14,3 +14,6 @@ Each part is reviewed and pushed separately. Check the actual controls and conte
 
 ## Part 1 — foundations
 TypeScript passes. At 390 × 844, persistent 14-unit labels, 52-unit inputs, focus outline, readable secondary boundaries and 16-unit button labels render correctly. SVG icons use the SDK-compatible native module. Existing screen hierarchy is intentionally addressed in the next parts.
+
+## Part 2 — shell and Today
+TypeScript passes. Reviewed at 390 × 844 and 768 × 1024: one title, current-day resume before scrolling, 20-unit phone gutters, bounded tablet column, and labeled icon tabs. Read day opens the correct saved plan. Supporting journal/account actions remain reachable; no plan position was reset.

@@ -1,8 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import { ComponentProps, useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { theme as c } from './src/theme';
+import { theme as c, typography as t } from './src/theme';
+import { Icon, IconName } from './src/components/Icon';
 import { BibleHub } from './src/screens/BibleHub';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { AuthProvider } from './src/services/AuthProvider';
@@ -14,6 +15,8 @@ import type { Translation } from './src/services/bible';
 import { PlanProvider, usePlan } from './src/services/PlanProvider';
 
 const tabs = ['Today', 'Bible', 'Prayer', 'Account'] as const;
+const icons:Record<(typeof tabs)[number],IconName> = {Today:'home',Bible:'book',Prayer:'heart',Account:'user'};
+const titles = {Today:'Today',Bible:'Bible',Prayer:'Prayer journal',Account:'Your account'};
 export default function App() {
   const [tab, setTab] = useState<(typeof tabs)[number]>('Today');
   const [reference,setReference]=useState<string>();
@@ -34,18 +37,26 @@ export default function App() {
     return()=>{active=false;subscription.remove();};
   },[]);
   return <SafeAreaProvider><AuthProvider><ReadingProvider><PlanProvider><SafeAreaView style={s.safe}>
-    <StatusBar style="light" />
-    <View style={s.header}><Text style={s.wordmark}>THE BIBLE DEPT.</Text><Text style={s.badge}>FREE TO GROW</Text></View>
-    <PlanScrollView key={`${tab}:${linkRevision}`} contentContainerStyle={s.content}>
-      <Text style={s.eyebrow}>A LITTLE EVERY DAY.</Text>
-      <Text style={s.heading}>{tab === 'Today' ? 'Make room\nfor the Word.' : tab}</Text>
-      {tab === 'Today' ? <HomeScreen onRead={()=>{setReference(undefined);setTab('Bible');}} onAccount={()=>setTab('Account')}/>
-        : tab === 'Bible' ? <BibleHub initialReference={reference} initialTranslation={translation} onAccount={()=>setTab('Account')}/>
-        : tab === 'Account' ? <AccountScreen/>
-        : <PrayerScreen onAccount={()=>setTab('Account')}/>}
-
-    </PlanScrollView>
-    <View style={s.tabs}>{tabs.map(t => <Pressable key={t} accessibilityRole="tab" accessibilityState={{selected:t===tab}} onPress={()=>setTab(t)} style={s.tab}><Text style={[s.tabLabel,t===tab&&s.activeTab]}>{t}</Text><View style={[s.tabDot,t===tab&&s.activeDot]}/></Pressable>)}</View>
+    <StatusBar style="dark" />
+    <KeyboardAvoidingView style={s.app} behavior={Platform.OS==='ios'?'padding':undefined}>
+      <View style={s.header}><View style={s.headerInner}><Text style={s.brand}>The Bible Dept.</Text><View style={s.brandRule}/></View></View>
+      <PlanScrollView key={`${tab}:${linkRevision}`} style={s.scroll} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <View style={s.content}>
+          <Text accessibilityRole="header" style={s.heading}>{titles[tab]}</Text>
+          {tab === 'Today' ? <HomeScreen onRead={()=>{setReference(undefined);setTab('Bible');}} onAccount={()=>setTab('Account')} onPrayer={()=>setTab('Prayer')}/>
+            : tab === 'Bible' ? <BibleHub initialReference={reference} initialTranslation={translation} onAccount={()=>setTab('Account')}/>
+            : tab === 'Account' ? <AccountScreen/>
+            : <PrayerScreen onAccount={()=>setTab('Account')}/>}
+        </View>
+      </PlanScrollView>
+      <View style={s.nav}><View style={s.tabs}>{tabs.map(item => {
+        const active=item===tab;
+        return <Pressable key={item} accessibilityRole="tab" accessibilityLabel={item} accessibilityState={{selected:active}} onPress={()=>setTab(item)} style={({pressed})=>[s.tab,pressed&&s.pressed]}>
+          <View style={[s.tabIcon,active&&s.activeIcon]}><Icon name={icons[item]} size={22} color={active?c.action:c.muted}/></View>
+          <Text style={[s.tabLabel,active&&s.activeLabel]}>{item}</Text>
+        </Pressable>;
+      })}</View></View>
+    </KeyboardAvoidingView>
   </SafeAreaView></PlanProvider></ReadingProvider></AuthProvider></SafeAreaProvider>;
 }
 function PlanScrollView(props:ComponentProps<typeof ScrollView>) {
@@ -54,5 +65,12 @@ function PlanScrollView(props:ComponentProps<typeof ScrollView>) {
   return <ScrollView {...props} ref={ref}/>;
 }
 const s = StyleSheet.create({
-  safe:{flex:1,backgroundColor:c.ink},header:{backgroundColor:c.ink,paddingHorizontal:22,paddingVertical:18,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},wordmark:{color:c.orange,fontSize:18,fontWeight:'900',letterSpacing:-.5},badge:{color:'#FFF5F5',fontSize:9,fontWeight:'800',letterSpacing:1.4},content:{backgroundColor:c.background,padding:24,paddingBottom:40,flexGrow:1},eyebrow:{fontSize:10,fontWeight:'800',letterSpacing:2,color:c.action,marginBottom:12},heading:{fontSize:40,lineHeight:43,fontWeight:'900',letterSpacing:-1.6,color:c.ink,marginBottom:26},hero:{backgroundColor:c.orange,padding:24,borderRadius:3,marginBottom:30},kicker:{fontSize:10,letterSpacing:1.8,fontWeight:'800',color:c.ink,marginBottom:20},heroTitle:{fontSize:34,lineHeight:37,fontWeight:'900',letterSpacing:-1,color:c.ink,marginBottom:14},heroBody:{fontSize:15,lineHeight:23,color:c.ink,marginBottom:25},button:{backgroundColor:c.ink,paddingVertical:17,paddingHorizontal:18,borderRadius:3},buttonText:{color:'#FFF5F5',fontWeight:'800',fontSize:15,textAlign:'center'},sectionTitle:{fontSize:23,fontWeight:'800',letterSpacing:-.5,color:c.ink,marginBottom:14},card:{backgroundColor:c.surface,padding:20,borderColor:c.border,borderWidth:1,borderRadius:4},cardTitle:{fontSize:18,fontWeight:'800',color:c.ink,marginBottom:8},body:{color:c.muted,fontSize:15,lineHeight:23},tabs:{backgroundColor:c.background,flexDirection:'row',borderTopWidth:1,borderTopColor:c.border,paddingTop:15,paddingBottom:10},tab:{flex:1,alignItems:'center',paddingVertical:6},tabLabel:{fontSize:12,fontWeight:'600',color:c.muted},activeTab:{color:c.action,fontWeight:'800'},tabDot:{width:4,height:4,borderRadius:2,marginTop:7},activeDot:{backgroundColor:c.orange},
+  safe:{flex:1,backgroundColor:c.background},app:{flex:1},
+  header:{borderBottomWidth:1,borderBottomColor:c.border},headerInner:{width:'100%',maxWidth:680,alignSelf:'center',paddingHorizontal:20,minHeight:56,flexDirection:'row',alignItems:'center',gap:16},
+  brand:{color:c.ink,fontSize:17,fontWeight:'800',letterSpacing:-.5},brandRule:{width:28,height:3,backgroundColor:c.orange,marginLeft:'auto'},
+  scroll:{flex:1},scrollContent:{flexGrow:1},content:{width:'100%',maxWidth:680,alignSelf:'center',paddingHorizontal:20,paddingTop:24,paddingBottom:32},
+  heading:{...t.title,color:c.ink,marginBottom:20},
+  nav:{backgroundColor:c.surface,borderTopWidth:1,borderTopColor:c.border},tabs:{width:'100%',maxWidth:680,alignSelf:'center',flexDirection:'row',paddingHorizontal:8,paddingTop:8,paddingBottom:8},
+  tab:{flex:1,minHeight:60,alignItems:'center',justifyContent:'center',gap:4,paddingVertical:4},tabIcon:{paddingHorizontal:16,paddingVertical:4,borderRadius:4},activeIcon:{backgroundColor:c.tint},
+  tabLabel:{fontSize:13,lineHeight:18,fontWeight:'500',color:c.muted},activeLabel:{color:c.action,fontWeight:'700'},pressed:{opacity:.65},
 });
