@@ -1,6 +1,6 @@
 {
   "captured": "2026-10-18",
-  "scope": "Public source URLs and source metadata only; no binaries redistributed. CSS availability does not establish use.",
+  "scope": "Selected public source URLs and metadata, including home hero, course, process, logo, portrait, and texture references. No binaries redistributed. CSS availability alone does not establish use.",
   "assets": [
     {
       "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655bb82364c68a69eff73777_Arma%20Logos-1%20(2).webp",
@@ -85,12 +85,6 @@
       "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
     },
     {
-      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/674cc980f268a519ba404ac1_Webflow%20Background.svg",
-      "sourceStylesheet": "bibledept",
-      "referenceName": "674cc980f268a519ba404ac1_Webflow Background.svg",
-      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
-    },
-    {
       "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676175934fa66732b5339427_TBD%20Background%20Black.avif",
       "sourceStylesheet": "bibledept",
       "referenceName": "676175934fa66732b5339427_TBD Background Black.avif",
@@ -119,6 +113,113 @@
       "sourceStylesheet": "bibledept",
       "referenceName": "6760725e8ef07c695455d654_TBD Background Orange 2.avif",
       "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/65b94ee101cd908e55ca0f0d_16x9%20%234%20(1).avif",
+      "alt": "",
+      "class": "home_featured-video-courses_image",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "65b94ee101cd908e55ca0f0d_16x9 #4 (1).avif",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655cb796234751b7659a3eeb_16x9%20%235.webp",
+      "alt": "",
+      "class": "home_featured-video-courses_image home_featured-course-thumb-align-right",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655cb796234751b7659a3eeb_16x9 #5.webp",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655cb794c807cc544f598f62_16x9%20%236.webp",
+      "alt": "",
+      "class": "home_featured-video-courses_image home_featured-course-thumb-align-right",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655cb794c807cc544f598f62_16x9 #6.webp",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655c9f91528ddde0cb566bc2_16x9%20%231.webp",
+      "alt": "",
+      "class": "home_featured-video-courses_image",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655c9f91528ddde0cb566bc2_16x9 #1.webp",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655c9c14e3f2467d260a2856_16x9%20%232.webp",
+      "alt": "",
+      "class": "home_featured-video-courses_image",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655c9c14e3f2467d260a2856_16x9 #2.webp",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/65b94d7afc8c3034ef467d92_4a5e8-6c22-fcee-d10-c5c3bf4d0d3e_16x9_-_5_Fasting_.avif",
+      "alt": "",
+      "class": "home_featured-video-courses_image",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "65b94d7afc8c3034ef467d92_4a5e8-6c22-fcee-d10-c5c3bf4d0d3e_16x9_-_5_Fasting_.avif",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655cb796234751b7659a3ee3_16x9%20%233.webp",
+      "alt": "",
+      "class": "home_featured-video-courses_image",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655cb796234751b7659a3ee3_16x9 #3.webp",
+      "role": "Course thumbnail",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655eafcd769318df7590e18f_Film%20Frame%203.webp",
+      "alt": "",
+      "class": "home_how-it-works_image rotate-right-hiw",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655eafcd769318df7590e18f_Film Frame 3.webp",
+      "role": "Process teaching still",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655eafcda2325c9e691bc027_Film%20Frame%202.webp",
+      "alt": "",
+      "class": "home_how-it-works_image",
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655eafcda2325c9e691bc027_Film Frame 2.webp",
+      "role": "Process teaching still",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/67605a30ac4bee6c2258ad9f_PM%20Cover%20Cropped.avif",
+      "alt": "",
+      "class": "header36_image",
+      "sourcePage": "https://www.thebibledept.com/",
+      "referenceName": "67605a30ac4bee6c2258ad9f_PM Cover Cropped.avif",
+      "role": "Home hero portrait",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/6760779ad150c89770036083_qbrjvv9t5kdugxz4fkwv.avif",
+      "alt": "",
+      "class": "testimonial1_client-image",
+      "sourcePage": "https://www.thebibledept.com/",
+      "referenceName": "6760779ad150c89770036083_qbrjvv9t5kdugxz4fkwv.avif",
+      "role": "Testimonial portrait",
+      "status": "Public HTML reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655bd4410631e4a5d9d4a5cc_3fac100ecf76728dfe546fa68fddefd2.webp",
+      "sourceStylesheet": "arma",
+      "selector": ".section_home_hero-header",
+      "referenceName": "655bd4410631e4a5d9d4a5cc_3fac100ecf76728dfe546fa68fddefd2.webp",
+      "role": "ARMA home hero background; sculpture seen in desktop browser",
+      "status": "Observed hero and extracted CSS reference; confirm destination reuse rights before release."
     }
   ]
 }

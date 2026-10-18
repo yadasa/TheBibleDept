@@ -17,6 +17,7 @@ This guide covers brand judgment, measured visual foundations, page structure, c
 | [Implementation and handoff](06-implementation-and-handoff.md) | Apply the guide to the current app or another project. |
 | [Visual reference](visual-reference.html) | Inspect swatches, hierarchy, controls, reading, and disclosures in a browser. |
 | [Asset inventory](asset-inventory.json) | Find dated source image references without bundling originals. |
+| [Review and checklist](07-review-and-checklist.md) | See revisions, verification scope, and a checklist for the next project. |
 
 Open `visual-reference.html` locally with `reference.css` beside it. GitHub displays HTML source rather than a live preview. The board uses fallback fonts and original example copy; it does not submit data.
 

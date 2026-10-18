@@ -15,6 +15,7 @@
   --font-editorial: Georgia, serif;
   --heading-weight: 700;
   --body-weight: 400;
+  --button-weight: 600;
   --radius-control: 4px;
   --container-max: 80rem;
   --gutter: 5%;
@@ -37,6 +38,7 @@
   --font-editorial: "big-caslon-fb", Georgia, serif;
   --heading-weight: 400;
   --body-weight: 500;
+  --button-weight: 500;
   --radius-control: 10px;
 }
 .sg-container { width: 100%; max-width: var(--container-max); margin-inline: auto; }
@@ -48,7 +50,7 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 50px; padding: 12px 24px; border: 1px solid var(--action);
   border-radius: var(--radius-control); background: var(--action); color: #fff;
-  font: 600 1rem/1.5 var(--font-body); text-decoration: none; cursor: pointer;
+  font: var(--button-weight) 1rem/1.5 var(--font-body); text-decoration: none; cursor: pointer;
 }
 .sg-button:hover { filter: brightness(.9); }
 .sg-button:active { transform: translateY(1px); }

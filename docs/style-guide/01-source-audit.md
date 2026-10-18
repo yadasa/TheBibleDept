@@ -7,10 +7,10 @@ The October 18, 2026 audit uses public marketing pages and their linked styleshe
 | Reference | Evidence inspected | Design role |
 | --- | --- | --- |
 | [ARMA home](https://www.armacourses.com/) | Rendered desktop hero, computed typography and buttons, HTML sections, responsive CSS | Course and membership marketing; dramatic editorial direction. |
-| [Bible Dept home](https://www.thebibledept.com/) | Rendered desktop hero, computed headings/buttons/sections, HTML and responsive CSS | Daily Scripture journey; default product direction. |
+| [Bible Dept home](https://www.thebibledept.com/) | Rendered desktop and phone hero, computed headings/buttons/sections, HTML and responsive CSS | Daily Scripture journey; default product direction. |
 | [Start Here](https://www.thebibledept.com/start-here) | Public HTML, headings, links and shared stylesheet | Sequential onboarding into resources. |
-| [Plan](https://www.thebibledept.com/plan) | Public HTML, headings, links and shared stylesheet | Single resource acquisition task. |
-| [Listen](https://www.thebibledept.com/listen) | Public HTML, headings, links and shared stylesheet | Podcast platform choice and daily teaching. |
+| [Plan](https://www.thebibledept.com/plan) | Rendered desktop and phone layout, computed phone title, HTML, links and shared stylesheet | Single resource acquisition task. |
+| [Listen](https://www.thebibledept.com/listen) | Rendered phone layout, HTML, links and shared stylesheet | Podcast platform choice and daily teaching. |
 
 No account, purchase, email signup, or private member area is needed for this guide. Asset URLs are references; this documentation does not bundle the sites' font files or photo library.
 
@@ -39,6 +39,8 @@ The actual ARMA hero uses `.home_hero-header_heading` at **7rem**, overriding th
 ## Responsive CSS evidence
 
 Both sheets include 991px, 767px, and 479px maximum-width media queries. Large section spacing changes from 7rem to 6rem at the tablet tier and 4rem at the smaller tier. Generic H1/H2/H3 sizes follow desktop → tablet → small-screen values of 56/48/40px → 52/44/36px → 40/36/32px in Bible Dept. ARMA's generic desktop H1 is 80px, while its actual hero has further overrides. Consult the context fields in [source-evidence.json](source-evidence.json) before reproducing an individual rule.
+
+At a 390px viewport, the Bible Dept home hero displays copy and stacked actions before the portrait. The Plan page moves its copy/form before the study image, uses a 36px / 43.2px title, and stacks the field and submit action. That title uses an H2 visual class despite being an H1 element, so it is not the generic 40px phone H1. The measured Plan document width was 375px inside the 390px viewport, with no horizontal overflow. These are specific browser observations, not a claim of a complete mobile-site audit.
 
 ## Repository context
 

@@ -861,5 +861,58 @@
         }
       ]
     }
+  ],
+  "browserObservations": [
+    {
+      "page": "https://www.armacourses.com/",
+      "viewportCssPx": [
+        1920,
+        889
+      ],
+      "selector": ".home_hero-header_heading",
+      "computed": {
+        "fontFamily": "headline-gothic-atf, sans-serif",
+        "fontSize": "112px",
+        "lineHeight": "112px",
+        "fontWeight": "400"
+      }
+    },
+    {
+      "page": "https://www.thebibledept.com/",
+      "viewportCssPx": [
+        1920,
+        945
+      ],
+      "selector": ".heading-style-h1",
+      "computed": {
+        "fontFamily": "neue-haas-grotesk-display, sans-serif",
+        "fontSize": "56px",
+        "lineHeight": "56px",
+        "fontWeight": "700"
+      },
+      "visual": "Orange manuscript field beside host portrait; source headline uppercase."
+    },
+    {
+      "page": "https://www.thebibledept.com/plan",
+      "viewportCssPx": [
+        390,
+        844
+      ],
+      "selector": "h1",
+      "computed": {
+        "fontSize": "36px",
+        "lineHeight": "43.2px"
+      },
+      "documentScrollWidthPx": 375,
+      "visual": "Copy, full-width stacked field/action, then study image. Compact navigation with menu."
+    },
+    {
+      "page": "https://www.thebibledept.com/",
+      "viewportCssPx": [
+        390,
+        844
+      ],
+      "visual": "Single column hero with text/actions before portrait; secondary action beneath primary."
+    }
   ]
 }
