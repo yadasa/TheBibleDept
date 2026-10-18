@@ -8,6 +8,7 @@ import { AccountScreen } from './src/screens/AccountScreen';
 import { AuthProvider } from './src/services/AuthProvider';
 import { ReadingProvider } from './src/services/ReadingProvider';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { PrayerScreen } from './src/screens/PrayerScreen';
 
 const tabs = ['Today', 'Bible', 'Prayer', 'Account'] as const;
 export default function App() {
@@ -22,7 +23,7 @@ export default function App() {
       {tab === 'Today' ? <HomeScreen onRead={value=>{setReference(value||'Luke 1');setTab('Bible');}} onAccount={()=>setTab('Account')}/>
         : tab === 'Bible' ? <BibleScreen initialReference={reference} onAccount={()=>setTab('Account')}/>
         : tab === 'Account' ? <AccountScreen/>
-        : <View style={s.card}><Text style={s.cardTitle}>A place for your prayers</Text><Text style={s.body}>This screen is being connected in the next migration step.</Text></View>}
+        : <PrayerScreen onAccount={()=>setTab('Account')}/>}
 
     </ScrollView>
     <View style={s.tabs}>{tabs.map(t => <Pressable key={t} accessibilityRole="tab" accessibilityState={{selected:t===tab}} onPress={()=>setTab(t)} style={s.tab}><Text style={[s.tabLabel,t===tab&&s.activeTab]}>{t}</Text><View style={[s.tabDot,t===tab&&s.activeDot]}/></Pressable>)}</View>
