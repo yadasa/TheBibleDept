@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BibleScreen } from './BibleScreen';
 import { PlanScreen } from './PlanScreen';
 import { Icon } from '../components/Icon';
@@ -7,12 +7,29 @@ import { useScreenScroll } from '../components/ScreenScrollView';
 import { theme as c } from '../theme';
 import type { Translation } from '../services/bible';
 
-export function BibleHub({initialReference,initialTranslation,onAccount}:{initialReference?:string;initialTranslation:Translation;onAccount:()=>void}) {
-  const [mode,setMode]=useState<'plan'|'search'>(initialReference?'search':'plan');
+type Mode='plan'|'search';
+export function BibleHub({initialReference,initialTranslation,onAccount,active=true,requestRevision=0}:{initialReference?:string;initialTranslation:Translation;onAccount:()=>void;active?:boolean;requestRevision?:number}) {
+  const [mode,setMode]=useState<Mode>(initialReference?'search':'plan');
+  const [visited,setVisited]=useState<Mode[]>([initialReference?'search':'plan']);
+  const [searchRequest,setSearchRequest]=useState({reference:initialReference||'Luke 1',translation:initialTranslation,revision:requestRevision});
   const scrollTop=useScreenScroll();
+  const chooseMode=useCallback((value:Mode)=>{
+    Keyboard.dismiss();setVisited(items=>items.includes(value)?items:[...items,value]);setMode(value);scrollTop();
+  },[scrollTop]);
+  useEffect(()=>{
+    // A Home command opens the plan without clearing a passage or draft in
+    // the visited Search panel. Explicit passage links replace that request.
+    if(initialReference)setSearchRequest({reference:initialReference,translation:initialTranslation,revision:requestRevision});
+    chooseMode(initialReference?'search':'plan');
+  },[initialReference,initialTranslation,requestRevision,chooseMode]);
   return <View>
-    <View style={s.modes}>{(['plan','search'] as const).map(value=><Pressable key={value} accessibilityRole="tab" accessibilityLabel={value==='plan'?'Reading plan':'Search passages'} accessibilityState={{selected:mode===value}} onPress={()=>{setMode(value);scrollTop();}} style={({pressed})=>[s.mode,mode===value&&s.active,pressed&&s.pressed]}><Icon name={value==='plan'?'book':'search'} size={18} color={mode===value?c.ink:c.muted}/><Text style={[s.text,mode===value&&s.activeText]}>{value==='plan'?'Reading plan':'Search'}</Text></Pressable>)}</View>
-    {mode==='plan'?<PlanScreen/>:<BibleScreen initialReference={initialReference||'Luke 1'} initialTranslation={initialTranslation} onAccount={onAccount}/>}
+    <View style={s.modes}>{(['plan','search'] as const).map(value=><Pressable key={value} accessibilityRole="tab" accessibilityLabel={value==='plan'?'Reading plan':'Search passages'} accessibilityState={{selected:mode===value}} onPress={()=>chooseMode(value)} style={({pressed})=>[s.mode,mode===value&&s.active,pressed&&s.pressed]}><Icon name={value==='plan'?'book':'search'} size={18} color={mode===value?c.ink:c.muted}/><Text style={[s.text,mode===value&&s.activeText]}>{value==='plan'?'Reading plan':'Search'}</Text></Pressable>)}</View>
+    {(['plan','search'] as const).filter(value=>visited.includes(value)||value===mode).map(value=>{
+      const showing=mode===value;
+      return <View key={value} style={!showing&&s.hidden} accessibilityElementsHidden={!active||!showing} importantForAccessibility={active&&showing?'auto':'no-hide-descendants'}>
+        {value==='plan'?<PlanScreen active={active&&showing}/>:<BibleScreen initialReference={searchRequest.reference} initialTranslation={searchRequest.translation} requestRevision={searchRequest.revision} onAccount={onAccount}/>}
+      </View>;
+    })}
   </View>;
 }
-const s=StyleSheet.create({modes:{flexDirection:'row',borderBottomWidth:1,borderColor:c.border,marginBottom:24},mode:{flex:1,minHeight:48,paddingHorizontal:8,paddingVertical:12,flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent'},active:{borderBottomColor:c.orange},text:{fontSize:15,lineHeight:22,fontWeight:'500',color:c.muted,flexShrink:1},activeText:{color:c.ink,fontWeight:'700'},pressed:{opacity:.65}});
+const s=StyleSheet.create({hidden:{display:'none'},modes:{flexDirection:'row',borderBottomWidth:1,borderColor:c.border,marginBottom:24},mode:{flex:1,minHeight:48,paddingHorizontal:8,paddingVertical:12,flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent'},active:{borderBottomColor:c.orange},text:{fontSize:15,lineHeight:22,fontWeight:'500',color:c.muted,flexShrink:1},activeText:{color:c.ink,fontWeight:'700'},pressed:{opacity:.65}});

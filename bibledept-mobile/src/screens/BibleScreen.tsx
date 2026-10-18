@@ -14,15 +14,15 @@ import { passageLink } from '../services/links';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
 
-export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
+export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', requestRevision = 0, onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; requestRevision?: number; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
   const {user}=useAuth(),{readings,complete}=useReadings(),scrollTop=useScreenScroll();
   const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
   const [draft,setDraft]=useState(initialReference),[reference,setReference]=useState(initialReference);
   const [translation,setTranslation]=useState<Translation>(initialTranslation);
   const [linkMessage,setLinkMessage]=useState(''),[passage,setPassage]=useState<Passage|null>(null);
   const [error,setError]=useState(''),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
-  useEffect(()=>{setDraft(initialReference);setReference(initialReference);},[initialReference]);
-  useEffect(()=>setTranslation(initialTranslation),[initialTranslation]);
+  useEffect(()=>{setDraft(initialReference);setReference(initialReference);},[initialReference,requestRevision]);
+  useEffect(()=>setTranslation(initialTranslation),[initialTranslation,requestRevision]);
   useEffect(()=>{
     const controller=new AbortController();
     setLoading(true);setError('');setPassage(null);setLinkMessage('');setSaveError('');

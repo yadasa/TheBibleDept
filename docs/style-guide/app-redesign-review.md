@@ -32,3 +32,6 @@ Reviewed the guest, empty, composer and answered states at phone width. A dispos
 
 ## Part 7 — account and phone
 Reviewed signed-out, signed-in, validation and phone screens. Local emulator UI verified email sign-in/sign-out and fictional phone verification without sending SMS. Switching to a different test UID shows an empty journal without the other account's prayers or draft. Unsupported preview SMS is explained and disabled, with email as the usable action. The configured native phone build keeps its verification path. Both Firebase integration tests pass.
+
+## Part 8 — continuity and privacy
+Visited views now keep reader chapter/translation, search drafts, prayer drafts and scroll positions. Verified Luke 2/KJV and the exact 1,688-unit scroll offset after Prayer/Bible navigation, plus a Search draft after Home resume. Hidden views are removed from accessibility. Account changes remount retained state; a second emulator UID cannot see the prior journal/draft. Podcast continues across chapters, stops leaving the reader, and returns idle. A local passage link opens John 3:16 in KJV.
