@@ -5,14 +5,15 @@ import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 import { createAuthSession } from './authSession';
 
 export const usingEmulators = __DEV__ && process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === 'true';
-const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || (usingEmulators ? 'demo-bibledept' : '');
+// Emulator mode always uses the demo project, even when live config is present.
+const projectId = usingEmulators ? 'demo-bibledept' : process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '';
 const config = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || (usingEmulators ? 'demo-bibledept-api-key' : ''),
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || (projectId ? `${projectId}.firebaseapp.com` : ''),
+  apiKey: usingEmulators ? 'demo-bibledept-api-key' : process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: usingEmulators ? 'demo-bibledept.firebaseapp.com' : process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || (projectId ? `${projectId}.firebaseapp.com` : ''),
   projectId,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || undefined,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || (usingEmulators ? '1:1234567890:web:local' : ''),
+  storageBucket: usingEmulators ? undefined : process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined,
+  messagingSenderId: usingEmulators ? undefined : process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || undefined,
+  appId: usingEmulators ? '1:1234567890:web:local' : process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
 };
 export const firebaseConfigured = Boolean(config.apiKey && config.projectId && config.appId);
 export const emulatorHost = process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST || Constants.expoConfig?.hostUri?.split(':')[0] || '127.0.0.1';
