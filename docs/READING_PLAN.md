@@ -3,6 +3,29 @@
 Transcribed from the supplied five-page reading plan. Day numbers are relative plan days, not calendar dates.
 Whole-book and combined readings retain the printed label. Structured references expand whole books into chapters.
 
+## App lookup
+
+The source data is in `bibledept-mobile/src/data/bibledept-365.json`.
+Use `getReadingPlanDay(day)` from `src/services/readingPlan.ts` for a validated,
+read-only lookup, or `READING_PLAN_BY_DAY` / `READING_PLAN_DAYS` for the full map.
+Each day includes the printed label, source PDF page, chapter count, and an ordered
+array of passages with book IDs, chapter boundaries, and API-ready references.
+
+```ts
+const day = getReadingPlanDay(54);
+// day.label: "2 Peter 1-3 & Jude"
+// day.passages.map(p => p.reference): ["2 Peter 1-3", "Jude 1"]
+```
+
+Request combined readings as separate passages through the existing Bible client.
+For example, use `fetchPassage("Jude 1", "web")`; its existing
+`single_chapter_book_matching=indifferent` option requests the whole chapter.
+The mapping is not tied to January 1 or any other calendar start date.
+This step adds the plan data and lookup; the Today screen is not yet connected to
+plan-day selection or plan completion.
+
+## Complete day-to-passage map
+
 | Day | Reading | Chapters | PDF page |
 | ---: | --- | ---: | ---: |
 | 1 | Luke 1-3 | 3 | 1 |
