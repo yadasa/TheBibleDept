@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "BibleDept",
+    "slug": "bibledept",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bibledept.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFF5F5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.bibledept.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "bibledept",
+    "plugins": [
+      "expo-web-browser"
+    ]
+  }
+}
