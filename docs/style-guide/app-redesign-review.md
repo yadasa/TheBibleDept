@@ -6,9 +6,13 @@ This pass follows the Bible Dept product direction in this folder: paper, ink, o
 
 1. **Foundations:** semantic type/spacing/control roles, one stroke icon system, readable field boundaries, button hierarchy, focus and loading feedback.
 2. **App shell and Today:** safe areas, labeled icon navigation, one screen title, current day and actual reading before supporting actions.
-3. **Plan and reader:** chapter/translation/text size before Scripture; completion below reading; current/selected/completed day states; local storage wording; working podcast controls.
-4. **Prayer and account:** private journal, patient empty states, persistent field labels, explicit account status, focused sign-in actions and recovery.
-5. **Flow review:** narrow and tablet widths, large reading text, day browsing/advancement, search/error recovery, auth validation, podcast, and iOS bundle verification.
+3. **Plan and reader:** chapter/translation/text size before Scripture; completion below reading; current/selected/completed day states; local storage wording.
+4. **Passage search:** shared reading controls, editable failed requests, translation choice and sharing.
+5. **Daily teaching:** consistent media controls and readable episode details.
+6. **Prayer:** private journal, patient empty states, persistent field labels and confirmed save feedback.
+7. **Account:** explicit account status, focused sign-in actions, recovery and phone verification states.
+8. **Continuity and privacy:** preserve reading place and drafts while clearing retained private state on account changes.
+9. **Accessibility and final review:** focus, keyboard operation, narrow/tablet widths, large Scripture, resilience, and iOS bundle verification.
 
 Each part is reviewed and pushed separately. Check the actual controls and content, not only screenshots. Native safe areas, keyboard behavior, and VoiceOver still need a physical iPhone review; browser checks cannot establish those results.
 
@@ -35,3 +39,8 @@ Reviewed signed-out, signed-in, validation and phone screens. Local emulator UI 
 
 ## Part 8 — continuity and privacy
 Visited views now keep reader chapter/translation, search drafts, prayer drafts and scroll positions. Verified Luke 2/KJV and the exact 1,688-unit scroll offset after Prayer/Bible navigation, plus a Search draft after Home resume. Hidden views are removed from accessibility. Account changes remount retained state; a second emulator UID cannot see the prior journal/draft. Podcast continues across chapters, stops leaving the reader, and returns idle. A local passage link opens John 3:16 in KJV.
+
+## Part 9 — accessibility and final review
+Checked 320, 390 and 768 widths, with no horizontal overflow at tablet width; a second visual review found no clipping or hierarchy blocker. Browser keyboard checks cover visible 2-unit focus outlines, Tab/Enter form validation, Escape picker dismissal, and slider arrow-key seeking. Decorative SVG accessibility props are platform-specific to avoid invalid DOM warnings. Final Today reload has no console errors.
+
+TypeScript, all 18 unit tests, both Firebase emulator integration tests and the iOS JavaScript bundle export pass. The plan JSON and podcast mappings remain bundled; no new cloud mapping was introduced. Physical iPhone safe areas, keyboard, VoiceOver and native large-text behavior remain device checks. The web audio SDK can log an AbortError when playback is immediately interrupted during startup; pause/release still works, and this is not a verified native iOS issue.

@@ -1,4 +1,5 @@
 import Svg, { Path } from 'react-native-svg';
+import { Platform } from 'react-native';
 import { theme } from '../theme';
 
 // A single 24-unit stroke system. Decorative icons inherit the control's label.
@@ -29,5 +30,6 @@ const paths = {
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color = theme.ink }: { name: IconName; size?: number; color?: string }) {
-  return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" accessible={false} aria-hidden><Path d={paths[name]} /></Svg>;
+  const nativeAccessibility=Platform.OS==='web'?{}:{accessible:false};
+  return <Svg {...nativeAccessibility} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>;
 }

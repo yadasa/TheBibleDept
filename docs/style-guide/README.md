@@ -20,6 +20,7 @@ This guide covers brand judgment, measured visual foundations, page structure, c
 | [Visual reference](visual-reference.html) | Inspect swatches, hierarchy, controls, reading, and disclosures in a browser. |
 | [Asset inventory](asset-inventory.json) | Find dated source image references without bundling originals. |
 | [Review and checklist](07-review-and-checklist.md) | See revisions, verification scope, and a checklist for the next project. |
+| [Active app redesign review](app-redesign-review.md) | See the implementation parts, runtime checks and remaining device verification for the Expo app. |
 
 Open `visual-reference.html` locally with `reference.css` beside it. GitHub displays HTML source rather than a live preview. The board uses fallback fonts and original example copy; it does not submit data.
 

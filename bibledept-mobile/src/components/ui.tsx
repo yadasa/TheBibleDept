@@ -4,14 +4,16 @@ import { control, radius, theme as c, typography as t } from '../theme';
 import { Icon, IconName } from './Icon';
 
 export function ActionButton({ title, onPress, disabled = false, loading = false, secondary = false, variant = secondary ? 'secondary' : 'primary', icon }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean; variant?: 'primary' | 'secondary' | 'ghost'; icon?: IconName }) {
+  const [focused,setFocused]=useState(false);
   const color = variant === 'primary' ? c.surface : variant === 'ghost' ? c.action : c.ink;
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={({pressed})=>[s.button, variant === 'secondary' && s.secondary, variant === 'ghost' && s.ghost, pressed && s.pressed, (disabled || loading) && s.disabled]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onPress={onPress} style={({pressed})=>[s.button, variant === 'secondary' && s.secondary, variant === 'ghost' && s.ghost, focused&&s.focused, pressed && s.pressed, (disabled || loading) && s.disabled]}>
     {loading ? <ActivityIndicator color={color} /> : <><Text style={[s.buttonText, {color}]}>{title}</Text>{icon && <Icon name={icon} size={20} color={color}/>}</>}
   </Pressable>;
 }
 
 export function IconButton({ name, label, onPress, disabled = false }: { name: IconName; label: string; onPress: () => void; disabled?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>[s.iconButton,pressed&&s.pressed,disabled&&s.disabled]}><Icon name={name}/></Pressable>;
+  const [focused,setFocused]=useState(false);
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onPress={onPress} style={({pressed})=>[s.iconButton,focused&&s.focused,pressed&&s.pressed,disabled&&s.disabled]}><Icon name={name}/></Pressable>;
 }
 
 export function Field({ label, ...props }: TextInputProps & { label: string }) {

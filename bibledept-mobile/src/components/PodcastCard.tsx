@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { control, radius, theme as c, typography as t } from '../theme';
@@ -49,12 +49,20 @@ function EpisodePlayer({episode}:{episode:Episode}) {
   async function open(url:string) {
     try {await Linking.openURL(url);}catch{setError('This link could not open. Please try again.');}
   }
+  // Native assistive actions use onAccessibilityAction below. RN Web forwards
+  // capture events, so the slider also supports a physical keyboard.
+  const webSeekKeys=Platform.OS==='web'?{onKeyDownCapture:(event:{key:string;preventDefault:()=>void})=>{
+    const target=event.key==='ArrowRight'||event.key==='ArrowUp'?position+15
+      :event.key==='ArrowLeft'||event.key==='ArrowDown'?position-15
+      :event.key==='Home'?0:event.key==='End'?duration:undefined;
+    if(target!==undefined){event.preventDefault();seek(target);}
+  }}:{};
   return <View style={s.card}>
     <View style={s.heading}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>Daily teaching</Text></View>
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
     {!!episode.rangeNote&&<Text style={s.note}>{episode.rangeNote}</Text>}
-    <Pressable ref={seekRef} accessibilityRole="adjustable" accessibilityLabel="Episode playback position" aria-valuemin={0} aria-valuemax={Math.round(duration)} aria-valuenow={Math.round(Math.min(position,duration))} aria-valuetext={`${audioTime(position)} of ${audioTime(duration)}`} aria-disabled={!status.isLoaded||!!problem} accessibilityValue={{min:0,max:Math.round(duration),now:Math.round(Math.min(position,duration)),text:`${audioTime(position)} of ${audioTime(duration)}`}} accessibilityActions={[{name:'increment',label:'Forward 15 seconds'},{name:'decrement',label:'Back 15 seconds'}]} onAccessibilityAction={event=>seek(position+(event.nativeEvent.actionName==='increment'?15:-15))} onLayout={event=>setWidth(event.nativeEvent.layout.width)} onPress={event=>{
+    <Pressable {...webSeekKeys} ref={seekRef} accessibilityRole="adjustable" accessibilityLabel="Episode playback position" aria-valuemin={0} aria-valuemax={Math.round(duration)} aria-valuenow={Math.round(Math.min(position,duration))} aria-valuetext={`${audioTime(position)} of ${audioTime(duration)}`} aria-disabled={!status.isLoaded||!!problem} accessibilityValue={{min:0,max:Math.round(duration),now:Math.round(Math.min(position,duration)),text:`${audioTime(position)} of ${audioTime(duration)}`}} accessibilityActions={[{name:'increment',label:'Forward 15 seconds'},{name:'decrement',label:'Back 15 seconds'}]} onAccessibilityAction={event=>seek(position+(event.nativeEvent.actionName==='increment'?15:-15))} onLayout={event=>setWidth(event.nativeEvent.layout.width)} onPress={event=>{
       const {locationX,pageX}=event.nativeEvent;
       if(Number.isFinite(locationX)&&width>0)seek(duration*locationX/width);
       else if(Number.isFinite(pageX))seekRef.current?.measureInWindow((x,_y,measuredWidth)=>{if(measuredWidth>0)seek(duration*(pageX-x)/measuredWidth);});
