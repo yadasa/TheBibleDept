@@ -6,6 +6,10 @@ Whole-book and combined readings retain the printed label. Structured references
 ## App lookup
 
 The source data is in `bibledept-mobile/src/data/bibledept-365.json`.
+It is bundled locally in the app, never fetched from or uploaded to Firebase.
+The compact file contains a book table and numeric chapter tuples (5,099 bytes),
+96% smaller than the original expanded mapping. The typed lookup reconstructs
+labels and passage objects in memory.
 Use `getReadingPlanDay(day)` from `src/services/readingPlan.ts` for a validated,
 read-only lookup, or `READING_PLAN_BY_DAY` / `READING_PLAN_DAYS` for the full map.
 Each day includes the printed label, source PDF page, chapter count, and an ordered

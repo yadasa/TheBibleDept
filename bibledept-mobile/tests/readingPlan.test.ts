@@ -1,13 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import data from '../src/data/bibledept-365.json';
-import { getReadingPlanDay, READING_PLAN, READING_PLAN_DAYS } from '../src/services/readingPlan';
+import { getReadingPlanDay, READING_PLAN, READING_PLAN_BOOKS, READING_PLAN_DAYS } from '../src/services/readingPlan';
 
 test('the source plan maps every day and every Bible chapter exactly once', () => {
   assert.equal(READING_PLAN_DAYS.length, 365);
   assert.deepEqual(READING_PLAN_DAYS.map(day => day.day), Array.from({length:365}, (_, i) => i + 1));
-  assert.equal(data.books.length, 66);
-  const expected = new Set(data.books.flatMap(book => Array.from({length:book.chapterCount}, (_, i) => `${book.bookId}:${i + 1}`)));
+  assert.equal(READING_PLAN_BOOKS.length, 66);
+  const expected = new Set(READING_PLAN_BOOKS.flatMap(book => Array.from({length:book.chapterCount}, (_, i) => `${book.bookId}:${i + 1}`)));
   assert.equal(expected.size, 1189);
   const actual = new Set<string>();
   for (const day of READING_PLAN_DAYS) {
