@@ -4,8 +4,12 @@
   "main": "index.ts",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-firebase/app": "^26.4.0",
+    "@react-native-firebase/auth": "^26.4.0",
     "expo": "~57.0.30",
+    "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.22",
+    "expo-dev-client": "~57.0.20",
     "expo-linking": "~57.0.13",
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "~57.0.3",
@@ -24,14 +28,15 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start --lan",
+    "start": "expo start --go --lan",
     "android": "expo start --android",
-    "ios": "expo start --lan",
+    "ios": "expo start --go --lan",
     "web": "expo start --web --localhost",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "emulators": "firebase emulators:start --project demo-bibledept --only auth,firestore --export-on-exit=.firebase/data",
-    "test:firebase": "tsx --test tests/firebase.integration.ts"
+    "test:firebase": "tsx --test tests/firebase.integration.ts",
+    "start:development-build": "expo start --dev-client --lan"
   },
   "private": true
 }

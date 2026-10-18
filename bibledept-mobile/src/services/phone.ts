@@ -1,10 +1,11 @@
 import { PhoneAuthCredential, signInWithCredential } from 'firebase/auth';
 import { emulatorHost, getFirebase, usingEmulators } from './firebase';
+import { requestNativePhoneCode } from './nativePhone';
 
 export type PhoneChallenge = {verificationId:string;testCode?:string};
 export async function requestPhoneCode(phoneNumber:string):Promise<PhoneChallenge> {
   if(!/^\+[1-9]\d{7,14}$/.test(phoneNumber)) throw new Error('Use an international phone number, such as +16505550123.');
-  if(!usingEmulators) throw new Error('Phone sign-in needs a signed development build with Firebase phone verification configured. Email sign-in is available now.');
+  if(!usingEmulators)return {verificationId:await requestNativePhoneCode(phoneNumber)};
   // This adapter is deliberately restricted to the local demo project and fictional numbers.
   if(!__DEV__||getFirebase().auth.app.options.projectId!=='demo-bibledept'||!/^\+165055501\d{2}$/.test(phoneNumber)) {
     throw new Error('Local testing uses fictional +16505550100 through +16505550199 numbers only.');
