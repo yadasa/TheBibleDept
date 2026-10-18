@@ -3,11 +3,14 @@ import { Notice } from '../components/ui';
 import { useAuth } from '../services/AuthProvider';
 import { useReadings } from '../services/ReadingProvider';
 import { theme as c } from '../theme';
+import { usePlan } from '../services/PlanProvider';
+import { getReadingPlanDay } from '../services/readingPlan';
 
 export function HomeScreen({onRead,onAccount}:{onRead:(reference?:string)=>void;onAccount:()=>void}) {
   const {user}=useAuth();const {readings,streak,error}=useReadings();
+  const plan=usePlan();const current=getReadingPlanDay(plan.currentDay)!;
   return <View>
-    <View style={s.hero}><Text style={s.kicker}>YOUR DAILY RHYTHM</Text><Text style={s.heroTitle}>{'Read. Reflect.\nLive it out.'}</Text><Text style={s.heroBody}>Start with a passage. Take a moment to understand it. Carry one truth into your day.</Text><Pressable accessibilityRole="button" onPress={()=>onRead(readings[0]?.reference)} style={s.button}><Text style={s.buttonText}>{readings.length?'Continue reading':'Open the Bible'}  →</Text></Pressable></View>
+    <View style={s.hero}><Text style={s.kicker}>{plan.finished?'365-DAY PLAN COMPLETE':`YOUR CURRENT DAY · ${plan.currentDay} OF 365`}</Text><Text style={s.heroTitle}>{`Day ${plan.currentDay}.\nMake room.`}</Text><Text style={s.heroBody}>{current.label}{'\n'}A little Scripture. A little reflection. Keep growing at your own pace.</Text><Pressable accessibilityRole="button" disabled={!plan.ready} onPress={()=>{plan.returnToCurrent();onRead();}} style={s.button}><Text style={s.buttonText}>{plan.ready?`Read day ${plan.currentDay}`:'Opening your plan…'}  →</Text></Pressable></View>
     <Text style={s.sectionTitle}>Grow with intention.</Text>
     {user?<View style={s.card}><Text style={s.metric}>{streak}<Text style={s.metricLabel}> day streak</Text></Text><Text style={s.body}>{readings.length} recent reading {readings.length===1?'day':'days'} saved.</Text>{readings[0]&&<Text style={s.last}>LAST READ · {readings[0].reference}</Text>}</View>:<View style={s.card}><Text style={s.cardTitle}>One chapter. A fresh start.</Text><Text style={s.body}>You do not have to catch up to begin. Take the next step today.</Text><Pressable accessibilityRole="button" onPress={onAccount}><Text style={s.link}>Save your progress with a free account →</Text></Pressable></View>}
     {!!error&&<Notice text={error} error/>}

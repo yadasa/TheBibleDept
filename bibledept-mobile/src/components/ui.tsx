@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, TextInputPro
 import { theme as c } from '../theme';
 
 export function ActionButton({ title, onPress, disabled = false, loading = false, secondary = false }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading }} disabled={disabled || loading} onPress={onPress} style={[s.button, secondary && s.secondary, (disabled || loading) && s.disabled]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={[s.button, secondary && s.secondary, (disabled || loading) && s.disabled]}>
     {loading ? <ActivityIndicator color={secondary ? c.action : '#FFFFFF'} /> : <Text style={[s.buttonText, secondary && s.secondaryText]}>{title}</Text>}
   </Pressable>;
 }
