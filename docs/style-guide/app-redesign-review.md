@@ -26,3 +26,6 @@ Reviewed search with John 3:16 in WEB and KJV, a failed reference followed by co
 
 ## Part 5 — daily teaching player
 Phone review confirms manual play, pause and 15-second skip still work. Selecting another day resets playback to the matching episode. The presentation uses the shared icons and readable metadata while preserving the existing seek-coordinate fallback, timeout, and audio lifecycle. No audio files are bundled or uploaded.
+
+## Part 6 — prayer journal
+Reviewed the guest, empty, composer and answered states at phone width. A disposable account on the local Firebase emulator verified save feedback, empty-draft validation, and marking an entry answered. Drafts survive tab navigation in the retention part. Validation clears when writing resumes. No live prayer or account data was written.

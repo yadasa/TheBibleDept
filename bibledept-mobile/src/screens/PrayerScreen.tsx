@@ -1,47 +1,146 @@
 import { addDoc, collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '../components/Icon';
 import { ActionButton, Field, Notice } from '../components/ui';
 import { useAuth } from '../services/AuthProvider';
-import { getFirebase } from '../services/firebase';
-import { theme as c } from '../theme';
 import { USER_COLLECTION } from '../services/dataPaths';
+import { getFirebase } from '../services/firebase';
+import { radius, spacing, theme as c, typography } from '../theme';
 
-type Prayer = {id:string;text:string;answered:boolean};
-export function PrayerScreen({onAccount}:{onAccount:()=>void}) {
-  const {user}=useAuth();
-  const [owner,setOwner]=useState<string>(),[prayers,setPrayers]=useState<Prayer[]>([]);
-  const [text,setText]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  useEffect(()=>{
-    setOwner(user?.uid);setPrayers([]);setError('');
-    if(!user)return;
-    return onSnapshot(query(collection(getFirebase().db,USER_COLLECTION,user.uid,'prayers'),orderBy('createdAt','desc'),limit(100)),snapshot=>{
-      setPrayers(snapshot.docs.map(d=>({id:d.id,text:String(d.data().text),answered:d.data().answered===true})));
-    },()=>setError('Your prayers could not be loaded. Check your Firebase connection.'));
-  },[user?.uid]);
-  async function save(){
-    if(!user)return;
-    const value=text.trim();if(!value){setError('Write a prayer first.');return;}
-    setBusy(true);setError('');
-    try{await addDoc(collection(getFirebase().db,USER_COLLECTION,user.uid,'prayers'),{text:value,answered:false,createdAt:serverTimestamp()});setText('');}
-    catch{setError('Your prayer could not be saved. Check your connection and retry.');}finally{setBusy(false);}
+type Prayer = { id: string; text: string; answered: boolean };
+
+export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
+  const { user } = useAuth();
+  const [owner, setOwner] = useState<string>();
+  const [prayers, setPrayers] = useState<Prayer[]>([]);
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [updating, setUpdating] = useState<string>();
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [revision, setRevision] = useState(0);
+  const activeUid = useRef(user?.uid);
+  activeUid.current = user?.uid;
+
+  useEffect(() => {
+    setText('');
+    setError('');
+    setMessage('');
+    setSaving(false);
+    setUpdating(undefined);
+  }, [user?.uid]);
+
+  useEffect(() => {
+    setOwner(user?.uid);
+    setPrayers([]);
+    setLoadError('');
+    setLoading(!!user);
+    if (!user) return;
+    return onSnapshot(
+      query(collection(getFirebase().db, USER_COLLECTION, user.uid, 'prayers'), orderBy('createdAt', 'desc'), limit(100)),
+      snapshot => {
+        setPrayers(snapshot.docs.map(d => ({ id: d.id, text: String(d.data().text), answered: d.data().answered === true })));
+        setLoading(false);
+      },
+      () => {
+        setLoadError('Your journal could not be loaded. Check your connection and try again.');
+        setLoading(false);
+      },
+    );
+  }, [user?.uid, revision]);
+
+  async function save() {
+    if (!user || saving) return;
+    const value = text.trim();
+    setMessage('');
+    if (!value) { setError('Write a prayer before saving.'); return; }
+    const uid = user.uid;
+    setSaving(true);
+    setError('');
+    try {
+      await addDoc(collection(getFirebase().db, USER_COLLECTION, uid, 'prayers'), { text: value, answered: false, createdAt: serverTimestamp() });
+      if (activeUid.current === uid) { setText(''); setMessage('Your prayer has been saved.'); }
+    } catch {
+      if (activeUid.current === uid) setError('Your prayer could not be saved. Your words are still here. Check your connection and retry.');
+    } finally {
+      if (activeUid.current === uid) setSaving(false);
+    }
   }
-  async function toggle(prayer:Prayer){
-    if(!user)return;
-    setBusy(true);setError('');
-    try{await updateDoc(doc(getFirebase().db,USER_COLLECTION,user.uid,'prayers',prayer.id),{answered:!prayer.answered});}
-    catch{setError('The prayer could not be updated. Please retry.');}finally{setBusy(false);}
+
+  async function toggle(prayer: Prayer) {
+    if (!user || updating) return;
+    const uid = user.uid;
+    setUpdating(prayer.id);
+    setError('');
+    setMessage('');
+    try {
+      await updateDoc(doc(getFirebase().db, USER_COLLECTION, uid, 'prayers', prayer.id), { answered: !prayer.answered });
+      if (activeUid.current === uid) setMessage(prayer.answered ? 'Your prayer is marked as praying again.' : 'Your prayer is marked as answered.');
+    } catch {
+      if (activeUid.current === uid) setError('The prayer could not be updated. Please try again.');
+    } finally {
+      if (activeUid.current === uid) setUpdating(undefined);
+    }
   }
-  if(!user)return <View style={s.card}><Text style={s.title}>Make space for prayer.</Text><Notice text="Keep a private journal of what you are praying about and return to it as you grow."/><ActionButton title="Sign in to save prayers" onPress={onAccount}/></View>;
-  const visible=owner===user.uid?prayers:[];
-  return <View>
-    <Text style={s.title}>What's on your heart?</Text><Notice text="Your prayer journal is private to your account."/>
-    <Field label="Your prayer" value={text} onChangeText={setText} multiline maxLength={3000} placeholder="God, today I am praying about…"/>
-    <ActionButton title="Save prayer" onPress={save} loading={busy}/>
-    {!!error&&<Notice text={error} error/>}
-    <Text style={s.section}>Your prayer journal</Text>
-    {!visible.length&&<Notice text="Your first prayer can start right here."/>}
-    {visible.map(prayer=><View key={prayer.id} style={s.card}><Text style={s.status}>{prayer.answered?'ANSWERED':'PRAYING'}</Text><Text style={s.prayer}>{prayer.text}</Text><ActionButton title={prayer.answered?'Keep praying':'Mark answered'} onPress={()=>toggle(prayer)} secondary disabled={busy}/></View>)}
+
+  if (!user) return <View style={s.guest}>
+    <View style={s.iconTile}><Icon name="heart" size={28} color={c.action} /></View>
+    <Text style={s.heading}>Make space for prayer.</Text>
+    <Text style={s.intro}>A thought, a need, a thank you. Keep them together in a private journal you can return to.</Text>
+    <View style={s.guestAction}><ActionButton title="Sign in to begin" onPress={onAccount} icon="arrowRight" /></View>
+    <View style={s.privacy}><Icon name="lock" size={16} color={c.muted} /><Text style={s.privacyText}>Saved prayers are private to your account.</Text></View>
+  </View>;
+
+  const visible = owner === user.uid ? prayers : [];
+  return <View style={s.screen}>
+    <View style={s.privacy}><Icon name="lock" size={16} color={c.muted} /><Text style={s.privacyText}>A private space, saved to your account.</Text></View>
+    <View style={s.composer}>
+      <Text style={s.heading}>What’s on your heart?</Text>
+      <Text style={s.composerHint}>Write it down. Take a moment to pray.</Text>
+      <Field label="Your prayer" value={text} onChangeText={value => { setText(value); setMessage(''); setError(''); }} multiline maxLength={3000} placeholder="God, today I am praying about…" style={s.writing} editable={!saving} />
+      <Text style={s.count}>{text.length.toLocaleString()} / 3,000 characters</Text>
+      <ActionButton title="Save prayer" onPress={save} loading={saving} icon="plus" />
+    </View>
+    {!!error && <Notice text={error} error />}
+    {!!message && <Notice text={message} success />}
+    <View style={s.sectionHeader}><Text style={s.section}>Your prayers</Text>{!loading && !loadError && <Text style={s.total}>{visible.length}{visible.length === 100 ? '+' : ''}</Text>}</View>
+    {loading ? <View style={s.loading}><ActivityIndicator color={c.action} /><Text style={s.loadingText}>Opening your journal…</Text></View> : loadError ? <View><Notice text={loadError} error /><ActionButton title="Reload journal" onPress={() => setRevision(value => value + 1)} variant="secondary" icon="refresh" /></View> : !visible.length ? <View style={s.empty}>
+      <Icon name="heart" size={22} color={c.muted} /><Text style={s.emptyTitle}>Begin with what’s here.</Text><Text style={s.emptyText}>Your saved prayers will appear here. There’s no right way to start.</Text>
+    </View> : visible.map(prayer => <View key={prayer.id} style={s.prayerRow}>
+      <View style={s.status}><Icon name={prayer.answered ? 'checkCircle' : 'heart'} size={16} color={prayer.answered ? c.success : c.action} /><Text style={[s.statusText, prayer.answered && s.answered]}>{prayer.answered ? 'Answered' : 'Praying'}</Text></View>
+      <Text selectable style={s.prayer}>{prayer.text}</Text>
+      <ActionButton title={prayer.answered ? 'Keep praying' : 'Mark as answered'} onPress={() => toggle(prayer)} variant="ghost" icon={prayer.answered ? 'heart' : 'check'} loading={updating === prayer.id} disabled={!!updating && updating !== prayer.id} />
+    </View>)}
   </View>;
 }
-const s=StyleSheet.create({card:{padding:20,backgroundColor:c.surface,borderWidth:1,borderColor:c.border,borderRadius:4,marginBottom:16},title:{fontSize:24,fontWeight:'800',color:c.ink,letterSpacing:-.6},section:{fontSize:21,fontWeight:'800',color:c.ink,marginTop:30,marginBottom:16},status:{fontSize:10,fontWeight:'900',letterSpacing:1.4,color:c.action,marginBottom:12},prayer:{fontSize:16,lineHeight:25,color:c.ink,marginBottom:10}});
+
+const s = StyleSheet.create({
+  screen: { gap: spacing[8] },
+  guest: { paddingVertical: spacing[16] },
+  iconTile: { width: 56, height: 56, backgroundColor: c.tint, borderRadius: radius, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[24] },
+  heading: { ...typography.section, color: c.ink },
+  intro: { ...typography.body, color: c.muted, marginTop: spacing[12] },
+  guestAction: { marginTop: spacing[24], marginBottom: spacing[16] },
+  privacy: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[8], marginBottom: spacing[16] },
+  privacyText: { ...typography.meta, color: c.muted, flex: 1 },
+  composer: { backgroundColor: c.surface, borderColor: c.border, borderWidth: 1, borderRadius: radius, padding: spacing[20] },
+  composerHint: { ...typography.body, color: c.muted, marginTop: spacing[8], marginBottom: spacing[24] },
+  writing: { minHeight: 160, lineHeight: 25 },
+  count: { ...typography.meta, color: c.muted, textAlign: 'right' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing[12], marginTop: spacing[24], marginBottom: spacing[8] },
+  section: { ...typography.section, color: c.ink, flexShrink: 1 },
+  total: { ...typography.meta, fontWeight: '600', color: c.muted },
+  loading: { flexDirection: 'row', alignItems: 'center', gap: spacing[12], paddingVertical: spacing[24] },
+  loadingText: { ...typography.meta, color: c.muted },
+  empty: { borderTopWidth: 1, borderColor: c.border, paddingVertical: spacing[24], gap: spacing[8] },
+  emptyTitle: { ...typography.label, color: c.ink, marginTop: spacing[4] },
+  emptyText: { ...typography.body, color: c.muted },
+  prayerRow: { borderTopWidth: 1, borderColor: c.border, paddingTop: spacing[24], paddingBottom: spacing[16] },
+  status: { flexDirection: 'row', alignItems: 'center', gap: spacing[8], marginBottom: spacing[12] },
+  statusText: { ...typography.meta, fontWeight: '600', color: c.action },
+  answered: { color: c.success },
+  prayer: { ...typography.body, color: c.ink, lineHeight: 26, marginBottom: spacing[8] },
+});
