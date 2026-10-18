@@ -17,3 +17,6 @@ TypeScript passes. At 390 × 844, persistent 14-unit labels, 52-unit inputs, foc
 
 ## Part 2 — shell and Today
 TypeScript passes. Reviewed at 390 × 844 and 768 × 1024: one title, current-day resume before scrolling, 20-unit phone gutters, bounded tablet column, and labeled icon tabs. Read day opens the correct saved plan. Supporting journal/account actions remain reachable; no plan position was reset.
+
+## Part 3 — plan reader and day navigation
+TypeScript and all 18 unit tests pass. Reviewed at 390 and 320 widths, including 28-unit Scripture, shared text-size settings after reload, chapter navigation returning to the top, day 365 browsing without advancement, and explicit completion advancing one day. Narrow grid review found a clipped Current label; changed it to Now beside the explicit current-day summary. Plan position remains local.

@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { ComponentProps, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { theme as c, typography as t } from './src/theme';
 import { Icon, IconName } from './src/components/Icon';
+import { ReadingTextProvider } from './src/components/ReaderControls';
+import { ScreenScrollView } from './src/components/ScreenScrollView';
 import { BibleHub } from './src/screens/BibleHub';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { AuthProvider } from './src/services/AuthProvider';
@@ -12,7 +14,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { PrayerScreen } from './src/screens/PrayerScreen';
 import { parseAppLink } from './src/services/links';
 import type { Translation } from './src/services/bible';
-import { PlanProvider, usePlan } from './src/services/PlanProvider';
+import { PlanProvider } from './src/services/PlanProvider';
 
 const tabs = ['Today', 'Bible', 'Prayer', 'Account'] as const;
 const icons:Record<(typeof tabs)[number],IconName> = {Today:'home',Bible:'book',Prayer:'heart',Account:'user'};
@@ -36,11 +38,11 @@ export default function App() {
     const subscription=Linking.addEventListener('url',event=>open(event.url));
     return()=>{active=false;subscription.remove();};
   },[]);
-  return <SafeAreaProvider><AuthProvider><ReadingProvider><PlanProvider><SafeAreaView style={s.safe}>
+  return <SafeAreaProvider><AuthProvider><ReadingProvider><ReadingTextProvider><PlanProvider><SafeAreaView style={s.safe}>
     <StatusBar style="dark" />
     <KeyboardAvoidingView style={s.app} behavior={Platform.OS==='ios'?'padding':undefined}>
       <View style={s.header}><View style={s.headerInner}><Text style={s.brand}>The Bible Dept.</Text><View style={s.brandRule}/></View></View>
-      <PlanScrollView key={`${tab}:${linkRevision}`} style={s.scroll} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+      <ScreenScrollView key={`${tab}:${linkRevision}`} style={s.scroll} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <View style={s.content}>
           <Text accessibilityRole="header" style={s.heading}>{titles[tab]}</Text>
           {tab === 'Today' ? <HomeScreen onRead={()=>{setReference(undefined);setTab('Bible');}} onAccount={()=>setTab('Account')} onPrayer={()=>setTab('Prayer')}/>
@@ -48,7 +50,7 @@ export default function App() {
             : tab === 'Account' ? <AccountScreen/>
             : <PrayerScreen onAccount={()=>setTab('Account')}/>}
         </View>
-      </PlanScrollView>
+      </ScreenScrollView>
       <View style={s.nav}><View style={s.tabs}>{tabs.map(item => {
         const active=item===tab;
         return <Pressable key={item} accessibilityRole="tab" accessibilityLabel={item} accessibilityState={{selected:active}} onPress={()=>setTab(item)} style={({pressed})=>[s.tab,pressed&&s.pressed]}>
@@ -57,12 +59,7 @@ export default function App() {
         </Pressable>;
       })}</View></View>
     </KeyboardAvoidingView>
-  </SafeAreaView></PlanProvider></ReadingProvider></AuthProvider></SafeAreaProvider>;
-}
-function PlanScrollView(props:ComponentProps<typeof ScrollView>) {
-  const ref=useRef<ScrollView>(null),{selectedDay}=usePlan();
-  useEffect(()=>{ref.current?.scrollTo({y:0,animated:false});},[selectedDay]);
-  return <ScrollView {...props} ref={ref}/>;
+  </SafeAreaView></PlanProvider></ReadingTextProvider></ReadingProvider></AuthProvider></SafeAreaProvider>;
 }
 const s = StyleSheet.create({
   safe:{flex:1,backgroundColor:c.background},app:{flex:1},
