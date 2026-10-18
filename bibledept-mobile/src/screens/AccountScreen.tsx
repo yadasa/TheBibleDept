@@ -5,11 +5,13 @@ import { ActionButton, Field, Notice } from '../components/ui';
 import { authError, useAuth } from '../services/AuthProvider';
 import { getFirebase, usingEmulators } from '../services/firebase';
 import { theme as c } from '../theme';
+import { PhoneSignIn } from './PhoneSignIn';
 
 export function AccountScreen() {
   const {user,ready,error:setupError}=useAuth();
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[register,setRegister]=useState(false);
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const [phone,setPhone]=useState(false);
   async function submit(){
     setError('');setMessage('');
     if(!email.trim()||!password){setError('Enter your email and password.');return;}
@@ -33,14 +35,14 @@ export function AccountScreen() {
       <Text style={s.title}>You're signed in.</Text><Text style={s.body}>{user.email||user.phoneNumber}</Text>
       <Notice text="Your reading progress and private prayers can now be saved to your account."/>
       <ActionButton title="Sign out" secondary onPress={()=>{setBusy(true);signOut(getFirebase().auth).catch(e=>setError(authError(e))).finally(()=>setBusy(false));}} loading={busy}/>
-    </View>:<View>
+    </View>:phone?<PhoneSignIn onEmail={()=>setPhone(false)}/>:<View>
       <Text style={s.title}>{register?'Make it your own.':'Welcome back.'}</Text><Notice text="Reading is always free. Sign in to keep your progress and prayers together."/>
       <Field label="Email address" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" autoComplete="email"/>
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry textContentType={register?'newPassword':'password'} autoComplete={register?'new-password':'current-password'} onSubmitEditing={submit}/>
       <ActionButton title={register?'Create free account':'Sign in with email'} onPress={submit} loading={busy}/>
       <ActionButton title={register?'I already have an account':'Create a free account'} onPress={()=>{setRegister(!register);setError('');setMessage('');}} secondary disabled={busy}/>
       {!register&&<ActionButton title="Forgot password?" onPress={reset} secondary disabled={busy}/>}
-      <Notice text="Phone-number sign-in is being connected separately. No social login is required."/>
+      <ActionButton title="Use phone number instead" onPress={()=>{setPhone(true);setError('');}} secondary disabled={busy}/>
     </View>}
     {!!error&&<Notice text={error} error/>}{!!message&&<Notice text={message}/>}
   </View>;
