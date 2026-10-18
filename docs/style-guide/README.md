@@ -4,6 +4,8 @@ Build the next project in the same family as The Bible Dept and ARMA: confident 
 
 This guide covers brand judgment, measured visual foundations, page structure, components, imagery, voice, interaction, accessibility, and application to this repository. It records the public sites as inspected on **October 18, 2026**. It is a working design reference, not a claim of an official brand manual or shared authorship.
 
+**For one document you can view and share, open the [illustrated visual style guide PDF](BibleDept-and-ARMA-Visual-Style-Guide.pdf).** Its 19 pages bring together the palettes, type specimens, source imagery and logos, layout diagrams, component examples, app patterns, voice, and review checklist. The PDF has searchable text and section bookmarks. Font substitutes and proposed examples are labeled.
+
 ## Read and use the guide
 
 | Part | Use it to |

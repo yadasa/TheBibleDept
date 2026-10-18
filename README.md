@@ -28,6 +28,8 @@ These are the public website's offerings. The app's existing software capabiliti
 
 The [Bible Dept and ARMA style and taste guide](docs/style-guide/README.md) documents the two public sites' visual foundations, design judgment, page schemas, components, imagery, and voice for related projects. It includes measured source evidence, reusable reference tokens, a local visual reference, and guidance for the active app. Source values, existing app adaptations, and new recommendations are labeled separately.
 
+For a single illustrated document, view the [19-page visual style guide PDF](docs/style-guide/BibleDept-and-ARMA-Visual-Style-Guide.pdf), with color swatches, type samples, source imagery, component specimens, and layout diagrams.
+
 ## Run the current iPhone app
 
 The active client is **[bibledept-mobile](bibledept-mobile/)**, built with Expo and the Firebase JavaScript SDK. Start here for local testing: **[Local iPhone setup](docs/LOCAL_TESTING.md)**.
