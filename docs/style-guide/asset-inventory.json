@@ -1,0 +1,124 @@
+{
+  "captured": "2026-10-18",
+  "scope": "Public source URLs and source metadata only; no binaries redistributed. CSS availability does not establish use.",
+  "assets": [
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655bb82364c68a69eff73777_Arma%20Logos-1%20(2).webp",
+      "alt": "",
+      "class": "image-2",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.armacourses.com/",
+      "referenceName": "655bb82364c68a69eff73777_Arma Logos-1 (2).webp",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676063236deed8f01ccc9e31_TBD%20Texture%20Logo.avif",
+      "alt": "",
+      "class": "navbar2_logo",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.thebibledept.com/",
+      "referenceName": "676063236deed8f01ccc9e31_TBD Texture Logo.avif",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676095e2c7c30eec493b246a_BIBLE-DEPT-015%20(1).avif",
+      "alt": "",
+      "class": "layout73_background-image",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.thebibledept.com/",
+      "referenceName": "676095e2c7c30eec493b246a_BIBLE-DEPT-015 (1).avif",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676073a2a7dd892943e74c18_Meet%20Dr_Manny%202.avif",
+      "alt": "",
+      "class": "layout192_image",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.thebibledept.com/",
+      "referenceName": "676073a2a7dd892943e74c18_Meet Dr_Manny 2.avif",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676058a5ccf8c607dc3eb17d_TBD%20Cover%202.avif",
+      "alt": "",
+      "class": "layout1_image",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.thebibledept.com/",
+      "referenceName": "676058a5ccf8c607dc3eb17d_TBD Cover 2.avif",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676e35d94c9bbf1b4b7ff2b8_BIBLE-DEPT-010.avif",
+      "alt": "",
+      "class": "header20_image",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.thebibledept.com/plan",
+      "referenceName": "676e35d94c9bbf1b4b7ff2b8_BIBLE-DEPT-010.avif",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676e2e661599e501ad911b0b_BIBLE-DEPT-001.avif",
+      "alt": "",
+      "class": "header20_image",
+      "width": null,
+      "height": null,
+      "sourcePage": "https://www.thebibledept.com/listen",
+      "referenceName": "676e2e661599e501ad911b0b_BIBLE-DEPT-001.avif",
+      "status": "Public source reference; confirm destination reuse rights before release."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/655eb2b0cf5e283d9d2064a4_Background%20grid.webp",
+      "sourceStylesheet": "arma",
+      "referenceName": "655eb2b0cf5e283d9d2064a4_Background grid.webp",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/6557a26edf1e5e354f3bc2af/66b0fb6a8beab397f03e5518_Light%20Grid%20Background.avif",
+      "sourceStylesheet": "arma",
+      "referenceName": "66b0fb6a8beab397f03e5518_Light Grid Background.avif",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/674cc980f268a519ba404ac1_Webflow%20Background.svg",
+      "sourceStylesheet": "bibledept",
+      "referenceName": "674cc980f268a519ba404ac1_Webflow Background.svg",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/676175934fa66732b5339427_TBD%20Background%20Black.avif",
+      "sourceStylesheet": "bibledept",
+      "referenceName": "676175934fa66732b5339427_TBD Background Black.avif",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/67605b5f39eefc48c37b730a_TBD%20Background%20Orange.avif",
+      "sourceStylesheet": "bibledept",
+      "referenceName": "67605b5f39eefc48c37b730a_TBD Background Orange.avif",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/6760730312d6e0c3b8454494_TBD%20Background%20Black%202.avif",
+      "sourceStylesheet": "bibledept",
+      "referenceName": "6760730312d6e0c3b8454494_TBD Background Black 2.avif",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/6760aa605d3e5a5d4acd2e61_TBD%20Background%20White%202.avif",
+      "sourceStylesheet": "bibledept",
+      "referenceName": "6760aa605d3e5a5d4acd2e61_TBD Background White 2.avif",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    },
+    {
+      "url": "https://cdn.prod.website-files.com/674cc980f268a519ba404a37/6760725e8ef07c695455d654_TBD%20Background%20Orange%202.avif",
+      "sourceStylesheet": "bibledept",
+      "referenceName": "6760725e8ef07c695455d654_TBD Background Orange 2.avif",
+      "status": "CSS reference; may be an unused utility. Confirm visible role and destination reuse rights."
+    }
+  ]
+}

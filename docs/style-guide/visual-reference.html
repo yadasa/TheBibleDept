@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bible Dept and ARMA visual reference</title>
+  <link rel="stylesheet" href="reference.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1rem/1.55 var(--font-body); }
+    h1,h2,h3,p { margin: 0; } a { color: inherit; }
+    h1 { max-width: 15ch; font-size: clamp(2.25rem,5vw,4rem); line-height: 1; text-transform: uppercase; }
+    h2 { font-size: clamp(1.75rem,3vw,2.5rem); line-height: 1.15; }
+    h3 { font-size: 1.25rem; line-height: 1.3; }
+    header { background: var(--ink); color: var(--paper); padding: 20px 5%; }
+    header div { max-width: 80rem; margin: auto; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
+    .intro { display: grid; grid-template-columns: 1.2fr 1fr; }
+    .promise { background: var(--brand-accent); color: var(--ink); padding: clamp(32px,6vw,96px); }
+    .promise p { margin-top: 24px; max-width: 46ch; font-size: 1.125rem; }
+    .eyebrow { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 20px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 32px; align-items: center; }
+    .hero-art { background: var(--ink); color: var(--paper); padding: clamp(32px,6vw,96px); display: grid; align-content: center; gap: 24px; }
+    .hero-art strong { display: block; font-size: clamp(2rem,4vw,3.5rem); line-height: 1.05; }
+    .hero-art p { max-width: 36ch; }
+    .content-section { padding: 64px 5%; }
+    .content-section > div { max-width: 80rem; margin: auto; }
+    .lead { max-width: 72ch; margin-top: 16px; }
+    .swatches { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; margin-top: 32px; }
+    .swatch { border: 1px solid #74675f; padding: 16px; min-height: 140px; display: flex; flex-direction: column; justify-content: space-between; }
+    .orange { background: #f05a00; color: #0a0a09; }.ink { background:#0a0a09;color:#fff5f5; }
+    .paper { background:#fff5f5;color:#0a0a09; }.action { background:#b74300;color:#fff; }.white { background:#fff;color:#0a0a09; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 32px; }
+    .specimen { background: #fff; padding: 32px; border-top: 4px solid var(--brand-accent); }
+    .specimen p { margin-top: 16px; }.specimen .sg-button { margin-top: 24px; }
+    .rule-list { display: grid; gap: 20px; padding-left: 24px; }
+    .rule-list li { padding-left: 8px; }.rule-list strong { display:block; }
+    .dark { background: var(--ink); color:var(--paper); }
+    .editorial { font-family: var(--font-display); font-size: clamp(2.25rem,5vw,4.5rem); line-height: 1; max-width:16ch; text-transform: uppercase; }
+    .editorial em { font-family: var(--font-editorial); text-transform:none; font-weight:400; }
+    .comparison-note { max-width:56ch; margin-top:24px; }
+    .scale { display:grid; gap:20px; margin-top:32px; }.scale .display { font-size:3.5rem;line-height:1;font-weight:700; }
+    .scale .section-title {font-size:3rem;line-height:1.2;font-weight:700;}.scale .body {font-size:1.125rem;line-height:1.5;}
+    .field-label {display:block;font-weight:700;margin:24px 0 8px;}.sg-field {width:100%;font:inherit;}
+    .help {font-size:.875rem;color:var(--muted);}.notice {border-left:4px solid var(--action);padding:12px 16px;background:var(--tint);margin-top:24px;}
+    details {border-top:1px solid var(--ink);padding:20px 0;}details:last-child {border-bottom:1px solid var(--ink);}
+    summary {font-weight:700;cursor:pointer;}summary:focus-visible {outline:3px solid var(--ink);outline-offset:4px;}
+    details p {margin-top:16px;max-width:60ch;}
+    footer {padding:32px 5%;border-top:1px solid var(--control-border);font-size:.875rem;}
+    code {font-size:.875em;overflow-wrap:anywhere;}
+    @media(max-width:767px) {
+      .intro,.grid {grid-template-columns:1fr;}.grid {gap:24px;}.swatches {grid-template-columns:repeat(2,1fr);}
+      .content-section {padding-block:40px;}.specimen {padding:24px;}.scale .display {font-size:2.5rem;}.scale .section-title {font-size:2.25rem;}
+    }
+    @media print {header,footer {background:white;color:black;}.content-section {break-inside:avoid;padding-block:24px;}.intro {grid-template-columns:1fr 1fr;} a {text-decoration:underline;} }
+  </style>
+</head>
+<body>
+  <header><div><strong>Bible Dept and ARMA</strong><span>Visual reference · October 18, 2026</span></div></header>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div class="promise">
+        <div class="eyebrow">Recommended Bible Dept direction</div>
+        <h1 id="page-title">Make room for today's reading.</h1>
+        <p>Confident teaching. A clear next step. A warm invitation to return.</p>
+        <div class="actions"><a class="sg-button is-paper" href="#reading">See the reading pattern</a><a href="#foundations">Explore the foundations</a></div>
+      </div>
+      <div class="hero-art"><div class="eyebrow">Image direction</div><strong>Human.<br>Grounded.<br>Inviting.</strong><p>Place an approved host portrait or teaching image here in a real project. Preserve skin tones, expression, and room around the subject.</p><p>No source photography or licensed fonts are bundled in this reference.</p></div>
+    </section>
+    <section class="content-section" id="foundations"><div>
+      <div class="eyebrow">01 · Palette</div><h2>Use color by role.</h2>
+      <p class="lead">Vivid orange carries the brand. Ink and paper carry the reading. The existing app's darker action shade makes small white labels readable.</p>
+      <div class="swatches">
+        <div class="swatch orange"><strong>Brand orange</strong><code>#F05A00 · source</code></div>
+        <div class="swatch ink"><strong>Ink</strong><code>#0A0A09 · source</code></div>
+        <div class="swatch paper"><strong>Paper</strong><code>#FFF5F5 · source</code></div>
+        <div class="swatch action"><strong>Action</strong><code>#B74300 · existing app</code></div>
+        <div class="swatch white"><strong>Surface</strong><code>#FFFFFF · source and app</code></div>
+      </div>
+    </div></section>
+    <section class="content-section"><div>
+      <div class="eyebrow">02 · Type</div><h2>Strong titles. Comfortable explanations.</h2>
+      <p class="lead">This board uses system fallbacks. The source family is Neue Haas Grotesk Display. Verify the destination font license and recheck wrapping when substituting the licensed family.</p>
+      <div class="scale"><div class="display">A clear next step</div><div class="section-title">A guide you can follow</div><p class="body">Build confidence one passage at a time. Keep the explanation clear and the reading space calm.</p><p>Regular body · 16px / 1.5</p></div>
+    </div></section>
+    <section class="content-section dark" data-brand="arma"><div>
+      <div class="eyebrow">03 · Related ARMA direction</div><h2 class="editorial">Serious study.<br>A little <em>editorial warmth.</em></h2>
+      <p class="comparison-note">ARMA pairs Headline Gothic ATF with selected Big Caslon FB italic words. This fallback specimen illustrates their roles; it does not reproduce their exact metrics. Keep this treatment within an intentionally chosen ARMA theme.</p>
+    </div></section>
+    <section class="content-section"><div>
+      <div class="eyebrow">04 · Actions and fields</div><h2>Make the task explicit.</h2>
+      <div class="grid">
+        <div class="specimen"><h3>Action hierarchy</h3><p>These samples demonstrate control appearance. The enabled links lead to another part of this board.</p>
+          <div class="actions"><a class="sg-button" href="#reading">See reading pattern</a><a class="sg-button is-secondary" href="#questions">See questions</a></div>
+          <button class="sg-button" disabled>Unavailable sample</button>
+          <p><a class="sg-link" href="03-visual-foundations.md">Read the visual foundations</a></p>
+        </div>
+        <div class="specimen"><h3>Field pattern</h3><p>Use a visible label and a boundary with sufficient contrast.</p>
+          <label class="field-label" for="demo-name">Example field</label><input class="sg-field" id="demo-name" placeholder="Type sample text" aria-describedby="field-help" autocomplete="off">
+          <p class="help" id="field-help">Local demonstration only. This field is not submitted or saved.</p>
+          <div class="notice">Status copy belongs close to the task it describes.</div>
+        </div>
+      </div>
+    </div></section>
+    <section class="content-section" id="reading"><div>
+      <div class="eyebrow">05 · Product rhythm</div><h2>Let the passage be the focus.</h2>
+      <div class="grid"><article class="specimen"><div class="eyebrow">Reading pattern · original sample text</div><h3>A quiet place to read</h3><p class="sg-reading">Long reading needs room to breathe. Keep the type comfortable, the background calm, and the next chapter easy to find. A brand moment can welcome someone into the experience; the reading itself should hold their attention.</p><p class="help">19px reference reading size · generous leading · no texture</p></article>
+      <ol class="rule-list"><li><strong>Know where you are.</strong>Keep book, chapter, and translation clear.</li><li><strong>Keep moving naturally.</strong>Make previous, next, and resume predictable.</li><li><strong>Offer help without pressure.</strong>Make returning after a missed day feel easy.</li></ol></div>
+    </div></section>
+    <section class="content-section" id="questions"><div>
+      <div class="eyebrow">06 · Questions</div><h2>Answer the practical hesitation.</h2>
+      <div class="grid"><p class="lead">A few calm answers often do more than another row of promotional cards. These native disclosures support keyboard interaction without JavaScript.</p><div>
+      <details><summary>What makes the design feel related?</summary><p>Strong type, purposeful orange, warm human imagery, generous space, and a concrete next action.</p></details>
+      <details><summary>Should the app copy a marketing hero?</summary><p>Use a compact welcome and prioritize the daily task. Preserve the brand's tone while giving reading more space.</p></details>
+      <details><summary>Are these official brand assets?</summary><p>This is an implementation reference derived from public sites. Use approved logos, imagery, and licensed fonts in production.</p></details>
+      </div></div>
+    </div></section>
+  </main>
+  <footer>Reference only · Source values, existing app values, and proposed patterns are distinguished in <a href="README.md">the full guide</a>. Primary references: <a href="https://www.thebibledept.com/">The Bible Dept</a> and <a href="https://www.armacourses.com/">ARMA</a>.</footer>
+</body>
+</html>

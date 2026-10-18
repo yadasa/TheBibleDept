@@ -12,8 +12,13 @@ This guide covers brand judgment, measured visual foundations, page structure, c
 | [Taste and brand direction](02-taste-and-brand.md) | Make decisions that feel related without mixing the two identities. |
 | [Visual foundations](03-visual-foundations.md) | Apply color, type, spacing, contrast, shape, and responsive rules. |
 | [Tokens](tokens.json) and [reference CSS](reference.css) | Start a prototype with separately labeled source and app values. |
+| [Layout and components](04-layout-and-components.md) | Reuse page schemas and specify components and states. |
+| [Imagery and voice](05-imagery-and-voice.md) | Direct assets and write clear, pastoral product copy. |
+| [Implementation and handoff](06-implementation-and-handoff.md) | Apply the guide to the current app or another project. |
+| [Visual reference](visual-reference.html) | Inspect swatches, hierarchy, controls, reading, and disclosures in a browser. |
+| [Asset inventory](asset-inventory.json) | Find dated source image references without bundling originals. |
 
-Patterns, imagery, voice, implementation, and the final review are added in subsequent completed commits.
+Open `visual-reference.html` locally with `reference.css` beside it. GitHub displays HTML source rather than a live preview. The board uses fallback fonts and original example copy; it does not submit data.
 
 ## Evidence language
 
