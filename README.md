@@ -41,6 +41,7 @@ BibleDept is a **free app**. The active client has no giving, checkout, subscrip
 | Website-inspired orange, black, and warm-white design | Implemented across Today, Bible, Prayer, and Account. |
 | Online Bible reading | Real passages from bible-api.com, with World English Bible and King James Version selection. No API key required. |
 | Official 365-day plan | A compact 5.1 KB mapping bundled inside the app, Day 1 start, current-day marker, next-day continuation, chapter selection, and a numbered day picker with direct jump. Plan position saves only on the device. |
+| Daily podcast | Official episodes matched to all 365 days, with a player below each day's reading, episode-page links, and Apple/Spotify follow links. A compact local index streams audio only when requested. |
 | Email accounts | Firebase email/password sign-in, free registration, password reset, and persistent native sessions. |
 | Reading progress | Daily completion, recent reading history, and a streak calculated from saved dates. |
 | Private prayer journal | Save prayers and mark them answered in Firestore. |

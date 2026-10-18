@@ -40,6 +40,7 @@ day in the Bible tab. The reading-plan panel offers:
 - **Choose day**, with a numbered grid, 30-day pages, and a jump-to-day input.
 - **Return to current day** when browsing another day.
 - Chapter buttons, WEB/KJV selection, and retryable online reading.
+- A matching [official podcast player](PODCASTS.md) below the reading for every day.
 
 Browsing does not move the saved current day. Finishing Day 365 marks the plan complete;
 there is no Day 366. The separate Search passages tab still supports free-form references
