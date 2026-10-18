@@ -6,6 +6,7 @@ import { usePlan } from '../services/PlanProvider';
 import { fetchPassage, Passage, Translation } from '../services/bible';
 import { getPlanChapters, getReadingPlanDay } from '../services/readingPlan';
 import { theme as c } from '../theme';
+import { PodcastCard } from '../components/PodcastCard';
 
 export function PlanScreen() {
   const plan=usePlan(),day=getReadingPlanDay(plan.selectedDay)!;
@@ -53,6 +54,7 @@ export function PlanScreen() {
     </View>)}
     {reading?.passages&&chapterIndex<chapters.length-1&&<ActionButton title={`Next chapter: ${chapters[chapterIndex+1].reference} →`} onPress={()=>setChapterSelection({day:day.day,index:chapterIndex+1})} secondary/>}
     <Pressable accessibilityRole="link" onPress={()=>Linking.openURL('https://bible-api.com/')}><Text style={s.credit}>Public-domain Scripture via bible-api.com · Internet required</Text></Pressable>
+    <PodcastCard day={day.day}/>
     <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} onSelect={plan.selectDay} onClose={()=>setPicker(false)}/>
   </View>;
 }
