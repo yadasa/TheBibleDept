@@ -12,5 +12,5 @@ export default ({config}:ConfigContext):ExpoConfig => {
     plugins.push(['expo-build-properties',{ios:{useFrameworks:'static'}}],'@react-native-firebase/app','@react-native-firebase/auth');
     config.ios={...config.ios,googleServicesFile:iosFile};
   }
-  return {...config,name:'BibleDept',slug:'bibledept',plugins,extra:{...config.extra,nativePhoneAuth}};
+  return {...config,name:'BibleDept',slug:'bibledept',plugins,ios:{...config.ios,associatedDomains:['applinks:thebibledept.com','applinks:www.thebibledept.com']},extra:{...config.extra,nativePhoneAuth}};
 };

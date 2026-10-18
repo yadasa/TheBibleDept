@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { theme as c } from './src/theme';
 import { BibleScreen } from './src/screens/BibleScreen';
@@ -9,11 +9,27 @@ import { AuthProvider } from './src/services/AuthProvider';
 import { ReadingProvider } from './src/services/ReadingProvider';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { PrayerScreen } from './src/screens/PrayerScreen';
+import { parseAppLink } from './src/services/links';
+import type { Translation } from './src/services/bible';
 
 const tabs = ['Today', 'Bible', 'Prayer', 'Account'] as const;
 export default function App() {
   const [tab, setTab] = useState<(typeof tabs)[number]>('Today');
   const [reference,setReference]=useState('Luke 1');
+  const [translation,setTranslation]=useState<Translation>('web');
+  useEffect(()=>{
+    const open=(url:string|null)=>{
+      if(!url)return;
+      const route=parseAppLink(url,__DEV__);
+      if(!route)return;
+      if(route.tab==='Bible'){setReference(route.reference);setTranslation(route.translation);}
+      setTab(route.tab);
+    };
+    let active=true;
+    Linking.getInitialURL().then(url=>{if(active)open(url);}).catch(()=>{});
+    const subscription=Linking.addEventListener('url',event=>open(event.url));
+    return()=>{active=false;subscription.remove();};
+  },[]);
   return <SafeAreaProvider><AuthProvider><ReadingProvider><SafeAreaView style={s.safe}>
     <StatusBar style="light" />
     <View style={s.header}><Text style={s.wordmark}>THE BIBLE DEPT.</Text><Text style={s.badge}>FREE TO GROW</Text></View>
@@ -21,7 +37,7 @@ export default function App() {
       <Text style={s.eyebrow}>A LITTLE EVERY DAY.</Text>
       <Text style={s.heading}>{tab === 'Today' ? 'Make room\nfor the Word.' : tab}</Text>
       {tab === 'Today' ? <HomeScreen onRead={value=>{setReference(value||'Luke 1');setTab('Bible');}} onAccount={()=>setTab('Account')}/>
-        : tab === 'Bible' ? <BibleScreen initialReference={reference} onAccount={()=>setTab('Account')}/>
+        : tab === 'Bible' ? <BibleScreen initialReference={reference} initialTranslation={translation} onAccount={()=>setTab('Account')}/>
         : tab === 'Account' ? <AccountScreen/>
         : <PrayerScreen onAccount={()=>setTab('Account')}/>}
 

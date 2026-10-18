@@ -6,21 +6,27 @@ import { theme as c } from '../theme';
 import { useAuth } from '../services/AuthProvider';
 import { useReadings } from '../services/ReadingProvider';
 import { readingDay } from '../services/readingDays';
+import * as Clipboard from 'expo-clipboard';
+import { passageLink } from '../services/links';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as ExpoLinking from 'expo-linking';
 
-export function BibleScreen({ initialReference = 'Luke 1', onPassageLoaded, onAccount }: { initialReference?: string; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
+export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
   const {user}=useAuth();const {readings,complete}=useReadings();
   const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
   const [draft, setDraft] = useState(initialReference);
   const [reference, setReference] = useState(initialReference);
-  const [translation, setTranslation] = useState<Translation>('web');
+  const [translation, setTranslation] = useState<Translation>(initialTranslation);
+  const [linkMessage,setLinkMessage]=useState('');
   const [passage, setPassage] = useState<Passage | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
   useEffect(() => { setDraft(initialReference); setReference(initialReference); }, [initialReference]);
+  useEffect(() => { setTranslation(initialTranslation); }, [initialTranslation]);
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true); setError(''); setPassage(null);
+    setLoading(true); setError(''); setPassage(null); setLinkMessage('');
     fetchPassage(reference, translation, controller.signal).then(result => {
       if (controller.signal.aborted) return;
       setPassage(result); onPassageLoaded?.(result);
@@ -40,6 +46,13 @@ export function BibleScreen({ initialReference = 'Luke 1', onPassageLoaded, onAc
       {user?<ActionButton title="Mark today's reading complete" loading={saving} onPress={()=>{setSaving(true);setSaveError('');complete(passage).catch(()=>setSaveError('Could not save your progress. Check your connection and retry.')).finally(()=>setSaving(false));}}/>:<ActionButton title="Sign in to save progress" onPress={onAccount}/>}
       {readings.some(r=>r.day===readingDay()&&r.reference===passage.reference)&&<Notice text="Reading saved for today."/>}
       {!!saveError&&<Notice text={saveError} error/>}
+      <ActionButton title="Copy passage link" secondary onPress={()=>{
+        const url=Constants.executionEnvironment===ExecutionEnvironment.StoreClient
+          ?ExpoLinking.createURL('read',{queryParams:{ref:passage.reference,translation}})
+          :passageLink(passage.reference,translation);
+        Clipboard.setStringAsync(url).then(()=>setLinkMessage('Passage link copied.')).catch(()=>setLinkMessage('Could not copy the link. Please retry.'));
+      }}/>
+      {!!linkMessage&&<Notice text={linkMessage}/>}
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://bible-api.com/')}><Text style={s.credit}>Public-domain translation · Online via bible-api.com</Text></Pressable>
     </View>}
     <Notice text="Reading is free. An internet connection is required; offline downloads will come later." />
