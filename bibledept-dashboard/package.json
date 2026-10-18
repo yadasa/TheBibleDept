@@ -5,14 +5,14 @@
   "main": "functions/index.js",
   "scripts": {
     "prepare": "husky install",
-    "dev": "NEXT_PUBLIC_ENV=dev next dev",
-    "dev:staging": "NEXT_PUBLIC_ENV=staging next dev",
-    "dev:prod": "NEXT_PUBLIC_ENV=prod next dev",
-    "build": "next build",
-    "build:dev": "NEXT_PUBLIC_ENV=dev next build",
-    "build:staging": "NEXT_PUBLIC_ENV=staging next build",
-    "build:prod": "NEXT_PUBLIC_ENV=prod next build",
-    "start": "next start",
+    "dev": "node scripts/next.cjs dev dev",
+    "dev:staging": "node scripts/next.cjs dev staging",
+    "dev:prod": "node scripts/next.cjs dev prod",
+    "build": "node scripts/next.cjs build dev",
+    "build:dev": "node scripts/next.cjs build dev",
+    "build:staging": "node scripts/next.cjs build staging",
+    "build:prod": "node scripts/next.cjs build prod",
+    "start": "node scripts/next.cjs start",
     "lint": "next lint"
   },
   "dependencies": {
