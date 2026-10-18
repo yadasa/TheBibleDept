@@ -13,20 +13,47 @@ labels and passage objects in memory.
 Use `getReadingPlanDay(day)` from `src/services/readingPlan.ts` for a validated,
 read-only lookup, or `READING_PLAN_BY_DAY` / `READING_PLAN_DAYS` for the full map.
 Each day includes the printed label, source PDF page, chapter count, and an ordered
-array of passages with book IDs, chapter boundaries, and API-ready references.
+array of passages with book IDs, chapter boundaries, and normalized range references.
 
 ```ts
 const day = getReadingPlanDay(54);
 // day.label: "2 Peter 1-3 & Jude"
 // day.passages.map(p => p.reference): ["2 Peter 1-3", "Jude 1"]
+// getPlanChapters(54).map(p => p.reference):
+// ["2 Peter 1", "2 Peter 2", "2 Peter 3", "Jude 1"]
 ```
 
-Request combined readings as separate passages through the existing Bible client.
+Stream individual chapters using `getPlanChapters(day)` and the existing Bible client.
+The provider rejects multiple whole chapters in one request (HTTP 400), so the reader
+loads only the selected chapter instead of prefetching a whole day's passages.
 For example, use `fetchPassage("Jude 1", "web")`; its existing
 `single_chapter_book_matching=indifferent` option requests the whole chapter.
 The mapping is not tied to January 1 or any other calendar start date.
-This step adds the plan data and lookup; the Today screen is not yet connected to
-plan-day selection or plan completion.
+
+## Current day and navigation
+
+New readers start on Day 1. Today shows the current day's passages and opens that
+day in the Bible tab. The reading-plan panel offers:
+
+- A current-day marker and completed-day progress bar.
+- **Continue to day N**, which finishes the current plan day and saves the next spot.
+- **Choose day**, with a numbered grid, 30-day pages, and a jump-to-day input.
+- **Return to current day** when browsing another day.
+- Chapter buttons, WEB/KJV selection, and retryable online reading.
+
+Browsing does not move the saved current day. Finishing Day 365 marks the plan complete;
+there is no Day 366. The separate Search passages tab still supports free-form references
+and the existing Firebase reading-history action.
+
+`PlanProvider` persists only `[currentDay, finishedFlag]` with AsyncStorage, separately
+for the guest and each signed-in account on this device. Neither the mapping nor this
+plan position is stored in Firestore. Reopening resumes the saved day; reinstalling the
+app or clearing its local storage starts a fresh local plan. This is independent of the
+existing Firebase reading-history and prayer features.
+
+Validation includes complete chapter coverage, mixed-book days, invalid saved positions,
+reopening, isolated user state, failed local writes, and double-tap protection. Browser
+checks covered Day 1, continuing to/restoring Day 2, mixed-book Day 54, and browsing Day 365.
 
 ## Complete day-to-passage map
 

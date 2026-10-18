@@ -18,6 +18,12 @@ Examples:
 
 For a whole single-chapter book, append `&single_chapter_book_matching=indifferent`.
 
+The service accepts **one whole chapter per request**. A request such as `Luke 1-3`
+returns HTTP 400 (`too many chapters`). The reading-plan UI expands each day's range
+into chapter buttons and fetches only the selected chapter, for example `Luke 1`,
+then `Luke 2`. It does not bulk-prefetch the plan. This limit was checked live on
+2026-10-18.
+
 ## Response shape
 
 ```json
