@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['displayName', 'updatedAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 80;
+      match /readings/{reading} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid)
+          && request.resource.data.keys().hasOnly(['reference', 'translation', 'completedAt'])
+          && request.resource.data.reference is string
+          && request.resource.data.reference.size() <= 100
+          && request.resource.data.translation in ['web', 'kjv']
+          && request.resource.data.completedAt is timestamp;
+      }
+      match /prayers/{prayer} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid)
+          && request.resource.data.keys().hasOnly(['text', 'answered', 'createdAt'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 3000
+          && request.resource.data.answered is bool
+          && request.resource.data.createdAt is timestamp;
+      }
+    }
+  }
+}

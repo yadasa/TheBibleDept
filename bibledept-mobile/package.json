@@ -9,6 +9,7 @@
     "expo-linking": "~57.0.13",
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "~57.0.3",
+    "firebase": "^12.19.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/react": "~19.2.2",
+    "firebase-tools": "^15.34.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
@@ -27,7 +29,9 @@
     "ios": "expo start --lan",
     "web": "expo start --web --localhost",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "emulators": "firebase emulators:start --project demo-bibledept --only auth,firestore --export-on-exit=.firebase/data",
+    "test:firebase": "tsx --test tests/firebase.integration.ts"
   },
   "private": true
 }
