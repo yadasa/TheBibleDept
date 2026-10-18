@@ -56,6 +56,21 @@ Firebase journals use `/bibledeptUsers/{uid}` to stay separate from an existing 
 app's records. Local emulator checks cover owner access, cross-user denial, and field validation.
 The Firebase project configuration belongs in the ignored `.env.local` file.
 
+## Planned reading habit features
+
+The following implementation plans extend the current reading experience. **They are planning documents, not implemented or deployed features.**
+
+| Plan | Proposed behavior |
+| --- | --- |
+| [Daily reading streaks](docs/READING_STREAKS_PLAN.md) | One confirmed chapter per account-local day, shared completion across the plan and standalone reader, a weekly row, longest streak, milestones, and a server-owned Firestore daily ledger and summary. Includes timezone, retry, migration, security, and acceptance-test requirements. |
+| [Gentle reading push notifications](docs/READING_REMINDERS_PLAN.md) | Separate opt-ins for streak reminders and welcome-back invitations, preferred time, quiet hours, pause/off controls, one preferred device, account-wide frequency caps, completion checks before sending, and a bounded inactivity sequence. Includes Expo/Firebase architecture, delivery limits, and a signed-device pilot. |
+
+The active app already calculates a basic streak from saved reading dates. The planned
+streak system also connects plan chapter completion to the same cloud service while
+keeping plan position saved on the device. Push reminders depend on that daily ledger;
+notification registration, permissions, backend scheduling, and delivery are future work.
+Reading stays free and reminders remain optional.
+
 ## Retained source for future migration
 
 The older native app, dashboard, and functions remain available as migration references.
