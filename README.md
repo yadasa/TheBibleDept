@@ -56,7 +56,7 @@ Supporting integrations include Stream Chat, Branch deep links, Stripe payments,
 
 ## Current repository status
 
-The Firebase backend is included in `bibledept-functions/`. The dashboard and mobile application components are being added in subsequent stages.
+The Firebase backend (`bibledept-functions/`) and web dashboard (`bibledept-dashboard/`) are included. Mobile app components are being added in subsequent stages.
 
 The local app has been rebranded to **BibleDept**, with website and email references using **thebibledept.com**. Static checks have been completed for the rebrand. A full mobile build, connected-service verification, and device testing are still needed before describing the app as release-ready.
 
