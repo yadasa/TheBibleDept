@@ -1,0 +1,19 @@
+# Local dependencies, environment settings, and generated files
+node_modules/
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Private signing and service credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.mobileprovision
+*service-account*.json
+*serviceAccount*.json

@@ -56,7 +56,7 @@ Supporting integrations include Stream Chat, Branch deep links, Stripe payments,
 
 ## Current repository status
 
-This repository currently contains this README only. The existing app source remains in the local development workspace and has not been republished into this clean repository.
+Source code is being published in sequential stages: backend, web dashboard, mobile app source, Android, and iOS. Repository conventions and the original license are included.
 
 The local app has been rebranded to **BibleDept**, with website and email references using **thebibledept.com**. Static checks have been completed for the rebrand. A full mobile build, connected-service verification, and device testing are still needed before describing the app as release-ready.
 
