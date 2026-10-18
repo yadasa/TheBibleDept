@@ -20,3 +20,6 @@ TypeScript passes. Reviewed at 390 × 844 and 768 × 1024: one title, current-da
 
 ## Part 3 — plan reader and day navigation
 TypeScript and all 18 unit tests pass. Reviewed at 390 and 320 widths, including 28-unit Scripture, shared text-size settings after reload, chapter navigation returning to the top, day 365 browsing without advancement, and explicit completion advancing one day. Narrow grid review found a clipped Current label; changed it to Now beside the explicit current-day summary. Plan position remains local.
+
+## Part 4 — passage search
+Reviewed search with John 3:16 in WEB and KJV, a failed reference followed by correction, shared enlarged text, and Copy passage link confirmation. Fields remain editable after API errors. Improved the provider's generic 400 message so it doesn't assume every failed reference was a multi-chapter request.

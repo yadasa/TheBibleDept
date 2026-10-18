@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ActionButton, Field, Notice } from '../components/ui';
+import { ReaderControls } from '../components/ReaderControls';
+import { PassageView } from '../components/PassageView';
+import { useScreenScroll } from '../components/ScreenScrollView';
 import { fetchPassage, Passage, Translation } from '../services/bible';
-import { theme as c } from '../theme';
+import { theme as c, typography as t } from '../theme';
 import { useAuth } from '../services/AuthProvider';
 import { useReadings } from '../services/ReadingProvider';
 import { readingDay } from '../services/readingDays';
@@ -12,50 +15,49 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
 
 export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
-  const {user}=useAuth();const {readings,complete}=useReadings();
+  const {user}=useAuth(),{readings,complete}=useReadings(),scrollTop=useScreenScroll();
   const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
-  const [draft, setDraft] = useState(initialReference);
-  const [reference, setReference] = useState(initialReference);
-  const [translation, setTranslation] = useState<Translation>(initialTranslation);
-  const [linkMessage,setLinkMessage]=useState('');
-  const [passage, setPassage] = useState<Passage | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [retry, setRetry] = useState(0);
-  useEffect(() => { setDraft(initialReference); setReference(initialReference); }, [initialReference]);
-  useEffect(() => { setTranslation(initialTranslation); }, [initialTranslation]);
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true); setError(''); setPassage(null); setLinkMessage('');
-    fetchPassage(reference, translation, controller.signal).then(result => {
-      if (controller.signal.aborted) return;
-      setPassage(result); onPassageLoaded?.(result);
-    }).catch(e => { if (!controller.signal.aborted) setError(e.message || 'Unable to load this passage.'); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
-  }, [reference, translation, retry]);
-  function read() { if (draft.trim() === reference) setRetry(v => v + 1); else setReference(draft.trim()); }
+  const [draft,setDraft]=useState(initialReference),[reference,setReference]=useState(initialReference);
+  const [translation,setTranslation]=useState<Translation>(initialTranslation);
+  const [linkMessage,setLinkMessage]=useState(''),[passage,setPassage]=useState<Passage|null>(null);
+  const [error,setError]=useState(''),[loading,setLoading]=useState(true),[retry,setRetry]=useState(0);
+  useEffect(()=>{setDraft(initialReference);setReference(initialReference);},[initialReference]);
+  useEffect(()=>setTranslation(initialTranslation),[initialTranslation]);
+  useEffect(()=>{
+    const controller=new AbortController();
+    setLoading(true);setError('');setPassage(null);setLinkMessage('');setSaveError('');
+    fetchPassage(reference,translation,controller.signal).then(result=>{
+      if(controller.signal.aborted)return;
+      setPassage(result);onPassageLoaded?.(result);
+    }).catch(e=>{if(!controller.signal.aborted)setError(e.message||'Unable to load this passage.');}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    return()=>controller.abort();
+  },[reference,translation,retry]);
+  function read(){Keyboard.dismiss();scrollTop();if(draft.trim()===reference)setRetry(v=>v+1);else setReference(draft.trim());}
+  const saved=!!passage&&readings.some(r=>r.day===readingDay()&&r.reference===passage.reference);
   return <View>
-    <Field label="Passage" value={draft} onChangeText={setDraft} placeholder="Luke 1 or John 3:16" returnKeyType="search" onSubmitEditing={read} autoCorrect={false} />
-    <View style={s.options}>{(['web', 'kjv'] as const).map(t => <Pressable key={t} accessibilityRole="radio" accessibilityState={{ checked: t === translation }} onPress={() => setTranslation(t)} style={[s.option, t === translation && s.selected]}><Text style={[s.optionText, t === translation && s.selectedText]}>{t === 'web' ? 'World English Bible' : 'King James Version'}</Text></Pressable>)}</View>
-    <ActionButton title="Read passage" onPress={read} loading={loading} />
-    {loading && <View style={s.loading}><ActivityIndicator color={c.action} /><Notice text="Opening Scripture…" /></View>}
-    {!!error && <View><Notice text={error} error /><ActionButton title="Try again" onPress={() => setRetry(v => v + 1)} secondary /></View>}
-    {passage && <View style={s.paper}>
-      <Text style={s.reference}>{passage.reference}</Text><Text style={s.translation}>{passage.translation_name}</Text>
-      {passage.verses.map(v => <Text key={`${v.book_id}.${v.chapter}.${v.verse}`} style={s.verse}><Text style={s.number}>{v.verse}  </Text>{v.text.trim()}</Text>)}
-      {user?<ActionButton title="Mark today's reading complete" loading={saving} onPress={()=>{setSaving(true);setSaveError('');complete(passage).catch(()=>setSaveError('Could not save your progress. Check your connection and retry.')).finally(()=>setSaving(false));}}/>:<ActionButton title="Sign in to save progress" onPress={onAccount}/>}
-      {readings.some(r=>r.day===readingDay()&&r.reference===passage.reference)&&<Notice text="Reading saved for today."/>}
-      {!!saveError&&<Notice text={saveError} error/>}
-      <ActionButton title="Copy passage link" secondary onPress={()=>{
-        const url=Constants.executionEnvironment===ExecutionEnvironment.StoreClient
-          ?ExpoLinking.createURL('read',{queryParams:{ref:passage.reference,translation}})
-          :passageLink(passage.reference,translation);
-        Clipboard.setStringAsync(url).then(copied=>setLinkMessage(copied?'Passage link copied.':'Copying is unavailable in this browser.')).catch(()=>setLinkMessage('Could not copy the link. Please retry.'));
-      }}/>
-      {!!linkMessage&&<Notice text={linkMessage}/>}
-      <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://bible-api.com/')}><Text style={s.credit}>Public-domain translation · Online via bible-api.com</Text></Pressable>
+    <Text style={s.intro}>Open a chapter or a specific verse.</Text>
+    <Field label="Bible passage" value={draft} onChangeText={setDraft} placeholder="Luke 1 or John 3:16" returnKeyType="search" onSubmitEditing={read} autoCorrect={false}/>
+    <ActionButton title="Read passage" icon="search" onPress={read} loading={loading}/>
+    <ReaderControls translation={translation} onTranslation={setTranslation}/>
+    {loading&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text="Opening Scripture…"/></View>}
+    {!!error&&<View style={s.error}><Text style={s.errorTitle}>This passage couldn't load</Text><Notice text={error} error/><ActionButton title="Try again" icon="refresh" onPress={()=>setRetry(v=>v+1)} secondary/></View>}
+    {passage&&<View>
+      <PassageView passage={passage}/>
+      <View style={s.actions}>
+        {user?<ActionButton title={saved?'Reading saved for today':"Save to today's reading history"} icon="check" loading={saving} disabled={saved} onPress={()=>{setSaving(true);setSaveError('');complete(passage).catch(()=>setSaveError('Could not save your reading. Check your connection and retry.')).finally(()=>setSaving(false));}}/>:<ActionButton title="Sign in to save reading history" onPress={onAccount} secondary/>}
+        {saved&&<Notice text="This passage is saved to your account." success/>}
+        {!!saveError&&<Notice text={saveError} error/>}
+        <ActionButton title="Copy passage link" variant="ghost" onPress={()=>{
+          const url=Constants.executionEnvironment===ExecutionEnvironment.StoreClient
+            ?ExpoLinking.createURL('read',{queryParams:{ref:passage.reference,translation}})
+            :passageLink(passage.reference,translation);
+          Clipboard.setStringAsync(url).then(copied=>setLinkMessage(copied?'Passage link copied.':'Copying is unavailable in this browser.')).catch(()=>setLinkMessage('Could not copy the link. Please retry.'));
+        }}/>
+        {!!linkMessage&&<Notice text={linkMessage}/>}
+      </View>
+      <Pressable accessibilityRole="link" onPress={()=>Linking.openURL('https://bible-api.com/')} style={s.creditLink}><Text style={s.credit}>Public-domain Scripture via bible-api.com.</Text></Pressable>
     </View>}
-    <Notice text="Reading is free. An internet connection is required; offline downloads will come later." />
+    <Notice text="Connect to the internet to load a passage. Reading is always free."/>
   </View>;
 }
-const s = StyleSheet.create({ options: { flexDirection: 'row', gap: 8 }, option: { flex: 1, minHeight: 45, padding: 10, borderWidth: 1, borderColor: c.border, borderRadius: 4, justifyContent: 'center' }, selected: { backgroundColor: c.tint, borderColor: c.action }, optionText: { fontSize: 12, color: c.muted, textAlign: 'center', fontWeight: '600' }, selectedText: { color: c.action }, loading: { alignItems: 'center', paddingVertical: 35 }, paper: { backgroundColor: c.surface, padding: 22, marginTop: 26, borderWidth: 1, borderColor: c.border, borderRadius: 4 }, reference: { fontSize: 28, fontWeight: '800', letterSpacing: -1, color: c.ink }, translation: { fontSize: 11, fontWeight: '700', letterSpacing: 1, color: c.action, marginTop: 8, marginBottom: 25 }, verse: { fontSize: 18, lineHeight: 32, color: c.ink, marginBottom: 13 }, number: { fontSize: 12, fontWeight: '800', color: c.action }, credit: { fontSize: 11, lineHeight: 18, color: c.muted, marginTop: 20 } });
+const s=StyleSheet.create({intro:{...t.body,color:c.muted,marginBottom:20},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},actions:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},creditLink:{minHeight:44,justifyContent:'center',paddingVertical:12},credit:{...t.meta,color:c.muted,textDecorationLine:'underline'}});
