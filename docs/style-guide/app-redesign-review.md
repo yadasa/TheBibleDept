@@ -23,3 +23,6 @@ TypeScript and all 18 unit tests pass. Reviewed at 390 and 320 widths, including
 
 ## Part 4 — passage search
 Reviewed search with John 3:16 in WEB and KJV, a failed reference followed by correction, shared enlarged text, and Copy passage link confirmation. Fields remain editable after API errors. Improved the provider's generic 400 message so it doesn't assume every failed reference was a multi-chapter request.
+
+## Part 5 — daily teaching player
+Phone review confirms manual play, pause and 15-second skip still work. Selecting another day resets playback to the matching episode. The presentation uses the shared icons and readable metadata while preserving the existing seek-coordinate fallback, timeout, and audio lifecycle. No audio files are bundled or uploaded.
