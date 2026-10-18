@@ -5,6 +5,7 @@ import { ActionButton, Field, Notice } from '../components/ui';
 import { useAuth } from '../services/AuthProvider';
 import { getFirebase } from '../services/firebase';
 import { theme as c } from '../theme';
+import { USER_COLLECTION } from '../services/dataPaths';
 
 type Prayer = {id:string;text:string;answered:boolean};
 export function PrayerScreen({onAccount}:{onAccount:()=>void}) {
@@ -14,7 +15,7 @@ export function PrayerScreen({onAccount}:{onAccount:()=>void}) {
   useEffect(()=>{
     setOwner(user?.uid);setPrayers([]);setError('');
     if(!user)return;
-    return onSnapshot(query(collection(getFirebase().db,'users',user.uid,'prayers'),orderBy('createdAt','desc'),limit(100)),snapshot=>{
+    return onSnapshot(query(collection(getFirebase().db,USER_COLLECTION,user.uid,'prayers'),orderBy('createdAt','desc'),limit(100)),snapshot=>{
       setPrayers(snapshot.docs.map(d=>({id:d.id,text:String(d.data().text),answered:d.data().answered===true})));
     },()=>setError('Your prayers could not be loaded. Check your Firebase connection.'));
   },[user?.uid]);
@@ -22,13 +23,13 @@ export function PrayerScreen({onAccount}:{onAccount:()=>void}) {
     if(!user)return;
     const value=text.trim();if(!value){setError('Write a prayer first.');return;}
     setBusy(true);setError('');
-    try{await addDoc(collection(getFirebase().db,'users',user.uid,'prayers'),{text:value,answered:false,createdAt:serverTimestamp()});setText('');}
+    try{await addDoc(collection(getFirebase().db,USER_COLLECTION,user.uid,'prayers'),{text:value,answered:false,createdAt:serverTimestamp()});setText('');}
     catch{setError('Your prayer could not be saved. Check your connection and retry.');}finally{setBusy(false);}
   }
   async function toggle(prayer:Prayer){
     if(!user)return;
     setBusy(true);setError('');
-    try{await updateDoc(doc(getFirebase().db,'users',user.uid,'prayers',prayer.id),{answered:!prayer.answered});}
+    try{await updateDoc(doc(getFirebase().db,USER_COLLECTION,user.uid,'prayers',prayer.id),{answered:!prayer.answered});}
     catch{setError('The prayer could not be updated. Please retry.');}finally{setBusy(false);}
   }
   if(!user)return <View style={s.card}><Text style={s.title}>Make space for prayer.</Text><Notice text="Keep a private journal of what you are praying about and return to it as you grow."/><ActionButton title="Sign in to save prayers" onPress={onAccount}/></View>;

@@ -11,16 +11,16 @@ test('local Firebase email auth and private reading rules work together', async 
   connectFirestoreEmulator(db,'127.0.0.1',8080);
   try {
     const {user} = await createUserWithEmailAndPassword(auth,`reader-${Date.now()}@bibledept.test`,'Local-test-2468!');
-    const reading = doc(db,'users',user.uid,'readings','today');
+    const reading = doc(db,'bibledeptUsers',user.uid,'readings','today');
     await setDoc(reading,{reference:'Luke 1',translation:'web',completedAt:serverTimestamp()});
     assert.equal((await getDoc(reading)).data()?.reference,'Luke 1');
-    await assert.rejects(getDoc(doc(db,'users','somebody-else','readings','today')),e=>(e as {code:string}).code==='permission-denied');
+    await assert.rejects(getDoc(doc(db,'bibledeptUsers','somebody-else','readings','today')),e=>(e as {code:string}).code==='permission-denied');
     await assert.rejects(setDoc(reading,{reference:'Luke 1',translation:'web',completedAt:serverTimestamp(),role:'admin'}),e=>(e as {code:string}).code==='permission-denied');
-    const prayer = doc(db,'users',user.uid,'prayers','test');
+    const prayer = doc(db,'bibledeptUsers',user.uid,'prayers','test');
     await setDoc(prayer,{text:'A disposable local test prayer.',answered:false,createdAt:serverTimestamp()});
     await updateDoc(prayer,{answered:true});
     assert.equal((await getDoc(prayer)).data()?.answered,true);
-    await assert.rejects(getDoc(doc(db,'users','somebody-else','prayers','test')),e=>(e as {code:string}).code==='permission-denied');
+    await assert.rejects(getDoc(doc(db,'bibledeptUsers','somebody-else','prayers','test')),e=>(e as {code:string}).code==='permission-denied');
     await deleteDoc(prayer);
     await deleteDoc(reading);
     await deleteUser(user);
