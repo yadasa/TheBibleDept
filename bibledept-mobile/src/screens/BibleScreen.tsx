@@ -3,8 +3,13 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'r
 import { ActionButton, Field, Notice } from '../components/ui';
 import { fetchPassage, Passage, Translation } from '../services/bible';
 import { theme as c } from '../theme';
+import { useAuth } from '../services/AuthProvider';
+import { useReadings } from '../services/ReadingProvider';
+import { readingDay } from '../services/readingDays';
 
-export function BibleScreen({ initialReference = 'Luke 1', onPassageLoaded }: { initialReference?: string; onPassageLoaded?: (passage: Passage) => void }) {
+export function BibleScreen({ initialReference = 'Luke 1', onPassageLoaded, onAccount }: { initialReference?: string; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
+  const {user}=useAuth();const {readings,complete}=useReadings();
+  const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
   const [draft, setDraft] = useState(initialReference);
   const [reference, setReference] = useState(initialReference);
   const [translation, setTranslation] = useState<Translation>('web');
@@ -32,6 +37,9 @@ export function BibleScreen({ initialReference = 'Luke 1', onPassageLoaded }: { 
     {passage && <View style={s.paper}>
       <Text style={s.reference}>{passage.reference}</Text><Text style={s.translation}>{passage.translation_name}</Text>
       {passage.verses.map(v => <Text key={`${v.book_id}.${v.chapter}.${v.verse}`} style={s.verse}><Text style={s.number}>{v.verse}  </Text>{v.text.trim()}</Text>)}
+      {user?<ActionButton title="Mark today's reading complete" loading={saving} onPress={()=>{setSaving(true);setSaveError('');complete(passage).catch(()=>setSaveError('Could not save your progress. Check your connection and retry.')).finally(()=>setSaving(false));}}/>:<ActionButton title="Sign in to save progress" onPress={onAccount}/>}
+      {readings.some(r=>r.day===readingDay()&&r.reference===passage.reference)&&<Notice text="Reading saved for today."/>}
+      {!!saveError&&<Notice text={saveError} error/>}
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://bible-api.com/')}><Text style={s.credit}>Public-domain translation · Online via bible-api.com</Text></Pressable>
     </View>}
     <Notice text="Reading is free. An internet connection is required; offline downloads will come later." />
