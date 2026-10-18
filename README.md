@@ -56,7 +56,7 @@ Supporting integrations include Stream Chat, Branch deep links, Stripe payments,
 
 ## Current repository status
 
-The backend, dashboard, and React Native source and assets are included. Android and iOS native projects are being added in subsequent stages.
+The backend, dashboard, React Native source, and Android project are included. The iOS project is being added next.
 
 The local app has been rebranded to **BibleDept**, with website and email references using **thebibledept.com**. Static checks have been completed for the rebrand. A full mobile build, connected-service verification, and device testing are still needed before describing the app as release-ready.
 
