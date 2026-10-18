@@ -1,0 +1,69 @@
+/* Documentation/prototype reference only. No remote fonts or runtime imports.
+   Source roles and adaptation status: tokens.json and 03-visual-foundations.md. */
+:root {
+  --brand-accent: #f05a00;
+  --ink: #0a0a09;
+  --paper: #fff5f5;
+  --surface: #fff;
+  --action: #b74300; /* Existing app adaptation for white labels. */
+  --muted: #74675f;
+  --border: #e9dbd3; /* Decorative; not a sufficient input boundary alone. */
+  --control-border: #74675f;
+  --tint: #ffe7d9;
+  --font-body: "neue-haas-grotesk-display", Arial, sans-serif;
+  --font-display: var(--font-body);
+  --font-editorial: Georgia, serif;
+  --heading-weight: 700;
+  --body-weight: 400;
+  --radius-control: 4px;
+  --container-max: 80rem;
+  --gutter: 5%;
+  --section-space: 7rem;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+[data-brand="arma"] {
+  --brand-accent: #fc4615;
+  --ink: #151515;
+  --paper: #e6e7da;
+  --action: #151515; /* Recommended readable ARMA action, not source red. */
+  --font-display: "headline-gothic-atf", "Arial Narrow", Impact, sans-serif;
+  --font-editorial: "big-caslon-fb", Georgia, serif;
+  --heading-weight: 400;
+  --body-weight: 500;
+  --radius-control: 10px;
+}
+.sg-container { width: 100%; max-width: var(--container-max); margin-inline: auto; }
+.sg-gutter { padding-inline: var(--gutter); }
+.sg-section { padding-block: var(--section-space); }
+.sg-heading { font-family: var(--font-display); font-weight: var(--heading-weight); line-height: 1.1; }
+.sg-editorial-accent { font-family: var(--font-editorial); font-style: italic; font-weight: 400; }
+.sg-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 50px; padding: 12px 24px; border: 1px solid var(--action);
+  border-radius: var(--radius-control); background: var(--action); color: #fff;
+  font: 600 1rem/1.5 var(--font-body); text-decoration: none; cursor: pointer;
+}
+.sg-button:hover { filter: brightness(.9); }
+.sg-button:active { transform: translateY(1px); }
+.sg-button.is-secondary { background: var(--surface); color: var(--ink); border-color: var(--control-border); }
+.sg-button.is-paper { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.sg-button:disabled { cursor: default; filter: none; transform: none; opacity: .5; }
+.sg-button:focus-visible, .sg-link:focus-visible, .sg-field:focus-visible {
+  outline: 3px solid var(--ink); outline-offset: 3px; box-shadow: 0 0 0 6px #fff;
+}
+.sg-link { color: var(--action); text-decoration: underline; text-underline-offset: .2em; }
+.sg-field { border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 14px; min-height: 50px; }
+.sg-reading { max-width: 65ch; font: 400 1.1875rem/1.65 var(--font-body); color: var(--ink); }
+@media (max-width: 991px) { :root { --section-space: 6rem; } }
+@media (max-width: 767px) { :root { --section-space: 4rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .sg-button { transition: none; }
+  .sg-button:active { transform: none; }
+}

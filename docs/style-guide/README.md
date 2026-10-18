@@ -10,8 +10,10 @@ This guide covers brand judgment, measured visual foundations, page structure, c
 | --- | --- |
 | [Source audit](01-source-audit.md) | Trace findings to public pages, CSS selectors, and browser observations. |
 | [Taste and brand direction](02-taste-and-brand.md) | Make decisions that feel related without mixing the two identities. |
+| [Visual foundations](03-visual-foundations.md) | Apply color, type, spacing, contrast, shape, and responsive rules. |
+| [Tokens](tokens.json) and [reference CSS](reference.css) | Start a prototype with separately labeled source and app values. |
 
-Additional parts are added in separate completed commits: visual foundations and tokens; patterns, imagery, voice, and implementation; then review and revisions.
+Patterns, imagery, voice, implementation, and the final review are added in subsequent completed commits.
 
 ## Evidence language
 
