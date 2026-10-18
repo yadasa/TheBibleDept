@@ -4,6 +4,7 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 export default ({config}:ConfigContext):ExpoConfig => {
   const nativePhoneAuth=process.env.BIBLEDEPT_NATIVE_PHONE==='1';
   const plugins=[...(config.plugins||[])];
+  plugins.push('expo-asset',['expo-audio',{microphonePermission:false,recordAudioAndroid:false,enableBackgroundRecording:false,enableBackgroundPlayback:false}]);
   if(nativePhoneAuth){
     const iosFile=process.env.BIBLEDEPT_FIREBASE_IOS_CONFIG;
     if(!iosFile||!existsSync(iosFile))throw new Error('Set BIBLEDEPT_FIREBASE_IOS_CONFIG to the local GoogleService-Info.plist file before enabling native phone authentication.');
