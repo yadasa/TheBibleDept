@@ -58,7 +58,7 @@ const LineChart: React.FC<Props> = (props) => {
           <Line
             type="linear"
             dataKey="Members"
-            stroke="#696FFF"
+            stroke="rgb(var(--color-primary))"
             strokeWidth={5}
             dot={false}
           />

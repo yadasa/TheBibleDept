@@ -8,6 +8,7 @@ module.exports = {
   ],
   theme: {
     colors: {
+      brand: 'rgb(var(--color-brand) / <alpha-value>)',
       neutral: {
         10: 'rgb(var(--color-neutral-10) / <alpha-value>)',
         40: 'rgb(var(--color-neutral-40) / <alpha-value>)',

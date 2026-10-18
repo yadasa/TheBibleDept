@@ -18,7 +18,7 @@ interface IProps {
 const ProgressBar: React.FC<IProps> = ({
   style = {},
   value = 0,
-  color = '#7199fe',
+  color = '#B74300',
   backgroundColor = '',
   width,
   shining,

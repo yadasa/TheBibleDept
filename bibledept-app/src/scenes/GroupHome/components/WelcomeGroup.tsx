@@ -53,7 +53,7 @@ const WelcomeGroup: React.FC = () => {
           {I18n.t('text.How it works')}
         </H3>
         <WelcomeItem
-          iconColor={'#7199FE'}
+          iconColor={'#B74300'}
           icon={'📖'}
           title={I18n.t('We stay connected and growing by')}
           desc={I18n.t('text.doing the daily journey together')}

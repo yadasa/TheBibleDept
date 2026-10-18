@@ -158,7 +158,7 @@ const s = StyleSheet.create({
   },
   activedIcon: {
     position: 'absolute',
-    backgroundColor: '#7199FE',
+    backgroundColor: '#B74300',
   },
   avatars: {
     display: 'flex',

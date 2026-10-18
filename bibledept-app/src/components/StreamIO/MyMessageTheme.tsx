@@ -8,14 +8,14 @@ function MyMessageTheme(): DeepPartial<Theme> {
     messageSimple: {
       card: {
         authorName: { color: color.white, marginRight: 5, textAlign: 'left' },
-        authorNameContainer: { backgroundColor: color.blue },
+        authorNameContainer: { backgroundColor: color.primary },
         footer: {
           title: { marginHorizontal: 0, color: color.white },
           description: { marginHorizontal: 0, color: `${color.white}AA`, lineHeight: 18 },
         },
       },
       content: {
-        containerInner: { backgroundColor: color.blue },
+        containerInner: { backgroundColor: color.primary },
         markdown: { text: { color: color.white } },
         errorContainer: {
           paddingRight: 0,
@@ -31,14 +31,14 @@ export function withMyMessageTheme(color: any): DeepPartial<Theme> {
     messageSimple: {
       card: {
         authorName: { color: color.white, marginRight: 5, textAlign: 'left' },
-        authorNameContainer: { backgroundColor: color.blue },
+        authorNameContainer: { backgroundColor: color.primary },
         footer: {
           title: { marginHorizontal: 0, color: color.white },
           description: { marginHorizontal: 0, color: `${color.white}AA`, lineHeight: 18 },
         },
       },
       content: {
-        containerInner: { backgroundColor: color.blue },
+        containerInner: { backgroundColor: color.primary },
         markdown: { text: { color: color.white } },
         errorContainer: {
           paddingRight: 0,

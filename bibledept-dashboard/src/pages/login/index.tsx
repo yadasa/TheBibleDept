@@ -51,7 +51,7 @@ const LoginPage: NextPageWithLayout = () => {
 LoginPage.getLayout = (page) => {
   return (
     <Layout>
-      <Layout.Content className="flex h-screen w-screen items-center justify-center bg-primary">
+      <Layout.Content className="flex h-screen w-screen items-center justify-center bg-brand">
         {page}
       </Layout.Content>
     </Layout>

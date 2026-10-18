@@ -194,7 +194,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   todayTask: {
-    borderColor: '#7199FE',
+    borderColor: '#B74300',
     borderWidth: 2,
   },
   collapseItem: {

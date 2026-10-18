@@ -375,37 +375,39 @@ div.ant-typography-h5 > textarea,
 
 @layer base {
   :root {
-    --color-primary: 105 111 255;
+    --color-brand: 240 90 0;
+    --color-primary: 183 67 0;
     --color-danger: 235 87 87;
     --color-warning: 255 161 78;
     --color-success: 242 201 76;
     --color-info: 111 207 151;
 
     --color-neutral-10: 255 255 255;
-    --color-neutral-40: 250 250 250;
-    --color-neutral-50: 237 238 243;
-    --color-neutral-60: 223 225 233;
+    --color-neutral-40: 255 245 245;
+    --color-neutral-50: 242 232 228;
+    --color-neutral-60: 226 212 204;
     --color-neutral-70: 178 179 185;
     --color-neutral-80: 130 130 130;
     --color-neutral-90: 79 79 79;
-    --color-neutral-100: 51 51 51;
+    --color-neutral-100: 10 10 9;
   }
   .dark {
-    /*TODO: define dark mode color here*/
-    --color-primary: 105 111 255;
+    /* Neutral surfaces retain the dashboard light theme. */
+    --color-brand: 240 90 0;
+    --color-primary: 183 67 0;
     --color-danger: 235 87 87;
     --color-warning: 255 161 78;
     --color-success: 242 201 76;
     --color-info: 111 207 151;
 
     --color-neutral-10: 255 255 255;
-    --color-neutral-40: 250 250 250;
-    --color-neutral-50: 237 238 243;
-    --color-neutral-60: 223 225 233;
+    --color-neutral-40: 255 245 245;
+    --color-neutral-50: 242 232 228;
+    --color-neutral-60: 226 212 204;
     --color-neutral-70: 178 179 185;
     --color-neutral-80: 130 130 130;
     --color-neutral-90: 79 79 79;
-    --color-neutral-100: 51 51 51;
+    --color-neutral-100: 10 10 9;
   }
 }
 
@@ -413,6 +415,8 @@ html,
 body {
   padding: 0;
   margin: 0;
+  background-color: #fff5f5;
+  color: #0a0a09;
   font-family: Poppins, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
     Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
 }
