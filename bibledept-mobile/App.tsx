@@ -17,12 +17,14 @@ export default function App() {
   const [tab, setTab] = useState<(typeof tabs)[number]>('Today');
   const [reference,setReference]=useState('Luke 1');
   const [translation,setTranslation]=useState<Translation>('web');
+  const [linkRevision,setLinkRevision]=useState(0);
   useEffect(()=>{
     const open=(url:string|null)=>{
       if(!url)return;
       const route=parseAppLink(url,__DEV__);
       if(!route)return;
       if(route.tab==='Bible'){setReference(route.reference);setTranslation(route.translation);}
+      setLinkRevision(value=>value+1);
       setTab(route.tab);
     };
     let active=true;
@@ -33,7 +35,7 @@ export default function App() {
   return <SafeAreaProvider><AuthProvider><ReadingProvider><SafeAreaView style={s.safe}>
     <StatusBar style="light" />
     <View style={s.header}><Text style={s.wordmark}>THE BIBLE DEPT.</Text><Text style={s.badge}>FREE TO GROW</Text></View>
-    <ScrollView contentContainerStyle={s.content}>
+    <ScrollView key={`${tab}:${linkRevision}`} contentContainerStyle={s.content}>
       <Text style={s.eyebrow}>A LITTLE EVERY DAY.</Text>
       <Text style={s.heading}>{tab === 'Today' ? 'Make room\nfor the Word.' : tab}</Text>
       {tab === 'Today' ? <HomeScreen onRead={value=>{setReference(value||'Luke 1');setTab('Bible');}} onAccount={()=>setTab('Account')}/>

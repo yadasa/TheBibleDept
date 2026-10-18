@@ -50,7 +50,7 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
         const url=Constants.executionEnvironment===ExecutionEnvironment.StoreClient
           ?ExpoLinking.createURL('read',{queryParams:{ref:passage.reference,translation}})
           :passageLink(passage.reference,translation);
-        Clipboard.setStringAsync(url).then(()=>setLinkMessage('Passage link copied.')).catch(()=>setLinkMessage('Could not copy the link. Please retry.'));
+        Clipboard.setStringAsync(url).then(copied=>setLinkMessage(copied?'Passage link copied.':'Copying is unavailable in this browser.')).catch(()=>setLinkMessage('Could not copy the link. Please retry.'));
       }}/>
       {!!linkMessage&&<Notice text={linkMessage}/>}
       <Pressable accessibilityRole="link" onPress={() => Linking.openURL('https://bible-api.com/')}><Text style={s.credit}>Public-domain translation · Online via bible-api.com</Text></Pressable>
