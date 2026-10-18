@@ -29,3 +29,6 @@ Phone review confirms manual play, pause and 15-second skip still work. Selectin
 
 ## Part 6 — prayer journal
 Reviewed the guest, empty, composer and answered states at phone width. A disposable account on the local Firebase emulator verified save feedback, empty-draft validation, and marking an entry answered. Drafts survive tab navigation in the retention part. Validation clears when writing resumes. No live prayer or account data was written.
+
+## Part 7 — account and phone
+Reviewed signed-out, signed-in, validation and phone screens. Local emulator UI verified email sign-in/sign-out and fictional phone verification without sending SMS. Switching to a different test UID shows an empty journal without the other account's prayers or draft. Unsupported preview SMS is explained and disabled, with email as the usable action. The configured native phone build keeps its verification path. Both Firebase integration tests pass.
