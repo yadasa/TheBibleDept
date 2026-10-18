@@ -57,3 +57,10 @@ export function getReadingPlanDay(day: number): ReadingPlanDay | undefined {
     ? READING_PLAN_BY_DAY[day]
     : undefined;
 }
+
+/** The free API accepts one whole chapter per request. No network calls here. */
+export function getPlanChapters(day:number):ReadonlyArray<{book:string;chapter:number;reference:string}> {
+  return getReadingPlanDay(day)?.passages.flatMap(p=>Array.from(
+    {length:p.chapterEnd-p.chapterStart+1},(_,index)=>({book:p.book,chapter:p.chapterStart+index,reference:`${p.book} ${p.chapterStart+index}`}),
+  ))||[];
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getReadingPlanDay, READING_PLAN, READING_PLAN_BOOKS, READING_PLAN_DAYS } from '../src/services/readingPlan';
+import { getPlanChapters, getReadingPlanDay, READING_PLAN, READING_PLAN_BOOKS, READING_PLAN_DAYS } from '../src/services/readingPlan';
 
 test('the source plan maps every day and every Bible chapter exactly once', () => {
   assert.equal(READING_PLAN_DAYS.length, 365);
@@ -54,4 +54,12 @@ test('the lookup rejects invalid day numbers and protects shared data from mutat
   assert.ok(Object.isFrozen(first));
   assert.ok(Object.isFrozen(first.passages));
   assert.ok(Object.isFrozen(first.passages[0]));
+});
+
+test('each day expands into individually streamable chapters, including mixed books',()=>{
+  assert.deepEqual(getPlanChapters(1).map(p=>p.reference),['Luke 1','Luke 2','Luke 3']);
+  assert.deepEqual(getPlanChapters(54).map(p=>p.reference),['2 Peter 1','2 Peter 2','2 Peter 3','Jude 1']);
+  assert.deepEqual(getPlanChapters(75).map(p=>p.reference),['2 John 1','3 John 1']);
+  assert.deepEqual(getPlanChapters(365).map(p=>p.reference),['2 Chronicles 34','2 Chronicles 35','2 Chronicles 36']);
+  assert.deepEqual(getPlanChapters(366),[]);
 });

@@ -36,6 +36,7 @@ export function createBibleClient({ fetcher = fetch, interval = 2100, now = Date
       const url = `https://bible-api.com/${encodeURIComponent(reference)}?translation=${translation}&single_chapter_book_matching=indifferent`;
       const response = await fetcher(url, { signal: controller.signal });
       if (response.status === 429) throw new Error('The Bible service is busy. Wait 30 seconds, then try again.');
+      if (response.status === 400) throw new Error('Choose one chapter or a verse range. The Bible service cannot open several whole chapters in one request.');
       if (!response.ok) throw new Error(response.status === 404 ? 'That passage was not found. Try a reference such as Luke 1.' : 'The Bible service is unavailable. Please try again.');
       const data = await response.json();
       if (typeof data.reference !== 'string' || !Array.isArray(data.verses) || !data.verses.length || data.verses.some((v: Verse) => typeof v.text !== 'string' || !Number.isInteger(v.chapter) || !Number.isInteger(v.verse))) {
