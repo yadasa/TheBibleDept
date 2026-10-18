@@ -26,7 +26,7 @@ These are the public website's offerings. The app's existing software capabiliti
 
 ## What the app already has
 
-The existing local codebase contains mobile screens, a web dashboard, and backend workflows for the following capabilities:
+The codebase contains mobile screens, a web dashboard, and backend workflows for the following capabilities:
 
 | Area | Existing capabilities |
 | --- | --- |
@@ -44,7 +44,7 @@ This inventory describes functionality present in the source. Availability in a 
 
 ## Application structure
 
-The existing software is organized into three components:
+The software is organized into three components:
 
 | Component | Role | Technology |
 | --- | --- | --- |
@@ -56,9 +56,9 @@ Supporting integrations include Stream Chat, Branch deep links, Stripe payments,
 
 ## Current repository status
 
-The backend, dashboard, React Native source, and Android project are included. The iOS project is being added next.
+The complete existing app source is included: [mobile app](bibledept-app/README.md), [web dashboard](bibledept-dashboard/README.md), and [Firebase backend](bibledept-functions/README.md). The mobile app includes both Android and iOS native projects.
 
-The local app has been rebranded to **BibleDept**, with website and email references using **thebibledept.com**. Static checks have been completed for the rebrand. A full mobile build, connected-service verification, and device testing are still needed before describing the app as release-ready.
+The app has been rebranded to **BibleDept**, with website and email references using **thebibledept.com**. Static checks have been completed for the rebrand. A full mobile build, connected-service verification, and device testing are still needed before describing the app as release-ready.
 
 ## Learn more
 
@@ -67,4 +67,8 @@ The local app has been rebranded to **BibleDept**, with website and email refere
 - [Download the reading plan](https://www.thebibledept.com/plan)
 - [Listen and watch](https://www.thebibledept.com/listen)
 
-The purpose and public offerings above are based on these website pages. The software feature inventory is based on the existing local app source.
+The purpose and public offerings above are based on these website pages. The software feature inventory is based on the app source in this repository.
+
+## License
+
+See the [MIT license](LICENSE.md). Original copyright attribution is preserved.
