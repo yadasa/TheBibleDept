@@ -31,7 +31,10 @@ import { Passage } from "./bible";
 import { callBackend, getFirebase } from "./firebase";
 import { USER_COLLECTION } from "./dataPaths";
 import { messageForUser, UserFacingError } from "./userMessage";
+import { withRequestDeadline } from "./requestDeadline";
 
+const setupTimeout="We couldn’t confirm your reading time zone yet. Check your connection and try again.";
+const setupFailure="We couldn’t confirm your reading time zone. Please try again.";
 type Habit = {
   zone: string | null;
   ready: boolean;
@@ -83,6 +86,7 @@ function HabitSession({
     mounted = useRef(true),
     [queueReady, setQueueReady] = useState(false),
     [now, setNow] = useState(Date.now());
+  const confirmedZone=useRef<string|null>(null);
   const key = `bibledept.pendingReading.${owner}`;
   useEffect(() => {
     mounted.current = true;
@@ -127,8 +131,12 @@ function HabitSession({
       onSnapshot(
         doc(db, ...base, "settings", "readingHabit"),
         (snapshot) => {
+          const confirmed=snapshot.data()?.migrationComplete===true;
+          confirmedZone.current=confirmed?snapshot.data()?.timeZone||null:null;
           setZone(snapshot.data()?.timeZone || null);
-          setReady(snapshot.data()?.migrationComplete === true);
+          setReady(confirmed);
+          // A migration can finish after a client timeout; its saved result wins.
+          if(confirmed)setError(value=>value===setupTimeout||value===setupFailure?'':value);
           setLoading(false);
         },
         failed,
@@ -161,7 +169,7 @@ function HabitSession({
       subscription.remove();
     };
   }, []);
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>,fallback="We couldn’t save your reading. Please try again.") {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
@@ -171,7 +179,7 @@ function HabitSession({
     } catch (e) {
       if (mounted.current)
         setError(
-          messageForUser(e,"We couldn’t save your reading. Please try again."),
+          messageForUser(e,fallback),
         );
       throw e;
     } finally {
@@ -191,8 +199,15 @@ function HabitSession({
   }
   async function configure(value: string) {
     await run(async () => {
-      await callBackend("configureReadingHabit", { timeZone: value }, owner);
-    });
+      // Include credential preparation; the SDK's own timeout starts after it.
+      // The server's resumable migration can continue after this UI deadline.
+      try {
+        await withRequestDeadline(
+          ()=>callBackend("configureReadingHabit", { timeZone: value }, owner),
+          20000,setupTimeout,
+        );
+      }catch(error){if(confirmedZone.current!==value)throw error;}
+    },setupFailure);
   }
   async function complete(
     passage: Passage,
