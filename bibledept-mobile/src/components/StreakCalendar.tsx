@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { cancelAnimation, Easing, interpolateColor, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, interpolateColor, SharedValue, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { shiftDate } from '../../shared/habits';
 import { Colors, useTheme, useThemedStyles, typography as t } from '../theme';
 import { luminousPalettes } from '../themeColors';
-import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingRunColor } from '../services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingSquarePhase } from '../services/readingCalendar';
 import { useReducedMotion } from './LiquidBottomNav';
 import { useScreenScrollControls } from './ScreenScrollView';
 
@@ -68,29 +68,30 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
 
 type HaloPosition={date:string;column:number;row:number};
 function StreakHaloGroup({run,positions,cellSize,orange,shadow,animate}:{run:number;positions:HaloPosition[];cellSize:number;orange:string;shadow:string;animate:boolean}) {
-  const {cycleMs,minOpacity,maxOpacity}=readingGlowProfile(run),pulse=useSharedValue(minOpacity);
-  const {rest,peak}=readingFillColors(orange,run),settledColor=readingRunColor(orange,run);
+  const {cycleMs}=readingGlowProfile(run),clock=useSharedValue(0);
   useEffect(()=>{
-    cancelAnimation(pulse);
-    pulse.value=animate?minOpacity:(minOpacity+maxOpacity)/2;
-    if(animate)pulse.value=withRepeat(withTiming(maxOpacity,{duration:cycleMs/2,easing:Easing.inOut(Easing.sin)}),-1,true);
-    return()=>cancelAnimation(pulse);
-  },[animate,cycleMs,minOpacity,maxOpacity,pulse]);
-  const glowStyle=useAnimatedStyle(()=>({opacity:pulse.value}));
-  // Animate opaque RGB colors directly. No fading surface or black dimming layer.
-  // Reanimated 4 shares this color style across matching squares on the UI thread.
-  const fillStyle=useAnimatedStyle(()=>({opacity:1,backgroundColor:animate?interpolateColor(Math.max(0,Math.min(1,(pulse.value-minOpacity)/(maxOpacity-minOpacity))),[0,1],[rest,peak]):settledColor}));
+    cancelAnimation(clock);clock.value=0;
+    if(animate)clock.value=withRepeat(withTiming(1,{duration:cycleMs,easing:Easing.linear}),-1,false);
+    return()=>cancelAnimation(clock);
+  },[animate,cycleMs,clock]);
+  return <View testID={`reading-streak-fill-${run}`} style={StyleSheet.absoluteFill}>
+    {positions.map(position=><StreakSquareLight key={position.date} {...position} run={run} cellSize={cellSize} orange={orange} shadow={shadow} animate={animate} clock={clock}/>)}
+  </View>;
+}
+
+/** Each square samples a different phase of its intensity group's shared clock. */
+function StreakSquareLight({date,column,row,run,cellSize,orange,shadow,animate,clock}:HaloPosition&{run:number;cellSize:number;orange:string;shadow:string;animate:boolean;clock:SharedValue<number>}) {
+  const offset=readingSquarePhase(date),{minOpacity,maxOpacity}=readingGlowProfile(run);
+  const {rest,peak}=readingFillColors(orange,run),settledColor=readingRunColor(orange,run);
+  const glowStyle=useAnimatedStyle(()=>({opacity:animate?minOpacity+(maxOpacity-minOpacity)*readingPulseLevel(clock.value,offset):(minOpacity+maxOpacity)/2}));
+  const fillStyle=useAnimatedStyle(()=>({opacity:1,backgroundColor:animate?interpolateColor(readingPulseLevel(clock.value,offset),[0,1],[rest,peak]):settledColor}));
   return <View style={StyleSheet.absoluteFill}>
-    <Animated.View testID={`reading-streak-glow-${run}`} style={[StyleSheet.absoluteFill,glowStyle]}>
-    {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden'}}>
+    <Animated.View testID={`reading-streak-glow-${date}`} style={[{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden'},glowStyle]}>
       {/* Visible soft bloom, leaving a 1 px dark separation in the 8 px gap. */}
       <View style={{position:'absolute',left:GLOW_REACH,top:GLOW_REACH,width:cellSize,height:cellSize,borderRadius:3,
         backgroundColor:'rgba(255,188,66,0.01)',boxShadow:shadow}}/>
-    </View>)}
     </Animated.View>
-    <View testID={`reading-streak-fill-${run}`} style={StyleSheet.absoluteFill}>
-      {positions.map(({date,column,row})=><Animated.View key={date} testID={`reading-streak-color-${date}`} style={[{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,width:cellSize,height:cellSize,borderRadius:3,opacity:1},fillStyle]}/>)}
-    </View>
+    <Animated.View testID={`reading-streak-color-${date}`} style={[{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,width:cellSize,height:cellSize,borderRadius:3,opacity:1},fillStyle]}/>
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({

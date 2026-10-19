@@ -44,6 +44,20 @@ export function readingGlowProfile(run: number) {
   };
 }
 
+/** Stable pseudorandom phase per date, without reshuffling on render or theme changes. */
+export function readingSquarePhase(date:string) {
+  let hash=2166136261;
+  for(let i=0;i<date.length;i++)hash=Math.imul(hash^date.charCodeAt(i),16777619);
+  hash=Math.imul(hash^(hash>>>16),0x85ebca6b);
+  hash=Math.imul(hash^(hash>>>13),0xc2b2ae35);
+  return ((hash^(hash>>>16))>>>0)/4294967296;
+}
+
+export function readingPulseLevel(clock:number,offset:number) {
+  'worklet';
+  return .5-.5*Math.cos(2*Math.PI*(clock+offset));
+}
+
 /** Position recent activity at the right edge rather than opening on empty old weeks. */
 export function calendarRecencyOffset(latest: string, first: string, viewport: number, cellSize: number, gap=4, padding=4) {
   const column=Math.max(0,Math.min(25,Math.floor(dateDistance(latest,first)/7)));

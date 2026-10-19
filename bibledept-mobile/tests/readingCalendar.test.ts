@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingRunIntensity, readingSquarePhase } from '../src/services/readingCalendar';
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');
@@ -57,4 +57,21 @@ test('square pulses add opaque warm light instead of fading or darkening toward 
   }
   assert.equal(readingFillColors('#F05A00',1).rest,'rgb(240,90,0)');
   assert.equal(readingFillColors('#F05A00',21).peak,'rgb(255,255,255)');
+});
+
+test('individual square phases stay stable and spread neighboring dates across the cycle',()=>{
+  const dates=Array.from({length:31},(_,i)=>`2026-10-${String(i+1).padStart(2,'0')}`),phases=dates.map(readingSquarePhase);
+  assert.deepEqual(dates.map(readingSquarePhase),phases);
+  assert.ok(phases.every(phase=>phase>=0&&phase<1));
+  assert.equal(new Set(phases).size,dates.length);
+  assert.equal(new Set(phases.map(phase=>Math.floor(phase*4))).size,4);
+});
+
+test('offset pulses remain smooth at loop boundaries and preserve the full cycle',()=>{
+  assert.equal(readingPulseLevel(0,0),0);assert.equal(readingPulseLevel(.5,0),1);
+  for(const offset of [.01,.23,.67,.99]){
+    assert.ok(Math.abs(readingPulseLevel(0,offset)-readingPulseLevel(1,offset))<1e-12);
+    assert.ok(Math.abs(readingPulseLevel(1-.00001,offset)-readingPulseLevel(.00001,offset))<.0001);
+  }
+  assert.notEqual(readingPulseLevel(0,readingSquarePhase('2026-10-18')),readingPulseLevel(0,readingSquarePhase('2026-10-19')));
 });
