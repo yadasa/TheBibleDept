@@ -197,12 +197,14 @@ function AppShell() {
                   minHeight: 84,
                   paddingVertical: 16,
                   flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 12,
                   alignItems: "center",
                   justifyContent: "space-between",
                 }}
               >
                 <BrandLogo />
-                <Text style={{ ...t.meta, color: c.muted }}>
+                <Text style={{ ...t.meta, color: c.muted, flexShrink: 0, maxWidth: "100%" }}>
                   READ. UNDERSTAND. GROW.
                 </Text>
               </View>

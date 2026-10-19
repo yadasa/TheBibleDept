@@ -9,7 +9,9 @@ export function BrandLogo({ large = false }: { large?: boolean }) {
       contentFit="contain"
       style={{
         width: large ? 208 : 128,
-        height: ((large ? 208 : 128) * 229) / 580,
+        maxWidth: "100%",
+        aspectRatio: 580 / 229,
+        flexShrink: 0,
       }}
     />
   );

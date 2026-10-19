@@ -46,11 +46,10 @@ export function HomeScreen({
         </View>
       </View>
       <Text accessibilityRole="header" style={s.hero}>
-        Today’s{`\n`}reading<Text style={{ color: c.orange }}>.</Text>
+        Today’s reading<Text style={{ color: c.orange }}>.</Text>
       </Text>
       <Text style={s.intro}>
-        Read the chapters below, then listen to Dr. Manny Arango’s teaching
-        for the day.
+        Read today’s chapters, then listen to Dr. Manny Arango’s teaching.
       </Text>
       <GlassSurface style={s.reading}>
         <View style={s.topline}>
@@ -305,14 +304,14 @@ const styles = (c: Colors) =>
       color: c.muted,
     },
     hero: {
-      fontSize: 46,
-      lineHeight: 50,
+      fontSize: 30,
+      lineHeight: 36,
       fontWeight: "800",
-      letterSpacing: -1.9,
+      letterSpacing: -0.8,
       color: c.ink,
-      marginTop: 28,
+      marginTop: 16,
     },
-    intro: { ...t.body, color: c.muted, marginTop: 16, marginBottom: 28 },
+    intro: { ...t.body, color: c.muted, marginTop: 8, marginBottom: 20 },
     reading: {
       borderRadius: 20,
       padding: 22,
