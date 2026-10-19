@@ -1,5 +1,13 @@
 # October 19 performance pass
 
+## Latest revision: all contribution squares are static
+
+At the owner's request, all square animation was removed after the checkpoint below. Every streak length now uses its fixed orange-to-white color and a steady intensity-dependent gold halo. The calendar no longer imports Reanimated or creates clocks, animation worklets, phase calculations, timers, AppState listeners, scroll subscriptions, or visibility reconciliation. The obsolete animation/culling helpers and their tests were removed. Home passes its active state directly for the existing recency snap. The scroll timestamp shared value used only by the calendar was also removed.
+
+TypeScript and all **128 remaining unit tests** passed. Browser review found 99 static filled squares, zero animated square views and no CSS animations; sampled square colors and halo opacity remained unchanged over time. Fresh web/iOS/Android exports passed. Earlier animation measurements below are historical and are superseded by this fully static implementation. Presentation screenshots remain representative of the retained fixed colors and halos.
+
+## Previous checkpoint
+
 This checkpoint follows the reports of delayed navigation, expensive contribution-square effects, Home scroll jitter, and whole-screen work when changing chapters.
 
 ## Changes

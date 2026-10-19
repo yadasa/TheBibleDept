@@ -28,39 +28,9 @@ function liftOrange(orange:string,lift:number) {
     `rgb(${[r,g,b].map(hex => Math.round(parseInt(hex,16) + (255 - parseInt(hex,16)) * lift)).join(',')})`);
 }
 
-/** Opaque, warm colors: add light toward white rather than fading through black. */
-export function readingFillColors(orange:string,run:number) {
-  const intensity=readingRunIntensity(run);
-  return {rest:liftOrange(orange,.4*intensity),peak:liftOrange(orange,.12+.88*intensity)};
-}
-
-/** Full brighten/dim cycle: orange 5.2 s, near-white 3.2 s. */
-export function readingGlowProfile(run: number) {
-  const intensity=readingRunIntensity(run);
-  return {
-    cycleMs:5200-2000*intensity,
-    minOpacity:.08+.32*intensity,
-    maxOpacity:.2+.8*intensity,
-  };
-}
-
-/** The first three days retain their color and steady halo without animation. */
-export function readingShouldPulse(run:number) {
-  return run>=4;
-}
-
-/** Stable pseudorandom phase per date, without reshuffling on render or theme changes. */
-export function readingSquarePhase(date:string) {
-  let hash=2166136261;
-  for(let i=0;i<date.length;i++)hash=Math.imul(hash^date.charCodeAt(i),16777619);
-  hash=Math.imul(hash^(hash>>>16),0x85ebca6b);
-  hash=Math.imul(hash^(hash>>>13),0xc2b2ae35);
-  return ((hash^(hash>>>16))>>>0)/4294967296;
-}
-
-export function readingPulseLevel(clock:number,offset:number) {
-  'worklet';
-  return .5-.5*Math.cos(2*Math.PI*(clock+offset));
+/** Steady gold halo, retaining the former midpoint brightness without pulsing. */
+export function readingGlowOpacity(run:number) {
+  return .14+.56*readingRunIntensity(run);
 }
 
 /** Position recent activity at the right edge rather than opening on empty old weeks. */

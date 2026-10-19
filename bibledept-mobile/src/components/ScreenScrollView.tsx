@@ -6,7 +6,7 @@ import { createReadingScrollIntent, isVerticalReadingGesture } from '../services
 
 export type ScreenScrollMetrics = Readonly<{ offsetY: number; viewportHeight: number; contentHeight: number; active: boolean; restoring: boolean; userInitiated: boolean }>;
 type Controls = {
-  motion: {offsetY:SharedValue<number>;viewportHeight:SharedValue<number>;lastScrollAt:SharedValue<number>} | null;
+  motion: {offsetY:SharedValue<number>;viewportHeight:SharedValue<number>} | null;
   top: () => void;
   scrollTo: (options: { y: number; animated?: boolean }) => void;
   getMetrics: () => ScreenScrollMetrics;
@@ -21,8 +21,8 @@ export const useScreenScroll = () => useContext(Context).top;
 export const useScreenScrollControls = () => useContext(Context);
 
 export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, ...props }: ComponentProps<typeof ScrollView> & { active?: boolean; resetOnPlanDayChange?: boolean }) {
-  const motionY=useSharedValue(0),motionHeight=useSharedValue(0),lastScrollAt=useSharedValue(0);
-  const motion=useMemo(()=>({offsetY:motionY,viewportHeight:motionHeight,lastScrollAt}),[motionY,motionHeight,lastScrollAt]);
+  const motionY=useSharedValue(0),motionHeight=useSharedValue(0);
+  const motion=useMemo(()=>({offsetY:motionY,viewportHeight:motionHeight}),[motionY,motionHeight]);
   const ref = useRef<ScrollView>(null), viewport = useRef<View>(null), { selectedDay } = usePlan();
   const offset = useRef({ x: 0, y: 0 }), activeRef = useRef(active), restorePending = useRef(true);
   const viewportHeight = useRef(0), contentHeight = useRef(0);
@@ -49,7 +49,6 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     motionY.value=event.contentOffset.y;
     motionHeight.value=event.layoutMeasurement.height;
     const now=Date.now();
-    lastScrollAt.value=now;
     if(now-lastNotice.value>=48){lastNotice.value=now;runOnJS(receiveScroll)(event);}
   });
   const positionScroll = useCallback(({ y, animated = false }: { y: number; animated?: boolean }, preserveAnchor = false) => {

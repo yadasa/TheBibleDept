@@ -1,11 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingRunIntensity, readingShouldPulse, readingSquarePhase } from '../src/services/readingCalendar';
-
-test('only day four onward receives an animated streak effect',()=>{
-  for(const run of [0,1,2,3])assert.equal(readingShouldPulse(run),false);
-  for(const run of [4,7,11,21,365])assert.equal(readingShouldPulse(run),true);
-});
+import { calendarRecencyOffset, readingCalendar, readingGlowOpacity, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');
@@ -38,45 +33,10 @@ test('consecutive-day brightness rises gradually and caps at 21 days', () => {
   assert.equal(readingRunColor('#F05A00', 21), 'rgb(254,245,240)');
 });
 
-test('whiter squares pulse their glow and fill more visibly with a two-second speed range', () => {
-  const orange=readingGlowProfile(1),middle=readingGlowProfile(11),white=readingGlowProfile(21);
-  assert.equal(orange.cycleMs-white.cycleMs,2000);
-  assert.ok(orange.cycleMs>middle.cycleMs&&middle.cycleMs>white.cycleMs);
-  assert.ok(orange.maxOpacity<middle.maxOpacity&&middle.maxOpacity<white.maxOpacity);
-  for(let run=1;run<=365;run++){
-    const profile=readingGlowProfile(run);
-    assert.ok(profile.minOpacity>=0&&profile.minOpacity<profile.maxOpacity&&profile.maxOpacity<=1);
-  }
-  assert.deepEqual(readingGlowProfile(365),white);
-});
-
-test('square pulses add opaque warm light instead of fading or darkening toward gray', () => {
-  const channels=(color:string)=>color.match(/\d+/g)!.map(Number);
-  for(let run=1;run<=21;run++){
-    const {rest,peak}=readingFillColors('#F05A00',run),low=channels(rest),high=channels(peak);
-    assert.ok(rest.startsWith('rgb(')&&peak.startsWith('rgb('));
-    assert.equal(low.length,3);assert.equal(high.length,3);
-    low.forEach((value,index)=>assert.ok(high[index]>=value));
-    assert.ok(low[0]>=low[1]&&low[1]>=low[2]);
-    assert.ok(high[0]>=high[1]&&high[1]>=high[2]);
-  }
-  assert.equal(readingFillColors('#F05A00',1).rest,'rgb(240,90,0)');
-  assert.equal(readingFillColors('#F05A00',21).peak,'rgb(255,255,255)');
-});
-
-test('individual square phases stay stable and spread neighboring dates across the cycle',()=>{
-  const dates=Array.from({length:31},(_,i)=>`2026-10-${String(i+1).padStart(2,'0')}`),phases=dates.map(readingSquarePhase);
-  assert.deepEqual(dates.map(readingSquarePhase),phases);
-  assert.ok(phases.every(phase=>phase>=0&&phase<1));
-  assert.equal(new Set(phases).size,dates.length);
-  assert.equal(new Set(phases.map(phase=>Math.floor(phase*4))).size,4);
-});
-
-test('offset pulses remain smooth at loop boundaries and preserve the full cycle',()=>{
-  assert.equal(readingPulseLevel(0,0),0);assert.equal(readingPulseLevel(.5,0),1);
-  for(const offset of [.01,.23,.67,.99]){
-    assert.ok(Math.abs(readingPulseLevel(0,offset)-readingPulseLevel(1,offset))<1e-12);
-    assert.ok(Math.abs(readingPulseLevel(1-.00001,offset)-readingPulseLevel(.00001,offset))<.0001);
-  }
-  assert.notEqual(readingPulseLevel(0,readingSquarePhase('2026-10-18')),readingPulseLevel(0,readingSquarePhase('2026-10-19')));
+test('static glow preserves bounded streak brightness and caps after three weeks',()=>{
+  assert.equal(readingGlowOpacity(1),.14);
+  assert.ok(readingGlowOpacity(4)<readingGlowOpacity(11));
+  assert.ok(readingGlowOpacity(11)<readingGlowOpacity(21));
+  assert.ok(Math.abs(readingGlowOpacity(21)-.7)<1e-12);
+  assert.equal(readingGlowOpacity(365),readingGlowOpacity(21));
 });

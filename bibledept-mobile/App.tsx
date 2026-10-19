@@ -395,6 +395,7 @@ function AppShell() {
                                 )}
                                 {item === "Home" ? (
                                   <HomePage
+                                    active={active}
                                     onRead={read}
                                     onAccount={openAccount}
                                     onPrayer={openPrayer}

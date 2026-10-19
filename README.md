@@ -53,7 +53,7 @@ Email/password accounts support registration, sign-in, recovery, profile-name ch
 
 ![Dark reading preferences and light appearance choices in realistic angled iPhones](docs/images/bibledept-account-preferences.webp)
 
-- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 26-week activity calendar that opens at the most recent reading. Consecutive squares brighten from orange toward near-white over 21 days. Days one through three stay static; longer runs pulse with independent phases. Effects run only in view and pause during scrolling. Chapter reading checks and account streak credits have separate purposes.
+- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 26-week activity calendar that opens at the most recent reading. Consecutive squares brighten from orange toward near-white over 21 days, with a steady gold halo. All squares are static: no pulsing, color animation or animation clocks. Chapter reading checks and account streak credits have separate purposes.
 - **Notes and prayers:** owner-private records under /bibledeptUsers/{uid}; notes stay connected to Scripture, and saved prayers can be marked answered.
 - **Reading preferences:** usual translation, text size with a preview, and a confirmed reading time zone.
 - **Appearance:** dark and light themes with shared orange, grain, circular light, and frosted controls.
@@ -78,7 +78,7 @@ Firebase configuration belongs in the ignored .env.local. Documented emulator mo
 
 ## Current checks and release boundaries
 
-The latest October 19 review passed **135 unit tests, TypeScript, and fresh web/iOS/Android JavaScript exports**. Checks cover visible-only calendar work, short-run animation limits, shared/cancelable Scripture requests, chapter preparation, reading-credit safeguards and existing flows. Browser review confirmed preloaded Scripture, isolated chapter switching, offscreen waveform suspension, and Home/calendar layouts. Physical iPhone frame timing remains to be measured. [Complete request checklist](docs/REQUEST_CHECKLIST.md) · [Optimization evidence](docs/REQUEST_AUDIT.md).
+The latest October 19 review passed **128 unit tests, TypeScript, and fresh web/iOS/Android JavaScript exports**. Checks cover static streak colors and glow, shared/cancelable Scripture requests, chapter preparation, reading-credit safeguards and existing flows. Browser review confirmed preloaded Scripture, isolated chapter switching, offscreen waveform suspension, and Home/calendar layouts. Physical iPhone frame timing remains to be measured. [Complete request checklist](docs/REQUEST_CHECKLIST.md) · [Optimization evidence](docs/REQUEST_AUDIT.md).
 
 | Area | Current state |
 | --- | --- |

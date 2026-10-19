@@ -15,11 +15,13 @@ import { getPlanChapters, getReadingPlanDay } from "../services/readingPlan";
 import { Colors, useThemedStyles, typography as t } from "../theme";
 
 export function HomeScreen({
+  active=true,
   onRead,
   onAccount,
   onPrayer,
   onNotes,
 }: {
+  active?: boolean;
   onRead: () => void;
   onAccount: () => void;
   onPrayer: () => void;
@@ -94,7 +96,7 @@ export function HomeScreen({
           />
         </>
       )}
-      <StreakCalendar days={readDates} today={habit.today}/>
+      <StreakCalendar days={readDates} today={habit.today} active={active}/>
       {!!habit.error && <Notice text={habit.error} error />}
       {!!plan.syncError && <Notice text={plan.syncError}/>}
       <View style={s.sectionRow}>

@@ -2,7 +2,7 @@
 
 **Latest acceptance: October 19, 2026.** See the complete [request checklist](REQUEST_CHECKLIST.md) for current statuses and the final review below. Earlier measurements remain here as historical checkpoints.
 
-The latest [performance checkpoint](PERFORMANCE_REVIEW_2026-10-19.md) records visible-only/static short-run squares, scroll-time animation freezes, current-day preloading, isolated chapter updates, offscreen waveform suspension, 135 passing tests and fresh three-platform exports. Physical iPhone frame timing remains unmeasured.
+The latest [performance checkpoint](PERFORMANCE_REVIEW_2026-10-19.md) records removal of all square animation and its scheduling/visibility machinery, current-day preloading, isolated chapter updates, offscreen waveform suspension, 128 passing tests and fresh three-platform exports. Physical iPhone frame timing remains unmeasured.
 
 Reviewed October 18, 2026. This audit distinguishes implemented code, browser checks,
 physical-device feedback, and release work. It does not treat a successful bundle
