@@ -94,10 +94,10 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     scheduleAnchor();
   }, [notify, scheduleAnchor,scrollIntent]);
   useEffect(() => {
-    if (!active) return;
+    if (!active) { notify(); return; }
     const frame = requestAnimationFrame(restore);
     return () => cancelAnimationFrame(frame);
-  }, [active, restore]);
+  }, [active, restore, notify]);
   // Reset before descendant passive effects request a restored reading place
   // or the podcast anchor. A later parent effect would erase that request.
   useLayoutEffect(() => { if (resetOnPlanDayChange) top(); }, [selectedDay, resetOnPlanDayChange, top]);
