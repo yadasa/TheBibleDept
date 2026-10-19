@@ -16,6 +16,7 @@ const paths = {
   calendar: 'M8 2v4m8-4v4M3 10h18M4 4h16a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z',
   search: 'm21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
   headphones: 'M3 14v-3a9 9 0 0 1 18 0v3M3 13h3v8H4a1 1 0 0 1-1-1Zm18 0h-3v8h2a1 1 0 0 0 1-1Z',
+  speed: 'M4 19a9 9 0 1 1 16 0M4 19h16M12 15l4-6M7 8l1 1M17 8l-1 1M12 5v2',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v12H5Zm7 5v3',
@@ -36,5 +37,5 @@ export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {
   const {colors}=useTheme();
   const nativeAccessibility=Platform.OS==='web'?{}:{accessible:false};
-  return <Svg {...nativeAccessibility} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||colors.ink} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>;
+  return <Svg {...nativeAccessibility} style={{position:'relative',zIndex:1}} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||colors.ink} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>;
 }

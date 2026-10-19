@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveforms';
 import { podcastAmplitudePeak } from '../services/podcastWaveform';
-import { usePodcast, PLAYBACK_RATES } from '../state/PodcastProvider';
+import { usePodcast } from '../state/PodcastProvider';
 import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { GlassPressable } from './Glass';
 import { Icon } from './Icon';
-import { ActionButton, Notice } from './ui';
+import { Notice } from './ui';
 import { PodcastWaveform } from './PodcastWaveform';
+import { PlaybackSpeedControl } from './PlaybackSpeedControl';
 
 const unknownSamples = Array(96).fill(0) as number[];
 
@@ -37,11 +38,16 @@ export function PodcastCard({day}:{day:number}) {
     <View style={s.times}><Text style={s.time}>{audioTime(position)}</Text><Text style={s.time}>{audioTime(duration)}</Text></View>
     <Text style={s.waveCaption}>{loaded?'Drag the waveform to skip through the episode.':'Press play to listen to this episode.'}</Text>
     <View style={s.controls}>
-      <GlassPressable accessibilityRole="button" accessibilityLabel="Rewind podcast 15 seconds" accessibilityState={{disabled:!loaded}} disabled={!loaded} onPress={()=>audio.seek(position-15)} style={({pressed})=>[s.skip,pressed&&s.pressed,!loaded&&s.disabled]}><View style={s.reverse}><Icon name="refresh" size={22}/></View><Text style={s.skipText}>15s</Text></GlassPressable>
-      <View style={s.play}><ActionButton title={problem?'Retry episode':playing?'Pause episode':'Play episode'} icon={problem?'refresh':playing?'pause':'play'} onPress={()=>audio.play(day)} loading={current&&audio.loading}/></View>
-      <GlassPressable accessibilityRole="button" accessibilityLabel="Forward podcast 15 seconds" accessibilityState={{disabled:!loaded}} disabled={!loaded} onPress={()=>audio.seek(position+15)} style={({pressed})=>[s.skip,pressed&&s.pressed,!loaded&&s.disabled]}><Icon name="refresh" size={22}/><Text style={s.skipText}>15s</Text></GlassPressable>
+      <View style={s.transport}>
+        <SkipButton forward={false} disabled={!loaded} onPress={()=>audio.seek(position-15)}/>
+        <GlassPressable tone="primary" accessibilityRole="button" accessibilityLabel={problem?'Retry episode':playing?'Pause episode':'Play episode'}
+          accessibilityState={{busy:current&&audio.loading,disabled:current&&audio.loading}} disabled={current&&audio.loading} onPress={()=>audio.play(day)} style={({pressed})=>[s.play,pressed&&s.pressed]}>
+          {current&&audio.loading?<ActivityIndicator color={c.onAction}/>:<Icon name={problem?'refresh':playing?'pause':'play'} size={28} color={c.onAction}/>}
+        </GlassPressable>
+        <SkipButton forward disabled={!loaded} onPress={()=>audio.seek(position+15)}/>
+      </View>
+      <PlaybackSpeedControl day={day} rate={audio.playbackRate} onRate={audio.setRate}/>
     </View>
-    <View accessibilityRole="radiogroup" accessibilityLabel="Playback speed" style={s.speeds}>{PLAYBACK_RATES.map(rate=><GlassPressable key={rate} tone={audio.playbackRate===rate?'selected':'neutral'} accessibilityRole="radio" accessibilityLabel={`${rate} times speed`} aria-checked={audio.playbackRate===rate} accessibilityState={{checked:audio.playbackRate===rate}} onPress={()=>audio.setRate(rate)} style={s.speed}><Text style={[s.speedText,audio.playbackRate===rate&&s.selectedSpeed]}>{rate}×</Text></GlassPressable>)}</View>
     {!!problem&&<Notice text={String(problem)} error/>}
     {!current&&audio.episode&&<Text style={s.note}>Day {audio.episode.day} is {audio.status.playing?'playing':'paused'}. Play this episode to switch.</Text>}
     {!!linkError&&<Notice text={linkError} error/>}
@@ -51,22 +57,29 @@ export function PodcastCard({day}:{day:number}) {
   </View>;
 }
 
+function SkipButton({forward,disabled,onPress}:{forward:boolean;disabled:boolean;onPress:()=>void}) {
+  const {s}=useThemedStyles(styles);
+  return <Pressable accessibilityRole="button" accessibilityLabel={forward?'Forward 15 seconds':'Back 15 seconds'} accessibilityState={{disabled}} disabled={disabled}
+    hitSlop={4} onPress={onPress} style={({pressed})=>[s.skip,pressed&&s.pressed,disabled&&s.disabled]}>
+    <View style={s.skipGlyph}><View style={!forward&&s.reverse}><Icon name="refresh" size={28}/></View><Text accessible={false} style={s.skipText}>15</Text></View>
+  </Pressable>;
+}
+
 const styles=(c:Colors)=>StyleSheet.create({
-  card:{backgroundColor:c.surface,borderWidth:1,borderColor:c.border,borderRadius:radius,padding:20,marginTop:32},
+  card:{backgroundColor:c.surface,borderWidth:0,borderRadius:radius,padding:20,marginTop:32},
   heading:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},
   kicker:{...t.label,color:c.actionText},
   title:{...t.section,color:c.ink},
   host:{...t.meta,color:c.muted,marginTop:8},
   note:{...t.meta,color:c.muted,backgroundColor:c.tint,padding:12,borderRadius:radius,marginTop:16},
   waveCaption:{...t.meta,color:c.muted,marginTop:6},
-  speeds:{flexDirection:'row',gap:8,marginTop:16},speed:{flex:1,minHeight:44,alignItems:'center',justifyContent:'center',borderRadius:8},speedText:{...t.label,color:c.ink,fontVariant:['tabular-nums']},selectedSpeed:{color:c.actionText,textDecorationLine:'underline'},
   times:{flexDirection:'row',justifyContent:'space-between'},
   time:{...t.meta,fontVariant:['tabular-nums'],color:c.muted},
-  controls:{flexDirection:'row',alignItems:'center',gap:8,marginTop:8},
-  skip:{minWidth:44,minHeight:56,alignItems:'center',justifyContent:'center',gap:4,borderRadius:radius},
-  skipText:{...t.meta,color:c.ink,fontWeight:'600'},
+  controls:{flexDirection:'row',alignItems:'center',gap:8,marginTop:12},transport:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12},
+  skip:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',borderRadius:22},skipGlyph:{width:28,height:28},
+  skipText:{position:'absolute',left:0,right:0,top:8,fontSize:9,lineHeight:12,textAlign:'center',color:c.ink,fontWeight:'800',fontVariant:['tabular-nums']},
   reverse:{transform:[{scaleX:-1}]},
-  play:{flex:1},
+  play:{width:60,height:60,borderRadius:30,alignItems:'center',justifyContent:'center'},
   disabled:{opacity:.4},
   pressed:{opacity:.65},
   episodeLink:{minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,marginTop:12},
