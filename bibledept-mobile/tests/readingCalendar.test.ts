@@ -32,14 +32,16 @@ test('consecutive-day brightness rises gradually and caps at 21 days', () => {
   assert.equal(readingRunColor('#F05A00', 21), 'rgb(254,245,240)');
 });
 
-test('whiter squares pulse more visibly with a two-second full-cycle speed range', () => {
+test('whiter squares pulse their glow and fill more visibly with a two-second speed range', () => {
   const orange=readingGlowProfile(1),middle=readingGlowProfile(11),white=readingGlowProfile(21);
   assert.equal(orange.cycleMs-white.cycleMs,2000);
   assert.ok(orange.cycleMs>middle.cycleMs&&middle.cycleMs>white.cycleMs);
   assert.ok(orange.maxOpacity<middle.maxOpacity&&middle.maxOpacity<white.maxOpacity);
+  assert.ok(orange.maxFillDim<middle.maxFillDim&&middle.maxFillDim<white.maxFillDim);
   for(let run=1;run<=365;run++){
     const profile=readingGlowProfile(run);
     assert.ok(profile.minOpacity>=0&&profile.minOpacity<profile.maxOpacity&&profile.maxOpacity<=1);
+    assert.ok(profile.maxFillDim>=.06&&profile.maxFillDim<=.28);
   }
   assert.deepEqual(readingGlowProfile(365),white);
 });

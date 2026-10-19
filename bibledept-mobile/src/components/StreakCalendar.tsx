@@ -46,9 +46,6 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
     </View>
     <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} testID="reading-contribution-calendar" style={s.chart} contentContainerStyle={s.weeks}
       onLayout={event=>setWidth(event.nativeEvent.layout.width)} onContentSizeChange={snapToRecent}>
-      <View testID="reading-streak-glow" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} animate={active&&foreground&&!reduced}/>)}
-      </View>
       {weeks.map(week=><View key={week[0]} style={s.week}>
         {week.map(date=>{
           const run=activity.runs.get(date)||0,done=run>0,future=date>today;
@@ -57,6 +54,9 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
             style={[s.square,{width:cellSize,height:cellSize},date===today&&s.today,done&&{backgroundColor:fill,borderWidth:0},future&&s.future]}/>;
         })}
       </View>)}
+      <View testID="reading-streak-glow" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} animate={active&&foreground&&!reduced}/>)}
+      </View>
     </ScrollView>
     <View style={s.legend}><View style={[s.key,s.read]}/><Text style={s.meta}>Reading saved</Text><View style={[s.key,s.today]}/><Text style={s.meta}>Today</Text></View>
     <Text style={[s.meta,{marginTop:8}]}>Swipe for earlier weeks</Text>
@@ -65,7 +65,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
 
 type HaloPosition={date:string;column:number;row:number};
 function StreakHaloGroup({run,positions,cellSize,animate}:{run:number;positions:HaloPosition[];cellSize:number;animate:boolean}) {
-  const {cycleMs,minOpacity,maxOpacity}=readingGlowProfile(run),pulse=useSharedValue(minOpacity);
+  const {cycleMs,minOpacity,maxOpacity,maxFillDim}=readingGlowProfile(run),pulse=useSharedValue(minOpacity);
   useEffect(()=>{
     cancelAnimation(pulse);
     pulse.value=animate?minOpacity:(minOpacity+maxOpacity)/2;
@@ -73,13 +73,21 @@ function StreakHaloGroup({run,positions,cellSize,animate}:{run:number;positions:
     return()=>cancelAnimation(pulse);
   },[animate,cycleMs,minOpacity,maxOpacity,pulse]);
   const glowStyle=useAnimatedStyle(()=>({opacity:pulse.value}));
-  return <Animated.View testID={`reading-streak-glow-${run}`} style={[StyleSheet.absoluteFill,glowStyle]}>
+  // Dim the fill on the glow's downbeat, preserving its exact color at the peak.
+  // One shared layer per intensity animates every matching square without rerenders.
+  const fillStyle=useAnimatedStyle(()=>({opacity:animate?maxFillDim*(1-Math.max(0,Math.min(1,(pulse.value-minOpacity)/(maxOpacity-minOpacity)))):0}));
+  return <View style={StyleSheet.absoluteFill}>
+    <Animated.View testID={`reading-streak-glow-${run}`} style={[StyleSheet.absoluteFill,glowStyle]}>
     {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+4)+2.5,top:row*(cellSize+4)+2.5,width:cellSize+3,height:cellSize+3,borderRadius:4.5,overflow:'hidden'}}>
       {/* Clip the brighter gold ring to 1.5 px beyond the square. */}
       <View style={{position:'absolute',left:1.5,top:1.5,width:cellSize,height:cellSize,borderRadius:3,
         backgroundColor:'rgba(255,188,66,0.01)',boxShadow:'0 0 1px .9px rgba(255,211,100,1), 0 0 2px .5px rgba(255,174,38,1)'}}/>
     </View>)}
-  </Animated.View>;
+    </Animated.View>
+    <Animated.View testID={`reading-streak-fill-${run}`} style={[StyleSheet.absoluteFill,fillStyle]}>
+      {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+4)+4,top:row*(cellSize+4)+4,width:cellSize,height:cellSize,borderRadius:3,backgroundColor:'#000000'}}/>)}
+    </Animated.View>
+  </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({
   section:{marginTop:28,paddingVertical:24,borderBottomWidth:1,borderColor:c.border},

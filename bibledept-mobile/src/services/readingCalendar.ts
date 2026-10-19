@@ -32,6 +32,7 @@ export function readingGlowProfile(run: number) {
     cycleMs:5200-2000*intensity,
     minOpacity:.08+.32*intensity,
     maxOpacity:.2+.8*intensity,
+    maxFillDim:.06+.22*intensity,
   };
 }
 
