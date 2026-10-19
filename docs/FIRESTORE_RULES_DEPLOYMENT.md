@@ -27,3 +27,14 @@ it to avoid overwriting concurrent church updates.
 Publishing used the [Firebase Rules release API](https://firebase.google.com/docs/reference/rules/rest/v1/projects.releases/patch).
 This checkpoint did not deploy backend Functions, enable notifications, or change
 the sign-in/onboarding gate.
+
+## Account plan sync follow-up
+
+The October 19 follow-up allows validated owner writes only to
+`settings/planProgress`: current day, finished state, completed day numbers and a
+server timestamp. Other settings, habit days and statistics remain server-owned.
+The merged rules passed emulator checks for two independent clients, concurrent
+forward-only progress, malformed payloads, signed-out access and cross-owner denials.
+The published full rules source matched the reviewed merge. An independent server
+read verified the active account's Day 34 position and completed Days 1–33 after
+the running app uploaded its local progress. All unrelated church rules were preserved.

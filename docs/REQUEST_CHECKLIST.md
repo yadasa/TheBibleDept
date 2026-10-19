@@ -94,7 +94,7 @@ requested plan exists, but its proposed behavior is not activated.
 | Finish appearance, reading, and reminder preference pages | Complete in source; live delivery Verify | Theme choice; translation/text-size preview; reading time zone; reminder time, quiet hours, pause and opt-ins. Actual SMS/push delivery and native permission behavior remain release checks. |
 | Restore verse highlighting/comments and automatic Notes updates | Complete | Both readers provide range selection, highlight/note actions, edit, color, copy, delete, and Notes reopening of the source range. One owner-private annotation document backs both views. Isolated demo-account save/edit/reload/sign-out checks passed. |
 | Show an annotation action from a single verse tap | Complete | Single tap reveals a nearby note shortcut while retaining existing saved-note editing, range selection, and long-press alternatives. Native text-selection coexistence still needs iPhone review. |
-| Keep private prayers, reading days/streaks, and reminders working through the redesign | Complete in source; release Verify | Existing owner rules/providers and server-owned reading-day ledger retained. Local lesson completion is distinct from account streak credit; no promise that local plan/listening progress syncs between phones. |
+| Keep private prayers, reading days/streaks, and reminders working through the redesign | Complete in source; release Verify | Existing owner rules/providers and server-owned reading-day ledger retained. Signed-in plan position and completed lessons now sync; chapter offsets/listening remain local and lesson completion is distinct from account streak credit. |
 | Keep website links that open the app | Complete in source; public activation Verify | Validated route parser, custom scheme, associated-domain configuration and association-file generator. Public website association/fallback deployment and signed-iPhone validation are not yet established. [App links](APP_LINKS.md). |
 | Draft a future mandatory-auth launch flow | Draft complete | [Sign-in gate plan](launch/AUTH_GATE_PLAN.md) covers entry, recovery, links, ownership and rollback. No gate was activated; reading/listening currently remain available without sign-in. |
 | Draft first-time onboarding | Draft complete | [Onboarding plan](launch/ONBOARDING_PLAN.md) covers Day 1, real preferences, optional verified intro, resume/replay, accessibility and contextual reminder permission. No onboarding flow or first-launch permission prompt was added. |
@@ -117,11 +117,20 @@ requested plan exists, but its proposed behavior is not activated.
 
 | Request | Status | Result / evidence |
 | --- | --- | --- |
-| Fill the currently signed-in account with video examples | Complete | Added 12 notes, 10 prayers (7 active / 3 answered) and 14 reading-history entries after the owner requested the existing account. Existing documents, profile and authoritative streak statistics were preserved. Private content and the exact cleanup manifest remain local, outside Git. |
+| Fill the currently signed-in account with video examples | Complete | Added 12 notes, 10 prayers (7 active / 3 answered) and, after the calendar follow-up, 33 dated reading-history examples with believable gaps and a seven-day current run. Only seed-owned examples were revised; profile and authoritative streak statistics were preserved. Private content and cleanup manifests remain outside Git. |
 | Fix highlights and reading-history loading errors | Complete | Repaired the missing live owner-only namespace branches, tested the merged church rules and verified both errors disappeared in the active preview. [Deployment record](FIRESTORE_RULES_DEPLOYMENT.md). |
 | Put the supplied podcast cover in the Daily teaching card's top-right corner | Complete | Bundled a 192 px JPEG from the supplied artwork; rounded corners, no runtime CDN dependency. |
 | Enlarge the cover icon by 33% | Complete | Raised its display size from 44 px to 58⅔ px, retaining its square proportions. |
 | Replace the mobile hard scroll edge above navigation with a fade | Complete in source; physical appearance Verify | A 140 px native alpha transition composites the matching grain/glow backdrop. Only that backdrop is masked; live glass and interactive content retain their native layers. Expo Go SDK 57 includes the mask module. TypeScript, 103 unit tests and an iOS export passed; a physical iPhone appearance check is still required. |
+| Route first-time Day 1 readers to Introduction and show calendar Day 0 as Intro | Complete | Initial Day 1 opens Intro when no lesson is complete; its continue action opens Day 1 without a redirect loop. Intro remains accessible from the calendar. Browser flow verified. |
+| Mark Days 1–33 complete and make progress available on mobile | Complete | Day 34 is next. Current day/completions sync through owner-only Firestore transactions; independent server read and two-client emulator test verified the saved result. Phone must use the same account and updated bundle. |
+| Center audio transport independently of speed controls | Complete | Speed controls sit outside the centered transport; narrow layouts move speed controls to a separate row. Browser center measurements matched. |
+| Fade individual verses while scrolling | Complete | Viewport fades animate text separately from edge gradients, preserving visible selection/note controls and reduced-motion support. Browser opacity values and unit cases verified. |
+| Show orange contribution squares, total days, gaps and brighter consecutive runs | Complete | Replaced the rejected flame artwork. Calendar displays 33 total dated readings and a separate seven-day current run; gaps reset brightness, which caps at seven days with a tight gold halo. Verified 33 read squares at 320 px, with no horizontal grid overflow. Time-zone setup copy removed. |
+
+Latest source validation: TypeScript and **117 unit tests passed**. Final calendar
+iOS export and account-sync merged-rules integration passed. Browser checks do not replace physical
+iPhone verification of the latest glow, glass or touch behavior.
 
 ## Earlier remaining items
 

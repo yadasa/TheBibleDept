@@ -11,9 +11,9 @@
 
 The active app is [bibledept-mobile](../../bibledept-mobile/). Its existing account flow supports email/password registration, sign-in, password recovery, and persistent sessions. Phone sign-in has separate platform/build requirements; it must not be the only way into the app. The current account pages expose real profile, progress, appearance, reading, and reminder preferences.
 
-Plan position, chapter reading checks, scroll position, and observed podcast listening are stored locally under separate guest/account owners. Notes, prayers, saved chapter history, and reading-day records use the signed-in account. Signing in does not currently merge the guest's local plan with the account's local plan.
+Signed-in plan position and completed lessons sync through the account with a local cache. Chapter reading checks, scroll position, and observed podcast listening stay local under separate guest/account owners. Notes, prayers, saved chapter history, and reading-day records use the signed-in account. Signing in does not silently merge guest progress into the account.
 
-The new plans must preserve that distinction. Requiring an account would not by itself make local reading/listening progress sync across phones.
+The new plans must preserve that distinction. Requiring an account would not by itself make chapter offsets or listening intervals sync across phones.
 
 ## Implementation order
 

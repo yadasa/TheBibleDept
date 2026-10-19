@@ -15,7 +15,7 @@ These are real captures from the running web preview and a fictional local demo 
 - **365 days mapped from the printed plan.** The compact 5.1 KB passage map lives inside the app, rather than in a cloud collection.
 - **Start on Day 1.** Home makes the current reading prominent. A numbered picker, completion markers, and direct day entry let you browse without losing your place.
 - **An optional Day 0.** Listen to the publisher's full introduction before starting. It has no assigned reading and does not change the 365-day count.
-- **Pick up where you stopped.** Day, chapter, and scroll position stay on the device, scoped to the guest or signed-in account.
+- **Pick up where you stopped.** Signed-in plan position and completed days sync across devices. Chapter and scroll position stay on the device, scoped to the guest or signed-in account.
 - **Finish the whole lesson.** Reading each chapter and genuinely listening completes the day and opens a congratulations message. The last two minutes of audio are optional; seeking does not earn listening credit. Manual next-day continuation remains available.
 
 ## Scripture and the notes beside it
@@ -47,7 +47,7 @@ Email/password accounts support registration, sign-in, recovery, profile-name ch
 
 ![Dark reading preferences and light appearance choices in realistic angled iPhones](docs/images/bibledept-account-preferences.webp)
 
-- **Progress:** current plan day, completed days, saved chapter history, reading-day totals, and streaks. Local lesson progress and account streak credits have separate purposes.
+- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 12-week orange activity calendar with a total-day count and current streak. Consecutive days brighten gradually with a capped gold glow. Chapter reading checks and account streak credits have separate purposes.
 - **Notes and prayers:** owner-private records under /bibledeptUsers/{uid}; notes stay connected to Scripture, and saved prayers can be marked answered.
 - **Reading preferences:** usual translation, text size with a preview, and a confirmed reading time zone.
 - **Appearance:** dark and light themes with shared orange, grain, circular light, and frosted controls.

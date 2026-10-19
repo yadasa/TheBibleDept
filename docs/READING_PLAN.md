@@ -99,10 +99,14 @@ signed-in account on this device:
 | Lesson reading progress | `bibledept.lessons.v1:` | Compact day/chapter/offset/read/completed/acknowledged rows |
 | Podcast listening coverage | `bibledept.podcast-coverage.v1:` | Day, actual duration, and merged played intervals |
 
-Neither the passage mapping nor these positions, reading checks, listening intervals,
-or lesson completion flags are stored in Firestore. They do not sync across devices.
-Reinstalling the app or clearing its local storage starts a fresh local plan. Existing
-Firebase chapter-history, reading-streak, note, and prayer actions remain separate.
+The passage mapping remains bundled in the app. Signed-in current day, finished state,
+and completed lesson numbers also sync to `bibledeptUsers/{uid}/settings/planProgress`.
+Owner-only transactions merge completions and keep the furthest current day, so an
+older device cannot move the account backward. A new signed-in device restores them.
+Guest progress is not silently merged into an account. Chapter checks, scroll offsets,
+listening intervals and celebration acknowledgments remain local; clearing local
+storage removes those details. Firebase chapter-history, reading-streak, note, and
+prayer actions remain separate. Lesson completion does not invent calendar dates.
 
 Unit validation covers the extracted chapter map, owner isolation, position reopening,
 both completion orders, seek gaps, invalid local data, durable acknowledgments, failed
