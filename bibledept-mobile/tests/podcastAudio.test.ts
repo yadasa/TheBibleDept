@@ -50,6 +50,13 @@ test('PCM analysis stops when the app is inactive or locked and resumes only on 
   assert.equal(canSamplePodcast('active', 'ios', true), true);
 });
 
+test('the playback isolation override blocks sampling even on supported foreground devices while normal runs keep it enabled', () => {
+  assert.equal(canSamplePodcast('active', 'ios', true, true), false);
+  assert.equal(canSamplePodcast('active', 'web', true, true), false);
+  assert.equal(canSamplePodcast('active', 'ios', true, false), true);
+  assert.equal(canSamplePodcast('active', 'ios', true), true);
+});
+
 test('PCM level measures both stereo channels without phase cancellation and rejects invalid frames', () => {
   assert.equal(podcastSampleLevel([{ frames: [.5, -.5] }, { frames: [-.5, .5] }]), .5);
   assert.equal(podcastSampleLevel([{ frames: [NaN, Infinity, -Infinity] }]), null);

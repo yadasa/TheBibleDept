@@ -12,8 +12,8 @@ export function createPodcastSessionQueue() {
   };
 }
 
-export function canSamplePodcast(appState: string | null, platform: string, supported: boolean): boolean {
-  return appState === 'active' && platform !== 'android' && supported;
+export function canSamplePodcast(appState: string | null, platform: string, supported: boolean, diagnosticDisabled = false): boolean {
+  return !diagnosticDisabled && appState === 'active' && platform !== 'android' && supported;
 }
 
 export function needsPodcastSessionActivation(released: boolean, ready: boolean, status: {

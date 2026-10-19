@@ -35,6 +35,9 @@ export type PodcastState = {
 const Context = createContext<PodcastState | null>(null);
 const streamError = 'We couldn’t play this episode. Check your connection and try again.';
 const audioMode = { playsInSilentMode: true, shouldPlayInBackground: true, allowsRecording: false, interruptionMode: 'doNotMix' } as const;
+// Development isolation only: a fresh run with this flag never installs a PCM
+// tap, so phone playback can be compared against the same stream without it.
+const disableSamplingForPlaybackCheck = __DEV__ && process.env.EXPO_PUBLIC_PODCAST_DISABLE_SAMPLING === '1';
 
 // This bridge keeps the native hook unconditional while leaving Android's
 // microphone-dependent sampling disabled. Listening never requests a mic.
@@ -65,7 +68,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const [appState, setAppState] = useState(AppState.currentState);
   const appActive = useRef(AppState.currentState === 'active');
   const [sessionQueue] = useState(createPodcastSessionQueue);
-  const [samplingSupported, setSamplingSupported] = useState(Platform.OS !== 'android' && player.isAudioSamplingSupported);
+  const [samplingSupported, setSamplingSupported] = useState(!disableSamplingForPlaybackCheck && Platform.OS !== 'android' && player.isAudioSamplingSupported);
   const episodeRef = useRef<Episode | null>(null), generation = useRef(0), command = useRef(0);
   const alive = useRef(true), wantsPlayback = useRef(false), readyRef = useRef(false);
   const rateRef = useRef(1), lastPosition = useRef(0), lastDuration = useRef(0);
@@ -93,12 +96,12 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     if (publishTimer.current) clearTimeout(publishTimer.current);
     publishTimer.current = null;
   }
-  function diagnostic(event: string, state = rawStatus.current) {
+  function diagnostic(event: string, state = rawStatus.current, nativePosition = state.currentTime) {
     if (!__DEV__ || !episodeRef.current) return;
-    console.info('[BibleDept audio]', event, {
+    console.info('[BibleDept audio]', new Date().toISOString(), event, {
       playing: state.playing, buffering: state.isBuffering, loaded: state.isLoaded,
-      position: Number.isFinite(state.currentTime) ? Math.round(state.currentTime) : 0,
-      control: state.timeControlStatus, hasError: !!state.error,
+      position: Number.isFinite(nativePosition) ? Math.round(nativePosition * 1000) / 1000 : 0,
+      control: state.timeControlStatus, hasError: !!state.error, samplingDisabled: disableSamplingForPlaybackCheck,
     });
   }
   function publish() {
@@ -121,7 +124,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     releaseSession(command.current);
   }
   const onSample = useCallback((sample: AudioSample) => {
-    if (!alive.current || !appActive.current || !episodeRef.current || !readyRef.current || !wantsPlayback.current || !rawStatus.current.playing) return;
+    if (disableSamplingForPlaybackCheck || !alive.current || !appActive.current || !episodeRef.current || !readyRef.current || !wantsPlayback.current || !rawStatus.current.playing) return;
     const activeDuration = podcastDuration(player.duration, lastDuration.current || episodeRef.current.durationSeconds);
     // A queued packet from before a seek/source change must not draw peaks at
     // another point in the episode. Native PCM timestamps use the media clock.
@@ -139,7 +142,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     alive.current = true;
     const subscription = AppState.addEventListener('change', next => {
-      try { diagnostic(next, player.currentStatus); } catch {}
+      try { diagnostic(next, player.currentStatus, player.currentTime); } catch {}
       appActive.current = next === 'active';
       setAppState(next);
       if (next !== 'active') {
@@ -147,7 +150,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
         sampleLevel.current = 0;
         setLiveLevel(0);
         try { player.setAudioSamplingEnabled(false); } catch {}
-      } else if (episodeRef.current && canSamplePodcast(next, Platform.OS, player.isAudioSamplingSupported)) {
+      } else if (episodeRef.current && canSamplePodcast(next, Platform.OS, player.isAudioSamplingSupported, disableSamplingForPlaybackCheck)) {
         // React may defer the bridge's unmount while iOS suspends JS. Restore
         // the native tap explicitly even if both visibility renders coalesced.
         try { player.setAudioSamplingEnabled(true); } catch {}
@@ -255,7 +258,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     } catch { /* The audio can still play when system media controls are unavailable. */ }
   }
   function enableSampling() {
-    if (Platform.OS === 'android') return;
+    if (disableSamplingForPlaybackCheck || Platform.OS === 'android') return;
     try {
       // Web reports unsupported until its analyser is enabled by a user gesture.
       if (Platform.OS === 'web') player.setAudioSamplingEnabled(true);
@@ -397,7 +400,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
 
   return <Context.Provider value={{ episode, status, error: problem, loading, duration, position, playbackRate,
     samples, liveLevel, hasSamples, samplingSupported, play, toggle, pause, seek, setRate, dismiss }}>
-    {episode && canSamplePodcast(appState, Platform.OS, samplingSupported) && <SampleListener player={player} listener={onSample}/>}
+    {episode && canSamplePodcast(appState, Platform.OS, samplingSupported, disableSamplingForPlaybackCheck) && <SampleListener player={player} listener={onSample}/>}
     {children}
   </Context.Provider>;
 }
