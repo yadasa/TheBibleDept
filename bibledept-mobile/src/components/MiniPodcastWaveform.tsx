@@ -33,7 +33,14 @@ const MiniAnchor=memo(function MiniAnchor({levels,width,height,clock,contact,exp
     x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),
     y:height-anchorHeight.value-2,height:anchorHeight.value,opacity:clock.value>0?.55+.45*contact.value:0,
   }));
-  return <AnimatedRect fill="#FFF3C4" animatedProps={edge}/>;
+  const guide=useAnimatedProps(()=>{
+    const regularHeight=height*(.33+.34*expansion.value);
+    return {x:Math.max(0,clock.value*width-1),width:Math.min(1,Math.max(0,clock.value*width)),y:height-regularHeight-2,height:regularHeight,opacity:clock.value>0?.14+.1*contact.value:0};
+  });
+  return <G>
+    <AnimatedRect fill="#FFF3C4" animatedProps={guide}/>
+    <AnimatedRect fill="#FFF3C4" animatedProps={edge}/>
+  </G>;
 });
 
 // Static samples/config mean clock ticks do not rebuild these bar trees.

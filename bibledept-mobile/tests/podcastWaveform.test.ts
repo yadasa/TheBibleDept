@@ -82,13 +82,15 @@ test('silence, invalid samples, and the final visible bar remain bounded',()=>{
   assert.equal(renderedPodcastAmplitude(.8,4,true,57,58,1),1);
 });
 
-test('live influence is symmetric, decreases smoothly and vanishes four bars from the native clock',()=>{
+test('live influence fades over four past bars and more sharply over two future bars',()=>{
   assert.equal(podcastLiveBarWeight(29,58,.5),1);
   for(let distance=1;distance<=4;distance++) {
-    assert.equal(podcastLiveBarWeight(29-distance,58,.5),podcastLiveBarWeight(29+distance,58,.5));
-    assert.ok(podcastLiveBarWeight(29+distance,58,.5)<podcastLiveBarWeight(28+distance,58,.5));
+    assert.ok(podcastLiveBarWeight(29-distance,58,.5)<podcastLiveBarWeight(30-distance,58,.5));
   }
-  assert.equal(podcastLiveBarWeight(33,58,.5),0);
+  assert.ok(podcastLiveBarWeight(28,58,.5)>podcastLiveBarWeight(30,58,.5));
+  assert.equal(podcastLiveBarWeight(25,58,.5),0);
+  assert.equal(podcastLiveBarWeight(31,58,.5),0);
+  assert.ok(podcastLiveBarWeight(27,58,.5)>0);
   assert.equal(podcastLiveBarWeight(50,58,.5),0);
 });
 
@@ -104,14 +106,41 @@ test('unaffected and paused bars retain relative measured heights below 67%, wit
 
 test('nearby bars follow actual PCM, and their maximum tapers from 100% to 67%',()=>{
   let previous=1.1;
-  for(let index=29;index<=33;index++) {
+  for(let index=29;index>=25;index--) {
     const loud=renderedPodcastAmplitude(1,1,true,index,58,.5),quiet=renderedPodcastAmplitude(1,.01,true,index,58,.5);
     const cap=.67+.33*podcastLiveBarWeight(index,58,.5);
     assert.ok(loud<=cap+1e-12);
     assert.ok(loud<previous);
-    if(index<33)assert.ok(quiet<loud);
+    if(index>25)assert.ok(quiet<loud);
     else assert.equal(quiet,loud);
     previous=loud;
+  }
+});
+
+test('quiet active audio stays no more than 33% below the preceding unmodulated average',()=>{
+  const measured=[.2,.4,.6,.8,.1,.9,.3,.5];
+  const recentAverage=previousPodcastBarHeight(measured,.5,1,.67,.035);
+  assert.ok(Math.abs(recentAverage-.335)<1e-12);
+  const center=renderedPodcastAmplitude(.1,0,true,4,8,.5,1,recentAverage);
+  assert.ok(Math.abs(center-recentAverage*.67)<1e-12);
+  assert.ok(center>0);
+  const louder=renderedPodcastAmplitude(.1,.6,true,4,8,.5,1,recentAverage);
+  assert.equal(louder,.6);
+  assert.equal(previousPodcastBarHeight(measured,.5,1,.67,.035),recentAverage,'live response never changes the measured reference used for its floor');
+});
+
+test('neighbor floors blend away faster in the future and disappear entirely while paused',()=>{
+  const average=.6;
+  const at=(index:number,playing=true)=>renderedPodcastAmplitude(.01,0,playing,index,20,.5,1,average);
+  assert.ok(Math.abs(at(10)-average*.67)<1e-12);
+  assert.ok(at(9)>at(11));
+  assert.ok(at(8)>at(12));
+  assert.equal(at(6),.035);
+  assert.equal(at(12),.035);
+  for(let index=0;index<20;index++)assert.equal(at(index,false),.035);
+  for(const value of [NaN,-1,0,1,4,Infinity]) {
+    const level=renderedPodcastAmplitude(1,0,true,10,20,.5,1,value);
+    assert.ok(Number.isFinite(level)&&level>=.035&&level<=1);
   }
 });
 

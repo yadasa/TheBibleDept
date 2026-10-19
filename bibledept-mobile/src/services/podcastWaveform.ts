@@ -1,4 +1,4 @@
-const RESTING_HEIGHT=.67,FALLOFF_PITCHES=4;
+const RESTING_HEIGHT=.67,PAST_FALLOFF_PITCHES=4,FUTURE_FALLOFF_PITCHES=2;
 const bounded=(value:number)=>Number.isFinite(value)?Math.max(0,Math.min(1,value)):0;
 
 /** Choose once from the complete reference, never from each live PCM update. */
@@ -33,11 +33,12 @@ export function previousPodcastBarHeight(levels:readonly number[],progress:numbe
   return sum/(end-start);
 }
 
-/** Symmetric smoothstep influence around the native playback bar. */
+/** Live influence falls off faster ahead of playback than behind it. */
 export function podcastLiveBarWeight(index:number,count:number,progress:number):number {
   if(!Number.isInteger(index)||!Number.isInteger(count)||count<=0||index<0||index>=count||!Number.isFinite(progress))return 0;
   const current=Math.min(count-1,Math.floor(bounded(progress)*count));
-  const proximity=Math.max(0,1-Math.abs(index-current)/FALLOFF_PITCHES);
+  const radius=index>current?FUTURE_FALLOFF_PITCHES:PAST_FALLOFF_PITCHES;
+  const proximity=Math.max(0,1-Math.abs(index-current)/radius);
   return proximity*proximity*(3-2*proximity);
 }
 
@@ -46,10 +47,14 @@ export function podcastLiveBarWeight(index:number,count:number,progress:number):
  * Nearby bars respond to the real current PCM level with a smooth falloff;
  * only the current bar can reach 100%. Apply this after visual downsampling.
  */
-export function renderedPodcastAmplitude(historical:number,live:number,playing:boolean,index:number,count:number,progress:number,referencePeak=1):number {
+export function renderedPodcastAmplitude(historical:number,live:number,playing:boolean,index:number,count:number,progress:number,referencePeak=1,recentRestAverage=0):number {
   const resting=bounded(historical)*RESTING_HEIGHT;
   const weight=playing?podcastLiveBarWeight(index,count,progress):0;
   const cap=RESTING_HEIGHT+(1-RESTING_HEIGHT)*weight;
   const actual=normalizePodcastAmplitude(live,referencePeak);
-  return Math.max(.035,Math.min(cap,resting*(1-weight)+actual*cap*weight));
+  // A 33% dip below the preceding measured average is 67% of that average,
+  // never a negative height. The caller derives it from the unmodulated profile
+  // so this lower bound cannot feed back through its own live response.
+  const floor=bounded(recentRestAverage)*.67*weight;
+  return Math.max(.035,floor,Math.min(cap,resting*(1-weight)+actual*cap*weight));
 }

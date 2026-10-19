@@ -33,7 +33,11 @@ const PodcastAnchor=memo(function PodcastAnchor({levels,width,height,clock,conta
     x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),
     y:(height-anchorHeight.value)/2,height:anchorHeight.value,opacity:clock.value>0?.75+.25*contact.value:0,
   }));
-  return <AnimatedRect fill="#FFF3C4" stroke={outline} strokeWidth={outline==='none'?0:.5} animatedProps={edge}/>;
+  const guide=useAnimatedProps(()=>({x:Math.max(0,clock.value*width-1),width:Math.min(1,Math.max(0,clock.value*width)),opacity:clock.value>0?.18+.1*contact.value:0}));
+  return <G>
+    <AnimatedRect y={0} height={height} fill="#FFF3C4" animatedProps={guide}/>
+    <AnimatedRect fill="#FFF3C4" stroke={outline} strokeWidth={outline==='none'?0:.5} animatedProps={edge}/>
+  </G>;
 });
 
 // Stable component types retain native SVG nodes across PCM updates.
@@ -41,7 +45,10 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
   const config=useContext(RenderContext)!;
   const clock=config.clock;
   const pitch=(width+GAP)/Math.max(1,bars.length),barWidth=Math.max(1,pitch-GAP),filled=color===config.orange;
-  const levels=useMemo(()=>bars.map((amplitude,index)=>renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress,config.referencePeak)),
+  const levels=useMemo(()=>{
+    const recentRestAverage=previousPodcastBarHeight(bars,config.progress,1,.67,.035);
+    return bars.map((amplitude,index)=>renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress,config.referencePeak,recentRestAverage));
+  },
     [bars,config.liveLevel,config.playing,config.progress,config.referencePeak]);
   const clip=useAnimatedProps(()=>({width:Math.max(0,Math.min(width,clock.value*width))}));
   const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-4.5*pitch),x2:Math.max(.001,clock.value*width)}));
