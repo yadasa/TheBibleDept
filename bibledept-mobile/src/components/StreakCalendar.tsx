@@ -22,12 +22,19 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
   const scroll=useRef<ScrollView>(null);
   const chart=useRef<View>(null),chartTop=useRef<number|null>(null),horizontalOffset=useRef(0),windowRef=useRef<CalendarWindow|null>(null);
   const [visible,setVisible]=useState<CalendarWindow|null>(null);
+  const visibilityTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const horizontalScrollAt=useSharedValue(0);
   const cellSize=Math.max(14,Math.min(28,(width-56)/15));
   const updateVisibility=useCallback(()=>{
     const metrics=controls.getMetrics();
     const next=visibleCalendarWindow({active:metrics.active,chartTop:chartTop.current,scrollTop:metrics.offsetY,viewportHeight:metrics.viewportHeight,horizontalOffset:horizontalOffset.current,viewportWidth:width,cellSize,gap:CALENDAR_GAP,padding:CALENDAR_PADDING,halo:GLOW_REACH});
     if(!sameCalendarWindow(windowRef.current,next)){windowRef.current=next;setVisible(next);}
   },[controls,width,cellSize]);
+  const settleVisibility=useCallback(()=>{
+    if(visibilityTimer.current)clearTimeout(visibilityTimer.current);
+    visibilityTimer.current=setTimeout(()=>{visibilityTimer.current=null;updateVisibility();},120);
+  },[updateVisibility]);
+  useEffect(()=>()=>{if(visibilityTimer.current)clearTimeout(visibilityTimer.current);},[]);
   const measure=useCallback(()=>controls.measureContent(chart.current,bounds=>{chartTop.current=bounds.top;updateVisibility();}),[controls,updateVisibility]);
   const activity=useMemo(()=>readingCalendar(days,today),[days,today]);
   useEffect(()=>{
@@ -35,9 +42,13 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
     return controls.subscribe(metrics=>{
       if(metrics.active!==previous.active)setActive(metrics.active);
       if(metrics.active&&(!previous.active||metrics.contentHeight!==previous.contentHeight||metrics.viewportHeight!==previous.viewportHeight))measure();
-      previous=metrics;updateVisibility();
+      const scrolling=metrics.active&&metrics.offsetY!==previous.offsetY;
+      previous=metrics;
+      // Do not mount/unmount dozens of worklets while a finger or fling moves
+      // the chart. The clock is frozen on the UI thread until scrolling rests.
+      if(scrolling)settleVisibility();else updateVisibility();
     });
-  },[controls,measure,updateVisibility]);
+  },[controls,measure,updateVisibility,settleVisibility]);
   useEffect(()=>{const listener=AppState.addEventListener('change',state=>setForeground(state==='active'));return()=>listener.remove();},[]);
   const weeks=useMemo(()=>{
     const weekday=new Date(`${today}T12:00:00Z`).getUTCDay();
@@ -59,7 +70,10 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
   // One clock for the entire chart. Slow ambient pulses need only 30 updates/s;
   // native scrolling keeps its full refresh rate independently of this clock.
   const clock=useSharedValue(0),pendingTime=useSharedValue(0);
+  const verticalScrollAt=controls.motion?.lastScrollAt;
   const pulseFrame=useFrameCallback(frame=>{
+    const now=Date.now();
+    if(now-horizontalScrollAt.value<160||(verticalScrollAt&&now-verticalScrollAt.value<160))return;
     pendingTime.value+=Math.min(frame.timeSincePreviousFrame??0,64);
     if(pendingTime.value>=1000/30){clock.value+=pendingTime.value;pendingTime.value=0;}
   },false);
@@ -81,7 +95,7 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
     <View ref={chart} collapsable={false} onLayout={measure}>
     <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} testID="reading-contribution-calendar" style={[s.chart,{backgroundColor:palette.calendarWell,boxShadow:palette.calendarInset,borderRadius:10}]} contentContainerStyle={s.weeks}
       onLayout={event=>{setWidth(event.nativeEvent.layout.width);measure();}} onContentSizeChange={snapToRecent}
-      scrollEventThrottle={48} onScroll={event=>{horizontalOffset.current=event.nativeEvent.contentOffset.x;updateVisibility();}}>
+      scrollEventThrottle={48} onScroll={event=>{horizontalScrollAt.value=Date.now();horizontalOffset.current=event.nativeEvent.contentOffset.x;settleVisibility();}}>
       {useMemo(()=>weeks.map(week=><View key={week[0]} style={s.week}>
         {week.map(date=>{
           const run=activity.runs.get(date)||0,done=run>0,future=date>today;
