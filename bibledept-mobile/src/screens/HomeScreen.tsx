@@ -77,10 +77,6 @@ export function HomeScreen({
           onPress={onRead}
         />
         <Text style={s.device}>Pick up where you left off.</Text>
-        <View style={s.progressLabels}>
-          <Text style={s.small}>{complete} days completed</Text>
-          <Text style={s.small}>{percent}%</Text>
-        </View>
         <View style={s.track}>
           <View
             style={{
@@ -89,6 +85,10 @@ export function HomeScreen({
               width: `${(complete / 365) * 100}%`,
             }}
           />
+        </View>
+        <View style={s.progressLabels}>
+          <Text style={s.small}>{complete} days completed</Text>
+          <Text style={s.small}>{percent}%</Text>
         </View>
       </GlassSurface>
       {!!plan.error && (
@@ -258,9 +258,9 @@ const styles = (c: Colors) =>
       justifyContent: "space-between",
       gap: 12,
       marginTop: 4,
-      marginBottom: 10,
+      marginBottom: 0,
     },
-    track: { height: 4, backgroundColor: c.border },
+    track: { height: 4, backgroundColor: c.border, marginTop:10 },
     small: { ...t.meta, fontSize: 12, color: c.muted },
     device: { ...t.meta, fontSize: 11, lineHeight:14, color: c.muted, marginTop:4 },
     section: { ...t.section, fontSize: 20, lineHeight: 27, color: c.ink },
