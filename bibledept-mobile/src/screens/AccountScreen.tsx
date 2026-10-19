@@ -1,4 +1,3 @@
-import { GlassPressable as Pressable } from "../components/Glass";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -10,7 +9,6 @@ import { radius, spacing, useThemedStyles, Colors, typography } from '../theme';
 import { PhoneSignIn } from './PhoneSignIn';
 import { SettingsScreen } from './SettingsScreen';
 import { detachPushDevice } from '../services/NotificationProvider';
-import { BrandLogo } from '../components/BrandLogo';
 
 export function AccountScreen() {
   const {c,s}=useThemedStyles(styles);
@@ -22,7 +20,6 @@ export function AccountScreen() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [phone, setPhone] = useState(false);
-  const [modeFocused, setModeFocused] = useState(false);
   const [settings,setSettings]=useState(false);
 
   async function submit() {
@@ -74,7 +71,6 @@ export function AccountScreen() {
   if(user&&settings)return <SettingsScreen onBack={()=>setSettings(false)}/>;
 
   return <View>
-    {!user&&<View style={{marginBottom:24}}><BrandLogo large/></View>}
     {usingEmulators && <View style={s.mode}><Text style={s.modeTitle}>Practice account</Text><Text style={s.modeText}>Changes made here won’t appear in your usual account.</Text></View>}
     {user ? <View>
       <View style={s.identity}>
@@ -99,14 +95,14 @@ export function AccountScreen() {
         {register && <Text style={s.helper}>Use at least 8 characters.</Text>}
         {!!error && <Notice text={error} error />}
         {!!message && <Notice text={message} success />}
-        <ActionButton title={register ? 'Create free account' : 'Sign in'} onPress={submit} loading={busy} icon="arrowRight" />
+        <ActionButton title={register ? 'Create account' : 'Sign in'} onPress={submit} loading={busy} icon="arrowRight" />
         {!register && <ActionButton title="Forgot password?" onPress={reset} variant="ghost" disabled={busy} />}
       </View>
-      <View style={s.switchRow}><Text style={s.switchText}>{register ? 'Already have an account?' : 'New to Bible Dept?'}</Text><Pressable accessibilityRole="button" accessibilityLabel={register ? 'Sign in to an existing account' : 'Create a free account'} accessibilityState={{ disabled: busy }} disabled={busy} onFocus={() => setModeFocused(true)} onBlur={() => setModeFocused(false)} onPress={switchMode} style={({ pressed }) => [s.switchButton, pressed && s.pressed, modeFocused && s.focused]}><Text style={s.switchLink}>{register ? 'Sign in' : 'Create an account'}</Text></Pressable></View>
+      <View style={s.switchRow}><Text style={s.switchText}>{register ? 'Already have an account?' : 'New to Bible Dept?'}</Text></View>
+      <ActionButton title={register ? 'Sign in' : 'Create an account'} onPress={switchMode} disabled={busy} icon="arrowRight"/>
       <View style={s.divider}><View style={s.rule} /><Text style={s.dividerText}>or</Text><View style={s.rule} /></View>
       <ActionButton title="Continue with phone" onPress={() => { setPhone(true); setError(''); setMessage(''); }} variant="secondary" icon="phone" disabled={busy} />
     </View>}
-    <View style={s.freeNote}><Icon name="book" size={16} color={c.muted} /><Text style={s.freeText}>The readings and podcast are free. You can use both without an account.</Text></View>
   </View>;
 }
 
@@ -130,7 +126,7 @@ const styles=(c:Colors)=>StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: spacing[4], marginTop: spacing[12] },
   switchText: { ...typography.meta, color: c.muted },
   switchButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing[4], borderRadius: radius },
-  switchLink: { ...typography.label, color: c.actionText, textDecorationLine: 'underline' },
+  switchLink: { ...typography.label, color: c.actionText },
   pressed: { backgroundColor: c.tint },
   focused: { outlineColor: c.action, outlineWidth: 2, outlineOffset: 2 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: spacing[16], marginTop: spacing[16], marginBottom: spacing[8] },
