@@ -6,18 +6,15 @@ import { PassageView } from '../components/PassageView';
 import { useScreenScroll } from '../components/ScreenScrollView';
 import { fetchPassage, Passage, Translation } from '../services/bible';
 import { useThemedStyles, Colors, typography as t } from '../theme';
-import { useAuth } from '../services/AuthProvider';
-import { useReadings } from '../services/ReadingProvider';
-import { readingDay } from '../services/readingDays';
 import * as Clipboard from 'expo-clipboard';
 import { passageLink } from '../services/links';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
+import { ReadingCompletion } from '../components/ReadingCompletion';
 
 export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', requestRevision = 0, onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; requestRevision?: number; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
   const {c,s}=useThemedStyles(styles);
-  const {user}=useAuth(),{readings,complete}=useReadings(),scrollTop=useScreenScroll();
-  const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
+  const scrollTop=useScreenScroll();
   const [draft,setDraft]=useState(initialReference),[reference,setReference]=useState(initialReference);
   const [translation,setTranslation]=useState<Translation>(initialTranslation);
   const [linkMessage,setLinkMessage]=useState(''),[passage,setPassage]=useState<Passage|null>(null);
@@ -26,7 +23,7 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
   useEffect(()=>setTranslation(initialTranslation),[initialTranslation,requestRevision]);
   useEffect(()=>{
     const controller=new AbortController();
-    setLoading(true);setError('');setPassage(null);setLinkMessage('');setSaveError('');
+    setLoading(true);setError('');setPassage(null);setLinkMessage('');
     fetchPassage(reference,translation,controller.signal).then(result=>{
       if(controller.signal.aborted)return;
       setPassage(result);onPassageLoaded?.(result);
@@ -34,7 +31,6 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
     return()=>controller.abort();
   },[reference,translation,retry]);
   function read(){Keyboard.dismiss();scrollTop();if(draft.trim()===reference)setRetry(v=>v+1);else setReference(draft.trim());}
-  const saved=!!passage&&readings.some(r=>r.day===readingDay()&&r.reference===passage.reference);
   return <View>
     <Text style={s.intro}>Open a chapter or a specific verse.</Text>
     <Field label="Bible passage" value={draft} onChangeText={setDraft} placeholder="Luke 1 or John 3:16" returnKeyType="search" onSubmitEditing={read} autoCorrect={false}/>
@@ -43,11 +39,9 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
     {loading&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text="Opening Scripture…"/></View>}
     {!!error&&<View style={s.error}><Text style={s.errorTitle}>This passage couldn't load</Text><Notice text={error} error/><ActionButton title="Try again" icon="refresh" onPress={()=>setRetry(v=>v+1)} secondary/></View>}
     {passage&&<View>
-      <PassageView passage={passage}/>
+      <PassageView key={`${passage.reference}:${translation}`} passage={passage}/>
+      <ReadingCompletion passage={passage} source="reader" onAccount={onAccount}/>
       <View style={s.actions}>
-        {user?<ActionButton title={saved?'Reading saved for today':"Save to today's reading history"} icon="check" loading={saving} disabled={saved} onPress={()=>{setSaving(true);setSaveError('');complete(passage).catch(()=>setSaveError('Could not save your reading. Check your connection and retry.')).finally(()=>setSaving(false));}}/>:<ActionButton title="Sign in to save reading history" onPress={onAccount} secondary/>}
-        {saved&&<Notice text="This passage is saved to your account." success/>}
-        {!!saveError&&<Notice text={saveError} error/>}
         <ActionButton title="Copy passage link" variant="ghost" onPress={()=>{
           const url=Constants.executionEnvironment===ExecutionEnvironment.StoreClient
             ?ExpoLinking.createURL('read',{queryParams:{ref:passage.reference,translation}})

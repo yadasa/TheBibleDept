@@ -72,7 +72,7 @@ export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect
               const current = day === currentDay, selected = day === selectedDay, done = day < currentDay || finished;
               return <Pressable key={day} accessibilityRole="button" accessibilityLabel={'Day ' + day + ', ' + getReadingPlanDay(day)!.label + (current ? ', your current day' : '') + (done ? ', completed' : '')} accessibilityState={{ selected }} onPress={() => select(day)} style={({ pressed }) => [s.day, { width: cellWidth }, done && s.done, current && s.current, selected && s.selected, pressed && s.pressed]}>
                 <View style={s.dayNumber}><Text style={[s.dayText, current && s.currentText]}>{day}</Text></View>
-                {done && <View style={s.completionMarker}><Icon name="check" size={14} color={current ? c.ink : c.success}/></View>}
+                {done && <View style={s.completionMarker}><Icon name="check" size={14} color={current ? c.onOrange : c.success}/></View>}
                 {current && <Text style={s.currentMarker}>Now</Text>}
               </Pressable>;
             })}
@@ -109,7 +109,7 @@ const styles=(c:Colors)=>StyleSheet.create({
   dayNumber: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }, dayText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: c.ink },
   completionMarker: { position: 'absolute', top: 2, right: 2 },
   done: { backgroundColor: c.successTint }, current: { backgroundColor: c.orange, borderColor: c.orange }, selected: { borderColor: c.ink, borderWidth: 2 },
-  currentText: { fontWeight: '800' }, currentMarker: { ...t.meta, color: c.ink, fontWeight: '600', textAlign: 'center' },
+  currentText: { fontWeight: '800', color:c.onOrange }, currentMarker: { ...t.meta, color: c.onOrange, fontWeight: '600', textAlign: 'center' },
   legend: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginTop: 12 }, legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 }, legendText: { ...t.meta, color: c.muted },
   selectedKey: { width: 14, height: 14, borderColor: c.ink, borderWidth: 2, borderRadius: 2 },
   jump: { flexDirection: 'row', alignItems: 'flex-end', gap: 12, marginTop: 20, flexWrap: 'wrap' }, input: { flex: 1, minWidth: 140 }, jumpAction: { marginBottom: 16, minWidth: 112 },

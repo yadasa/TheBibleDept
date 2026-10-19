@@ -28,7 +28,7 @@ export function BibleHub({initialReference,initialTranslation,onAccount,active=t
     {(['plan','search'] as const).filter(value=>visited.includes(value)||value===mode).map(value=>{
       const showing=mode===value;
       return <View key={value} style={!showing&&s.hidden} accessibilityElementsHidden={!active||!showing} importantForAccessibility={active&&showing?'auto':'no-hide-descendants'}>
-        {value==='plan'?<PlanScreen active={active&&showing}/>:<BibleScreen initialReference={searchRequest.reference} initialTranslation={searchRequest.translation} requestRevision={searchRequest.revision} onAccount={onAccount}/>}
+        {value==='plan'?<PlanScreen active={active&&showing} onAccount={onAccount}/>:<BibleScreen initialReference={searchRequest.reference} initialTranslation={searchRequest.translation} requestRevision={searchRequest.revision} onAccount={onAccount}/>}
       </View>;
     })}
   </View>;

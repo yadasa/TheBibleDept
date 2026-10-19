@@ -1,6 +1,6 @@
 # Reading streak implementation plan
 
-Status: **Planned, not implemented.** Updated October 18, 2026 against repository commit `3b84b67`. This plan extends the active Expo client in `bibledept-mobile`. It does not deploy functions, alter Firestore rules, or enable reminders.
+Status: **Implemented in source; live deployment and signed-device validation remain.** This is the original October 18, 2026 design plan, whose baseline was repository commit `3b84b67`. The baseline inventory and proposed steps below are retained for rationale. See [current implementation and setup](HABIT_FEATURES_SETUP.md) and [app design details](APP_DESIGN_IMPLEMENTATION.md) for delivered behavior and release requirements.
 
 ## Product outcome
 
@@ -8,7 +8,7 @@ Help a reader build a sustainable daily Scripture habit. One explicitly complete
 
 Use the [Bible Dept style direction](style-guide/README.md): warm paper, deep ink, purposeful orange, readable action colors, simple icons, modest corners, comfortable text, and patient copy. The streak is private by default. Leaderboards, paid restores, competitive points, and notification campaigns are outside the first release.
 
-## Current implementation and gaps
+## Baseline implementation and gaps at planning time
 
 | Existing source | Current behavior | Planned change |
 | --- | --- | --- |

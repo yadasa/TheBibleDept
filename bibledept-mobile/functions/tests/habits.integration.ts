@@ -1,40 +1,162 @@
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { initializeHabit, recordCompletion, userPath } from '../src/streaks';
-import { registerDevice, savePreferences } from '../src/notifications';
-import { reserveReminder } from '../src/reminderWorker';
-import { defaultPreferences } from '../../shared/reminders';
-import { shiftDate } from '../../shared/habits';
-assert.ok(process.env.FIRESTORE_EMULATOR_HOST,'These tests must run inside the Firebase emulator.');
-initializeApp({projectId:'demo-bibledept'});
-const now=Date.parse('2026-10-19T00:30:00Z'),id='12345678-1234-1234-1234-123456789012';
-const completion={sessionId:id,chapterId:'LUK.1',translation:'web',source:'plan',planDay:1,expectedHabitDate:'2026-10-18'};
-test('concurrent completions award one day and late retries return the original receipt',async()=>{
-  const uid=`streak-${Date.now()}`;await initializeHabit(uid,'America/Chicago',now);
-  const receipts=await Promise.all(Array.from({length:8},(_,i)=>recordCompletion(uid,{...completion,sessionId:id+i},now)));
-  assert.equal(receipts.filter(r=>r.awardedNewDay).length,1);
-  const before=await recordCompletion(uid,completion,now),after=await recordCompletion(uid,completion,now+86400000);assert.deepEqual(after,before);
-  await assert.rejects(recordCompletion(uid,{...completion,chapterId:'LUK.2'},now+86400000));
-  await assert.rejects(recordCompletion(uid,{...completion,sessionId:id+'expired'},now+86400000),e=>(e as any).details?.reason==='expired_day');
-  assert.equal((await userPath(uid).collection('stats').doc('streak').get()).data()?.totalReadingDays,1);
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { initializeHabit, recordCompletion, userPath } from "../src/streaks";
+import {
+  registerDevice,
+  savePreferences,
+  unregisterDevice,
+  bindingId,
+} from "../src/notifications";
+import { reserveReminder } from "../src/reminderWorker";
+import { defaultPreferences } from "../../shared/reminders";
+import { shiftDate } from "../../shared/habits";
+assert.ok(
+  process.env.FIRESTORE_EMULATOR_HOST,
+  "These tests must run inside the Firebase emulator.",
+);
+initializeApp({ projectId: "demo-bibledept" });
+const now = Date.parse("2026-10-19T00:30:00Z"),
+  id = "12345678-1234-1234-1234-123456789012";
+const completion = {
+  sessionId: id,
+  chapterId: "LUK.1",
+  translation: "web",
+  source: "plan",
+  planDay: 1,
+  expectedHabitDate: "2026-10-18",
+};
+test("one completion ID is stable under simultaneous retries", async () => {
+  const uid = `same-session-${Date.now()}`;
+  await initializeHabit(uid, "America/Chicago", now);
+  const receipts = await Promise.all(
+    Array.from({ length: 5 }, () => recordCompletion(uid, completion, now)),
+  );
+  for (const receipt of receipts) assert.deepEqual(receipt, receipts[0]);
+  assert.equal(
+    (await userPath(uid).collection("readingSessions").get()).size,
+    1,
+  );
   await getFirestore().recursiveDelete(userPath(uid));
 });
-test('legacy migration imports more than 366 dates, keeps the longest streak, and is idempotent',async()=>{
-  const uid=`legacy-${Date.now()}`,root=userPath(uid),batch=getFirestore().batch();
-  for(let n=450;n>0;n--)batch.set(root.collection('readings').doc(shiftDate('2026-10-18',-n)),{reference:'Luke 1',translation:'web',completedAt:Timestamp.fromMillis(now-n*86400000)});
-  await batch.commit();await initializeHabit(uid,'America/Chicago',now);await initializeHabit(uid,'America/Chicago',now);
-  const summary=(await root.collection('stats').doc('streak').get()).data()!;assert.equal(summary.totalReadingDays,450);assert.equal(summary.longest,450);
-  const receipt=await recordCompletion(uid,completion,now);assert.equal(receipt.current,451);await getFirestore().recursiveDelete(root);
+test("a token moves between accounts and stale unregister or refresh cannot revoke its new owner", async () => {
+  const first = `first-${Date.now()}`,
+    second = `second-${Date.now()}`,
+    token = `ExpoPushToken[shared_${Date.now()}]`;
+  const input = {
+    installationId: id,
+    expoPushToken: token,
+    platform: "ios",
+    permissionStatus: "granted",
+  };
+  const a = await registerDevice(first, input, now),
+    b = await registerDevice(second, input, now);
+  assert.notEqual(a.accountScope, b.accountScope);
+  assert.equal(
+    (await userPath(first).collection("pushDevices").doc(id).get()).data()
+      ?.enabled,
+    false,
+  );
+  await registerDevice(
+    first,
+    { ...input, expoPushToken: `ExpoPushToken[new_${Date.now()}]` },
+    now,
+  );
+  await unregisterDevice(first, id, now);
+  const binding = getFirestore()
+    .collection("bibledeptPushBindings")
+    .doc(bindingId(token));
+  assert.equal((await binding.get()).data()?.uid, second);
+  await unregisterDevice(second, id, now);
+  await getFirestore().recursiveDelete(userPath(first));
+  await getFirestore().recursiveDelete(userPath(second));
 });
-test('reminder reservations use one device, deduplicate overlap, and are disabled in dry run',async()=>{
-  const uid=`reminder-${Date.now()}`,root=userPath(uid),yesterday=now-86400000;await initializeHabit(uid,'America/Chicago',yesterday);
-  await recordCompletion(uid,{...completion,expectedHabitDate:'2026-10-17'},yesterday);
-  await registerDevice(uid,{installationId:id,expoPushToken:`ExpoPushToken[test_${uid}]`,platform:'ios',permissionStatus:'granted'},now);
-  await savePreferences(uid,{...defaultPreferences,enabled:true,preferredInstallationId:id},now);
-  assert.equal(await reserveReminder(uid,now,false),null);
-  const attempts=await Promise.all([reserveReminder(uid,now,true),reserveReminder(uid,now,true)]);assert.equal(attempts.filter(Boolean).length,1);
-  assert.equal((await root.collection('notificationCampaigns').get()).size,1);
+test("concurrent completions award one day and late retries return the original receipt", async () => {
+  const uid = `streak-${Date.now()}`;
+  await initializeHabit(uid, "America/Chicago", now);
+  const receipts = await Promise.all(
+    Array.from({ length: 8 }, (_, i) =>
+      recordCompletion(uid, { ...completion, sessionId: id + i }, now),
+    ),
+  );
+  assert.equal(receipts.filter((r) => r.awardedNewDay).length, 1);
+  const before = await recordCompletion(uid, completion, now),
+    after = await recordCompletion(uid, completion, now + 86400000);
+  assert.deepEqual(after, before);
+  await assert.rejects(
+    recordCompletion(
+      uid,
+      { ...completion, chapterId: "LUK.2" },
+      now + 86400000,
+    ),
+  );
+  await assert.rejects(
+    recordCompletion(
+      uid,
+      { ...completion, sessionId: id + "expired" },
+      now + 86400000,
+    ),
+    (e) => (e as any).details?.reason === "expired_day",
+  );
+  assert.equal(
+    (await userPath(uid).collection("stats").doc("streak").get()).data()
+      ?.totalReadingDays,
+    1,
+  );
+  await getFirestore().recursiveDelete(userPath(uid));
+});
+test("legacy migration imports more than 366 dates, keeps the longest streak, and is idempotent", async () => {
+  const uid = `legacy-${Date.now()}`,
+    root = userPath(uid),
+    batch = getFirestore().batch();
+  for (let n = 450; n > 0; n--)
+    batch.set(root.collection("readings").doc(shiftDate("2026-10-18", -n)), {
+      reference: "Luke 1",
+      translation: "web",
+      completedAt: Timestamp.fromMillis(now - n * 86400000),
+    });
+  await batch.commit();
+  await initializeHabit(uid, "America/Chicago", now);
+  await initializeHabit(uid, "America/Chicago", now);
+  const summary = (await root.collection("stats").doc("streak").get()).data()!;
+  assert.equal(summary.totalReadingDays, 450);
+  assert.equal(summary.longest, 450);
+  const receipt = await recordCompletion(uid, completion, now);
+  assert.equal(receipt.current, 451);
+  await getFirestore().recursiveDelete(root);
+});
+test("reminder reservations use one device, deduplicate overlap, and are disabled in dry run", async () => {
+  const uid = `reminder-${Date.now()}`,
+    root = userPath(uid),
+    yesterday = now - 86400000;
+  await initializeHabit(uid, "America/Chicago", yesterday);
+  await recordCompletion(
+    uid,
+    { ...completion, expectedHabitDate: "2026-10-17" },
+    yesterday,
+  );
+  await registerDevice(
+    uid,
+    {
+      installationId: id,
+      expoPushToken: `ExpoPushToken[test_${uid}]`,
+      platform: "ios",
+      permissionStatus: "granted",
+    },
+    now,
+  );
+  await savePreferences(
+    uid,
+    { ...defaultPreferences, enabled: true, preferredInstallationId: id },
+    now,
+  );
+  assert.equal(await reserveReminder(uid, now, false), null);
+  const attempts = await Promise.all([
+    reserveReminder(uid, now, true),
+    reserveReminder(uid, now, true),
+  ]);
+  assert.equal(attempts.filter(Boolean).length, 1);
+  assert.equal((await root.collection("notificationCampaigns").get()).size, 1);
   await getFirestore().recursiveDelete(root);
 });

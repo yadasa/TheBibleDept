@@ -3,7 +3,7 @@ import { getFirebase } from './firebase';
 
 export function clearPhoneVerifier(){}
 
-export async function requestNativePhoneCode(phoneNumber:string):Promise<string> {
+export async function requestNativePhoneCode(phoneNumber:string):Promise<{verificationId:string;automaticCode?:string}> {
   if(Constants.executionEnvironment===ExecutionEnvironment.StoreClient) {
     throw new Error('Live SMS verification needs a signed development build. Expo Go supports email and local emulator phone tests.');
   }
@@ -18,5 +18,5 @@ export async function requestNativePhoneCode(phoneNumber:string):Promise<string>
   }
   const result=await nativeAuth.verifyPhoneNumber(nativeAuth.getAuth(),phoneNumber);
   if(!result.verificationId)throw new Error('Phone verification did not start. Please retry.');
-  return result.verificationId;
+  return {verificationId:result.verificationId,...(result.code?{automaticCode:result.code}:{})};
 }

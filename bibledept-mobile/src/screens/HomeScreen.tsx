@@ -1,44 +1,455 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ActionButton, Notice } from '../components/ui';
-import { Icon } from '../components/Icon';
-import { useAuth } from '../services/AuthProvider';
-import { useReadings } from '../services/ReadingProvider';
-import { useThemedStyles, Colors, typography as t } from '../theme';
-import { usePlan } from '../services/PlanProvider';
-import { getPlanChapters, getReadingPlanDay } from '../services/readingPlan';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { shiftDate } from "../../shared/habits";
+import { ActionButton, Notice } from "../components/ui";
+import { Icon, IconName } from "../components/Icon";
+import { useAuth } from "../services/AuthProvider";
+import { useHabit } from "../services/HabitProvider";
+import { useNotes } from "../services/NotesProvider";
+import { usePlan } from "../services/PlanProvider";
+import { getPlanChapters, getReadingPlanDay } from "../services/readingPlan";
+import { Colors, useThemedStyles, typography as t } from "../theme";
 
-export function HomeScreen({onRead,onAccount,onPrayer}:{onRead:()=>void;onAccount:()=>void;onPrayer:()=>void}) {
-  const {c,s}=useThemedStyles(styles);
-  const {user}=useAuth(),{readings,streak,error}=useReadings();
-  const plan=usePlan(),current=getReadingPlanDay(plan.currentDay)!;
-  const complete=plan.finished?365:plan.currentDay-1;
-  const chapters=getPlanChapters(current.day);
-  return <View>
-    <Text style={s.welcome}>A little every day. At your pace.</Text>
-    <View style={s.reading}>
-      <View style={s.row}><Text style={s.eyebrow}>Your reading plan</Text><Icon name={plan.finished?'checkCircle':'book'} color={c.action}/></View>
-      <View style={s.dayRow}><Text style={s.day}>Day {current.day}</Text><Text style={s.total}>of 365</Text></View>
-      <Text style={s.passage}>{current.label}</Text>
-      <Text style={s.meta}>{chapters.length} chapters · {plan.finished?'Plan complete':'Your current day'}</Text>
-      <ActionButton title={plan.finished?'Revisit this reading':`Read day ${current.day}`} icon="arrowRight" disabled={!plan.ready} onPress={()=>{plan.returnToCurrent();onRead();}}/>
-      <View style={s.progressRow}><View style={s.track}><View style={[s.fill,{width:`${100*complete/365}%`}]}/></View><Text style={s.progressText}>{complete} / 365 complete</Text></View>
+export function HomeScreen({
+  onRead,
+  onAccount,
+  onPrayer,
+  onNotes,
+}: {
+  onRead: () => void;
+  onAccount: () => void;
+  onPrayer: () => void;
+  onNotes: () => void;
+}) {
+  const { c, s } = useThemedStyles(styles),
+    { user } = useAuth(),
+    habit = useHabit(),
+    notes = useNotes(),
+    plan = usePlan(),
+    day = getReadingPlanDay(plan.currentDay)!;
+  const complete = plan.finished ? 365 : plan.currentDay - 1,
+    percent = Math.round((complete / 365) * 100),
+    chapters = getPlanChapters(day.day),
+    lastNote = notes.notes.find((n) => !!n.comment);
+  const date = new Date(habit.today + "T12:00:00Z").toLocaleDateString(
+    undefined,
+    { month: "long", day: "numeric", weekday: "long", timeZone: "UTC" },
+  );
+  return (
+    <View>
+      <View style={s.dateRow}>
+        <Text style={s.eyebrow}>{date}</Text>
+        <View style={s.badge}>
+          <View style={s.dot} />
+          <Text style={s.badgeText}>AT YOUR PACE</Text>
+        </View>
+      </View>
+      <Text accessibilityRole="header" style={s.hero}>
+        Make room{`\n`}for the Word<Text style={{ color: c.orange }}>.</Text>
+      </Text>
+      <Text style={s.intro}>
+        A little reading. A deeper understanding.{`\n`}A rhythm you can return
+        to.
+      </Text>
+      <View style={s.reading}>
+        <View style={s.topline}>
+          <Text style={s.eyebrow}>THE 365-DAY PLAN</Text>
+          <Icon name="book" color={c.action} />
+        </View>
+        <View style={s.dayRow}>
+          <Text style={s.day}>Day {day.day.toString().padStart(2, "0")}</Text>
+          <Text style={s.total}>/ 365</Text>
+        </View>
+        <Text style={s.reference}>{day.label}</Text>
+        <Text style={s.meta}>
+          {chapters.length} chapters ·{" "}
+          {plan.finished ? "Plan complete" : "Your next reading"}
+        </Text>
+        <ActionButton
+          title={plan.finished ? "Revisit your reading" : `Continue reading`}
+          icon="arrowRight"
+          disabled={!plan.ready}
+          onPress={onRead}
+        />
+        <View style={s.progressLabels}>
+          <Text style={s.small}>{complete} days completed</Text>
+          <Text style={s.small}>{percent}%</Text>
+        </View>
+        <View style={s.track}>
+          <View
+            style={{
+              height: 4,
+              backgroundColor: c.action,
+              width: `${(complete / 365) * 100}%`,
+            }}
+          />
+        </View>
+      </View>
+      {!!plan.error && (
+        <>
+          <Notice text={plan.error} error />
+          <ActionButton
+            title="Retry saved plan"
+            secondary
+            onPress={plan.retry}
+          />
+        </>
+      )}
+      <Text style={s.device}>
+        Your place in the plan is saved on this device.
+      </Text>
+      {user && habit.ready ? (
+        <View style={s.rhythm}>
+          <View style={s.topline}>
+            <Text style={s.section}>Your reading rhythm</Text>
+            <Icon name="flame" color={c.action} />
+          </View>
+          <View style={s.stats}>
+            <View>
+              <Text style={s.bigNumber}>
+                {habit.current}
+                <Text style={s.numberUnit}>
+                  {" "}
+                  {habit.current === 1 ? "day" : "days"}
+                </Text>
+              </Text>
+              <Text style={s.small}>
+                {habit.days.includes(habit.today)
+                  ? "Today, you showed up."
+                  : habit.current
+                    ? "There’s room for a chapter today."
+                    : "Every chapter is a new beginning."}
+              </Text>
+            </View>
+            <View style={s.best}>
+              <Text style={s.bestNumber}>{habit.streak.longest}</Text>
+              <Text style={s.small}>Personal best</Text>
+            </View>
+          </View>
+          <View style={s.week}>
+            {Array.from({ length: 7 }, (_, i) =>
+              shiftDate(habit.today, i - 6),
+            ).map((date) => {
+              const done = habit.days.includes(date),
+                today = date === habit.today,
+                label = new Date(date + "T12:00:00Z").toLocaleDateString(
+                  undefined,
+                  { weekday: "short", timeZone: "UTC" },
+                );
+              return (
+                <View
+                  key={date}
+                  accessibilityLabel={`${date}: ${done ? "read" : today ? "today, not completed" : "no reading"}`}
+                  style={s.weekDay}
+                >
+                  <Text style={[s.weekLabel, today && { color: c.action }]}>
+                    {label}
+                  </Text>
+                  <View
+                    style={[
+                      s.weekCircle,
+                      done && {
+                        backgroundColor: c.action,
+                        borderColor: c.action,
+                      },
+                      today &&
+                        !done && { borderColor: c.action, borderWidth: 2 },
+                    ]}
+                  >
+                    {done ? (
+                      <Icon name="check" size={18} color={c.onAction} />
+                    ) : (
+                      <Text style={{ color: c.muted, fontSize: 13 }}>
+                        {date.slice(8)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+          <Text style={s.small}>
+            {habit.streak.totalReadingDays} reading{" "}
+            {habit.streak.totalReadingDays === 1 ? "day" : "days"} in all ·{" "}
+            {habit.zone}
+          </Text>
+        </View>
+      ) : (
+        <View style={s.setup}>
+          <View style={s.topline}>
+            <Text style={s.section}>Build a steady rhythm.</Text>
+            <Icon name="flame" color={c.action} />
+          </View>
+          <Notice
+            text={
+              user
+                ? "Choose your reading time zone in Account → Settings to start tracking your days."
+                : "A chapter at a time. Sign in to keep your reading streak and your reflections together."
+            }
+          />
+          <ActionButton
+            title={user ? "Open account settings" : "Create your free account"}
+            variant="ghost"
+            icon="arrowRight"
+            onPress={onAccount}
+          />
+        </View>
+      )}
+      {!!habit.error && <Notice text={habit.error} error />}
+      <View style={s.sectionRow}>
+        <Text accessibilityRole="header" style={s.section}>
+          A moment to reflect
+        </Text>
+        <Text style={s.small}>MAKE IT PERSONAL</Text>
+      </View>
+      <View style={s.quickRow}>
+        <QuickCard
+          title="Your notes"
+          body="Keep what stands out."
+          icon="notes"
+          onPress={onNotes}
+        />
+        <QuickCard
+          title="Prayer journal"
+          body="Bring what’s on your heart."
+          icon="heart"
+          onPress={onPrayer}
+        />
+      </View>
+      {lastNote && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Return to your latest note"
+          onPress={onNotes}
+          style={s.lastNote}
+        >
+          <Text style={s.eyebrow}>YOUR LATEST REFLECTION</Text>
+          <Text style={s.noteComment} numberOfLines={3}>
+            {lastNote.comment}
+          </Text>
+          <Text style={s.noteReference}>
+            {lastNote.reference}:{lastNote.verseStart}
+            {lastNote.verseStart === lastNote.verseEnd
+              ? ""
+              : `–${lastNote.verseEnd}`}
+          </Text>
+        </Pressable>
+      )}
+      <View style={s.footer}>
+        <View style={s.shortRule} />
+        <Text style={s.footerText}>Read. Understand. Grow.</Text>
+      </View>
     </View>
-    {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Retry saved plan" secondary onPress={plan.retry}/></View>}
-    <Text style={s.local}>Your place in the plan is saved on this device.</Text>
-    <View style={s.sectionHeading}><Text accessibilityRole="header" style={s.sectionTitle}>Make time to reflect</Text></View>
-    <Pressable accessibilityRole="button" accessibilityLabel="Open your prayer journal" onPress={onPrayer} style={({pressed})=>[s.journal,pressed&&s.pressed]}>
-      <View style={s.journalIcon}><Icon name="heart" color={c.action}/></View><View style={s.journalText}><Text style={s.rowTitle}>Your prayer journal</Text><Text style={s.rowBody}>Bring what's on your heart.</Text></View><Icon name="chevronRight" size={18} color={c.muted}/>
-    </Pressable>
-    {user?<View style={s.history}><View style={s.row}><Text style={s.rowTitle}>Reading history</Text><Text style={s.streak}>{streak} day streak</Text></View><Text style={s.rowBody}>{readings.length} recent reading {readings.length===1?'day':'days'} saved to your account.</Text>{readings[0]&&<Text style={s.last}>Last saved · {readings[0].reference}</Text>}</View>:<View style={s.account}><Text style={s.rowTitle}>A space of your own</Text><Text style={s.rowBody}>Save prayers and reading history with a free account.</Text><ActionButton title="Open your account" variant="ghost" icon="arrowRight" onPress={onAccount}/></View>}
-    {!!error&&<Notice text={error} error/>}
-  </View>;
+  );
 }
-const styles=(c:Colors)=>StyleSheet.create({
-  welcome:{...t.body,color:c.muted,marginTop:-12,marginBottom:24},
-  reading:{backgroundColor:c.surface,borderWidth:1,borderColor:c.border,borderTopWidth:3,borderTopColor:c.orange,borderRadius:4,padding:20},
-  row:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},eyebrow:{...t.label,color:c.muted},
-  dayRow:{flexDirection:'row',alignItems:'baseline',gap:10,marginTop:24},day:{fontSize:36,lineHeight:42,fontWeight:'800',letterSpacing:-1,color:c.ink},total:{...t.body,color:c.muted},
-  passage:{fontSize:25,lineHeight:32,fontWeight:'700',letterSpacing:-.6,color:c.ink,marginTop:12},meta:{...t.meta,color:c.muted,marginTop:6,marginBottom:16},
-  progressRow:{marginTop:20,gap:8},track:{height:4,backgroundColor:c.tint},fill:{height:4,backgroundColor:c.action},progressText:{...t.meta,color:c.muted},local:{...t.meta,color:c.muted,marginTop:12},
-  sectionHeading:{marginTop:32,marginBottom:16},sectionTitle:{...t.section,color:c.ink},journal:{flexDirection:'row',alignItems:'center',gap:12,paddingVertical:16,borderTopWidth:1,borderBottomWidth:1,borderColor:c.border},journalIcon:{width:44,height:44,backgroundColor:c.tint,alignItems:'center',justifyContent:'center',borderRadius:4},journalText:{flex:1},rowTitle:{...t.label,fontSize:16,lineHeight:24,color:c.ink},rowBody:{...t.meta,color:c.muted,marginTop:4},account:{marginTop:24},history:{marginTop:24},streak:{...t.meta,color:c.action,fontWeight:'600'},last:{...t.meta,color:c.muted,marginTop:12},pressed:{opacity:.65},
-});
+function QuickCard({
+  title,
+  body,
+  icon,
+  onPress,
+}: {
+  title: string;
+  body: string;
+  icon: IconName;
+  onPress: () => void;
+}) {
+  const { c, s } = useThemedStyles(styles);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      style={({ pressed }) => [s.quick, pressed && { opacity: 0.7 }]}
+    >
+      <Icon name={icon} size={24} color={c.action} />
+      <Text style={s.quickTitle}>{title}</Text>
+      <Text style={s.small}>{body}</Text>
+      <View style={{ marginTop: 12 }}>
+        <Icon name="arrowRight" size={18} color={c.muted} />
+      </View>
+    </Pressable>
+  );
+}
+const styles = (c: Colors) =>
+  StyleSheet.create({
+    dateRow: {
+      flexDirection: "row",
+      gap: 8,
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+    },
+    eyebrow: {
+      ...t.meta,
+      color: c.muted,
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 1.3,
+    },
+    badge: {
+      flexDirection: "row",
+      gap: 6,
+      alignItems: "center",
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 4,
+    },
+    dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: c.action },
+    badgeText: {
+      fontSize: 9,
+      fontWeight: "700",
+      letterSpacing: 1,
+      color: c.muted,
+    },
+    hero: {
+      fontSize: 46,
+      lineHeight: 50,
+      fontWeight: "800",
+      letterSpacing: -1.9,
+      color: c.ink,
+      marginTop: 28,
+    },
+    intro: { ...t.body, color: c.muted, marginTop: 16, marginBottom: 28 },
+    reading: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderTopWidth: 3,
+      borderTopColor: c.orange,
+      borderRadius: 4,
+      padding: 22,
+    },
+    topline: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    dayRow: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      gap: 10,
+      marginTop: 26,
+    },
+    day: {
+      fontSize: 42,
+      lineHeight: 48,
+      fontWeight: "800",
+      letterSpacing: -1.5,
+      color: c.ink,
+    },
+    total: { ...t.body, color: c.muted },
+    reference: {
+      fontSize: 25,
+      lineHeight: 32,
+      fontWeight: "600",
+      letterSpacing: -0.6,
+      color: c.ink,
+      marginTop: 14,
+    },
+    meta: { ...t.meta, color: c.muted, marginTop: 6, marginBottom: 14 },
+    progressLabels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 12,
+      marginTop: 22,
+      marginBottom: 10,
+    },
+    track: { height: 4, backgroundColor: c.border },
+    small: { ...t.meta, fontSize: 12, color: c.muted },
+    device: { ...t.meta, fontSize: 11, color: c.muted, marginTop: 10 },
+    rhythm: {
+      marginTop: 32,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: c.border,
+      paddingVertical: 24,
+    },
+    section: { ...t.section, fontSize: 20, lineHeight: 27, color: c.ink },
+    stats: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 12,
+      flexWrap: "wrap",
+      marginVertical: 20,
+    },
+    bigNumber: {
+      fontSize: 38,
+      lineHeight: 44,
+      fontWeight: "800",
+      letterSpacing: -1,
+      color: c.ink,
+    },
+    numberUnit: {
+      fontSize: 17,
+      fontWeight: "500",
+      letterSpacing: 0,
+      color: c.muted,
+    },
+    best: {
+      borderLeftWidth: 1,
+      borderColor: c.border,
+      paddingLeft: 20,
+      justifyContent: "center",
+    },
+    bestNumber: {
+      fontSize: 24,
+      lineHeight: 30,
+      fontWeight: "700",
+      color: c.ink,
+    },
+    week: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 4,
+      marginBottom: 18,
+    },
+    weekDay: { alignItems: "center", flex: 1, gap: 9 },
+    weekLabel: { fontSize: 10, lineHeight: 16, color: c.muted },
+    weekCircle: {
+      minWidth: 32,
+      minHeight: 32,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    setup: {
+      marginTop: 28,
+      paddingTop: 24,
+      borderTopWidth: 1,
+      borderColor: c.border,
+    },
+    sectionRow: { marginTop: 32, marginBottom: 16, gap: 8 },
+    quickRow: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+    quick: {
+      flex: 1,
+      minWidth: 140,
+      padding: 18,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 4,
+    },
+    quickTitle: {
+      ...t.label,
+      fontSize: 16,
+      color: c.ink,
+      marginTop: 18,
+      marginBottom: 6,
+    },
+    lastNote: {
+      marginTop: 24,
+      borderLeftWidth: 2,
+      borderLeftColor: c.action,
+      paddingLeft: 18,
+      paddingVertical: 8,
+    },
+    noteComment: { ...t.body, color: c.ink, marginTop: 12 },
+    noteReference: { ...t.meta, color: c.action, marginTop: 10 },
+    footer: { alignItems: "center", paddingTop: 36, gap: 12 },
+    shortRule: { width: 26, height: 2, backgroundColor: c.orange },
+    footerText: { ...t.meta, fontSize: 11, color: c.muted, letterSpacing: 1 },
+  });

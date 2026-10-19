@@ -4,7 +4,7 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 export default ({config}:ConfigContext):ExpoConfig => {
   const nativePhoneAuth=process.env.BIBLEDEPT_NATIVE_PHONE==='1';
   const plugins=[...(config.plugins||[])];
-  plugins.push('expo-asset',['expo-audio',{microphonePermission:false,recordAudioAndroid:false,enableBackgroundRecording:false,enableBackgroundPlayback:false}]);
+  plugins.push('expo-asset','expo-image',['expo-notifications',{defaultChannel:'reading-reminders'}],['expo-audio',{microphonePermission:false,recordAudioAndroid:false,enableBackgroundRecording:false,enableBackgroundPlayback:false}]);
   if(nativePhoneAuth){
     const iosFile=process.env.BIBLEDEPT_FIREBASE_IOS_CONFIG;
     const androidFile=process.env.BIBLEDEPT_FIREBASE_ANDROID_CONFIG;
@@ -16,5 +16,6 @@ export default ({config}:ConfigContext):ExpoConfig => {
     if(iosFile)config.ios={...config.ios,googleServicesFile:iosFile};
     if(androidFile)config.android={...config.android,googleServicesFile:androidFile};
   }
-  return {...config,name:'BibleDept',slug:'bibledept',plugins,ios:{...config.ios,associatedDomains:['applinks:thebibledept.com','applinks:www.thebibledept.com']},extra:{...config.extra,nativePhoneAuth}};
+  const easProjectId=process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+  return {...config,name:'BibleDept',slug:'bibledept',plugins,ios:{...config.ios,associatedDomains:['applinks:thebibledept.com','applinks:www.thebibledept.com']},extra:{...config.extra,nativePhoneAuth,...(easProjectId?{eas:{projectId:easProjectId}}:{})}};
 };

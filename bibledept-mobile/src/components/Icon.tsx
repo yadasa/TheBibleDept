@@ -30,6 +30,7 @@ const paths = {
   settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z',
   flame: 'M13 2c1 5-4 6-3 10 2-1 3-3 3-3 4 3 6 5 6 8a7 7 0 0 1-14 0c0-4 3-7 8-15Z',
   bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM9 21h6',
+  notes: 'M5 3h14v18H5ZM8 7h8M8 11h8M8 15h5',
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {

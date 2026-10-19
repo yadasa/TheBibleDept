@@ -11,8 +11,9 @@ import { fetchPassage, Passage, Translation } from '../services/bible';
 import { getPlanChapters, getReadingPlanDay } from '../services/readingPlan';
 import { useThemedStyles, Colors, typography as t } from '../theme';
 import { PodcastCard } from '../components/PodcastCard';
+import { ReadingCompletion } from '../components/ReadingCompletion';
 
-export function PlanScreen({active=true}:{active?:boolean}) {
+export function PlanScreen({active=true,onAccount}:{active?:boolean;onAccount:()=>void}) {
   const {c,s}=useThemedStyles(styles);
   const scrollTop=useScreenScroll();
   const plan=usePlan(),day=getReadingPlanDay(plan.selectedDay)!;
@@ -47,7 +48,7 @@ export function PlanScreen({active=true}:{active?:boolean}) {
     <View style={s.chapters}>{chapters.map((item,index)=><Pressable key={item.reference} accessibilityRole="button" accessibilityLabel={`Read ${item.reference}`} accessibilityState={{selected:index===chapterIndex}} onPress={()=>selectChapter(index)} style={({pressed})=>[s.chip,index===chapterIndex&&s.activeChip,pressed&&s.pressed]}><Text style={[s.chipText,index===chapterIndex&&s.activeText]}>{item.reference}</Text>{index===chapterIndex&&<View style={s.selectionMark}/>}</Pressable>)}</View>
     {!reading?.passage&&!reading?.error&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text={`Opening ${chapter.reference}…`}/></View>}
     {reading?.error&&<View style={s.error}><Text style={s.errorTitle}>This chapter couldn't load</Text><Notice text={reading.error} error/><ActionButton title="Retry this reading" icon="refresh" onPress={()=>setRetry(value=>value+1)} secondary/></View>}
-    {reading?.passage&&<PassageView passage={reading.passage}/>}
+    {reading?.passage&&<><PassageView key={`${reading.passage.reference}:${translation}`} passage={reading.passage}/><ReadingCompletion passage={reading.passage} source="plan" planDay={day.day} onAccount={onAccount}/></>}
     {reading?.passage&&<View style={s.chapterNavigation}>
       {chapterIndex>0&&<ActionButton title={`Previous: ${chapters[chapterIndex-1].reference}`} icon="chevronLeft" onPress={()=>selectChapter(chapterIndex-1)} secondary/>}
       {chapterIndex<chapters.length-1&&<ActionButton title={`Next: ${chapters[chapterIndex+1].reference}`} icon="chevronRight" onPress={()=>selectChapter(chapterIndex+1)} secondary/>}

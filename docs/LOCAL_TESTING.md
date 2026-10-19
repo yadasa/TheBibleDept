@@ -10,6 +10,7 @@ Use Node.js 22 and install the current Expo Go from the iPhone App Store.
 ```powershell
 cd D:\Users\itsst\Downloads\TheBibleDept\TheBibleDept\bibledept-mobile
 npm ci
+npm --prefix functions ci
 Copy-Item .env.example .env.local
 ```
 
@@ -76,10 +77,14 @@ use [the signed iPhone build setup](IPHONE_NATIVE_SETUP.md) for it.
 ```powershell
 npm run typecheck
 npm test
-npm run test:firebase  # requires the local emulators
+npm run test:emulators # isolated disposable auth, Firestore, and Functions suite
 npx expo export --platform ios --output-dir .expo/verify-ios
 ```
 
 Emulator tests always target loopback and the demo project, even when the app's
 `.env.local` selects a live project. Do not test real phone numbers through them.
 See [app links](APP_LINKS.md) and [the Bible API](BIBLE_API.md) for supported formats.
+
+The active habit backend is `bibledept-mobile/functions`. Normal emulator startup now builds it and runs auth 9099, Firestore 8080, and Functions 5001 together. The isolated automated suite uses 19099, 18080, and 15001. `npm run test:firebase` targets those isolated ports; use `npm run test:emulators` to start and stop them automatically. If you already have the isolated suite running, run `npm run test:firebase` directly instead.
+
+For default dark mode, Account → Settings, streak setup, native push requirements, and notes synchronization, see [feature setup](HABIT_FEATURES_SETUP.md). Settings appears only after sign-in. [Design and navigation details](APP_DESIGN_IMPLEMENTATION.md) describe the Church nav port and its motion.

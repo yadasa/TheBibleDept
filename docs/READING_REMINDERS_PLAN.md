@@ -1,6 +1,6 @@
 # Gentle reading notification plan
 
-Status: **Planned, not implemented.** Updated October 18, 2026. This follows the [reading streak plan](READING_STREAKS_PLAN.md). It specifies future product behavior and backend work; it does not register devices, request permissions, schedule production jobs, or send any notifications.
+Status: **Implemented in source; live delivery remains disabled and requires a signed-device pilot.** This is the original October 18, 2026 design plan following the [reading streak plan](READING_STREAKS_PLAN.md). Baseline descriptions and proposed steps below are retained for rationale. See [current implementation, queue simplifications, and setup](HABIT_FEATURES_SETUP.md). No production job or real notification was sent during local implementation checks.
 
 ## Purpose and tone
 
@@ -8,7 +8,7 @@ Offer a small invitation when a reader might appreciate help returning. A remind
 
 Use two separately enabled categories: **Keep my rhythm** for an unfinished day in an active streak, and **Welcome me back** after a longer reading gap. Avoid escalating urgency, guilt, competitive comparisons, threats of lost progress, paid recovery, and repeated late-night prompts. An ignored message is a reason to send less.
 
-## Existing app and prerequisites
+## Baseline app and prerequisites at planning time
 
 The active client is Expo SDK 57 and currently has no `expo-notifications` dependency or remote-push registration flow. Its [configuration](../bibledept-mobile/app.config.ts) and [manifest](../bibledept-mobile/app.json) identify BibleDept; the retained church application's notification source does not mean this client can already receive push.
 

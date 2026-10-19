@@ -8,6 +8,8 @@ import { getFirebase, usingEmulators } from '../services/firebase';
 import { radius, spacing, useThemedStyles, Colors, typography } from '../theme';
 import { PhoneSignIn } from './PhoneSignIn';
 import { SettingsScreen } from './SettingsScreen';
+import { detachPushDevice } from '../services/NotificationProvider';
+import { BrandLogo } from '../components/BrandLogo';
 
 export function AccountScreen() {
   const {c,s}=useThemedStyles(styles);
@@ -55,7 +57,7 @@ export function AccountScreen() {
     setError('');
     setMessage('');
     setBusy(true);
-    try { await signOut(getFirebase().auth); }
+    try { if(user)await detachPushDevice(user.uid).catch(()=>{});await signOut(getFirebase().auth); }
     catch (e) { setError(authError(e)); }
     finally { setBusy(false); }
   }
@@ -71,6 +73,7 @@ export function AccountScreen() {
   if(user&&settings)return <SettingsScreen onBack={()=>setSettings(false)}/>;
 
   return <View>
+    {!user&&<View style={{marginBottom:24}}><BrandLogo large/></View>}
     {usingEmulators && <View style={s.mode}><Text style={s.modeTitle}>Local test account</Text><Text style={s.modeText}>This uses the Firebase emulators. No account data is sent to the live project.</Text></View>}
     {user ? <View>
       <View style={s.identity}>

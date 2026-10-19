@@ -43,7 +43,9 @@
     "web": "expo start --web --localhost",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "emulators": "firebase emulators:start --project demo-bibledept --only auth,firestore --export-on-exit=.firebase/data",
+    "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-bibledept --only auth,firestore,functions --export-on-exit=.firebase/data",
+    "emulators:isolated": "npm --prefix functions run build && firebase emulators:start --config firebase.test.json --project demo-bibledept --only auth,firestore,functions",
+    "test:emulators": "npm --prefix functions run build && firebase emulators:exec --config firebase.test.json --project demo-bibledept --only auth,firestore,functions \"npm run test:firebase && npm --prefix functions run test:integration\"",
     "test:firebase": "tsx --test tests/firebase.integration.ts",
     "start:development-build": "expo start --dev-client --lan"
   },
