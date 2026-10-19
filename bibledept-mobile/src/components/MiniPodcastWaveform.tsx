@@ -6,6 +6,7 @@ import Svg, { ClipPath, Defs, FeGaussianBlur, Filter, G, LinearGradient, Rect, S
 
 const INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect),AnimatedG=Animated.createAnimatedComponent(G);
+const AnimatedGradient=Animated.createAnimatedComponent(LinearGradient);
 type RenderConfig={id:string;expansion:SharedValue<number>;contact:SharedValue<number>;clock:SharedValue<number>};
 const RenderContext=createContext<RenderConfig|null>(null);
 
@@ -25,6 +26,7 @@ const MiniBars=memo(function MiniBars({samples:bars,width,height,color}:Renderer
   const filled=color==='#FF914D',pitch=(width+2)/Math.max(1,bars.length);
   const fillId=`${id}${filled?'played':'rest'}`,blurId=`${fillId}blur`;
   const clip=useAnimatedProps(()=>({width:Math.max(0,Math.min(width,clock.value*width))}));
+  const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-4.5*pitch),x2:Math.max(.001,clock.value*width)}));
   const overall=useAnimatedProps(()=>({opacity:Math.min(1,(filled?.55:.32)+(1-(filled?.55:.32))*expansion.value+.08*contact.value)}));
   const blurred=useAnimatedProps(()=>({opacity:1-expansion.value}));
   const sharp=useAnimatedProps(()=>({opacity:expansion.value}));
@@ -32,9 +34,11 @@ const MiniBars=memo(function MiniBars({samples:bars,width,height,color}:Renderer
   return <G>
     <Defs>
       {filled&&<ClipPath id={`${id}clip`}><AnimatedRect x={0} y={0} height={height} animatedProps={clip}/></ClipPath>}
-      <LinearGradient id={fillId} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={width} y2={0}>
-        <Stop offset={0} stopColor={filled?'#FF914D':'#C45D29'}/><Stop offset={1} stopColor={filled?'#FFD08E':'#E78D51'}/>
-      </LinearGradient>
+      {filled?<AnimatedGradient id={fillId} gradientUnits="userSpaceOnUse" y1={0} y2={0} animatedProps={gradient}>
+        <Stop offset={0} stopColor="#FF914D"/><Stop offset={.55} stopColor="#FFD08E"/><Stop offset={1} stopColor="#FFF3C4"/>
+      </AnimatedGradient>:<LinearGradient id={fillId} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={width} y2={0}>
+        <Stop offset={0} stopColor="#C45D29"/><Stop offset={1} stopColor="#E78D51"/>
+      </LinearGradient>}
       <Filter id={blurId} x="-10%" y="-30%" width="120%" height="160%"><FeGaussianBlur stdDeviation={1.1}/></Filter>
     </Defs>
     <G clipPath={filled?`url(#${id}clip)`:undefined}>
@@ -62,10 +66,6 @@ export const MiniPodcastWaveform=memo(function MiniPodcastWaveform({samples,widt
   useEffect(()=>{contact.value=withTiming(touching||scrubbing?1:0,{duration:touching||scrubbing?140:220,easing:Easing.out(Easing.cubic)});},[touching,scrubbing,contact]);
   useEffect(()=>{clock.value=withTiming(Math.max(0,Math.min(1,progress)),{duration:scrubbing?70:160,easing:Easing.out(Easing.cubic)});},[progress,scrubbing,clock]);
   const config=useMemo(()=>({id,expansion,contact,clock}),[id,expansion,contact,clock]);
-  const cursor=useAnimatedProps(()=>{
-    const tip=Math.max(0,Math.min(width,clock.value*width)),trail=Math.min(6,tip),maximumHeight=height*(.33+.34*expansion.value);
-    return {x:tip-trail,width:trail,y:height-maximumHeight-2,height:maximumHeight,opacity:tip>0?.5+.45*contact.value:0};
-  });
   const edge=useAnimatedProps(()=>{
     const maximumHeight=height*(.33+.34*expansion.value);
     return {x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),y:height-maximumHeight-2,height:maximumHeight,opacity:clock.value>0?.55+.45*contact.value:0};
@@ -75,10 +75,6 @@ export const MiniPodcastWaveform=memo(function MiniPodcastWaveform({samples,widt
     <RenderContext.Provider value={config}><PlayerWaveform samples={amplitudes} inputRange={INPUT_RANGE} width={width} height={height}
       barWidth={2} gap={2} baseline="bottom" rounded renderer={renderMiniBars} color="#C45D29" progressColor="#FF914D" progress={1} isPlaying={false} animationDuration={0}/></RenderContext.Provider>
     <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-      <Defs><LinearGradient id={`${id}tip`} x1="0%" x2="100%" y1="0%" y2="0%">
-        <Stop offset={0} stopColor="#FFD08E" stopOpacity={0}/><Stop offset={1} stopColor="#FFF3C4"/>
-      </LinearGradient></Defs>
-      <AnimatedRect fill={`url(#${id}tip)`} animatedProps={cursor}/>
       <AnimatedRect fill="#FFF3C4" animatedProps={edge}/>
     </Svg>
   </View>;

@@ -27,7 +27,7 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
   const clock=config.clock;
   const pitch=(width+GAP)/Math.max(1,bars.length),barWidth=Math.max(1,pitch-GAP),filled=color===config.orange;
   const clip=useAnimatedProps(()=>({width:Math.max(0,Math.min(width,clock.value*width))}));
-  const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-1.5*pitch),x2:Math.max(.001,clock.value*width)}));
+  const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-4.5*pitch),x2:Math.max(.001,clock.value*width)}));
   return <G>
     {filled&&<Defs>
       <ClipPath id={`${config.id}clip`}><AnimatedRect x={0} y={0} height={height} animatedProps={clip}/></ClipPath>
@@ -63,12 +63,6 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
   // Previewing a seek moves the cursor, while live PCM still belongs to the
   // native audio position until the release actually seeks the transport.
   const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,liveLevel,referencePeak,playing,progress:nativeProgress,clock}),[gradientId,c.orange,liveLevel,referencePeak,playing,nativeProgress,clock]);
-  const count=Math.max(1,Math.min(samples.length,Math.floor((width+GAP)/(BAR+GAP))));
-  const pitch=(width+GAP)/count;
-  const cursor=useAnimatedProps(()=>{
-    const tip=Math.max(0,Math.min(width,clock.value*width)),trail=Math.min(tip,1.5*pitch);
-    return {x:tip-trail,width:trail,opacity:tip>0?.65+.35*contact.value:0};
-  });
   const edge=useAnimatedProps(()=>({x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),opacity:clock.value>0?.75+.25*contact.value:0}));
 
   function previewAt(pageX:number) {
@@ -138,10 +132,6 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
         progress={1} isPlaying={false} animationDuration={0}/>}</RenderContext.Provider>
     </Pressable>
     {width>0&&<Svg pointerEvents="none" aria-hidden width={width} height={HEIGHT} style={StyleSheet.absoluteFill}>
-      <Defs><LinearGradient id={`${gradientId}cursor`} x1="0%" x2="100%" y1="0%" y2="0%">
-        <Stop offset={0} stopColor="#FFD080" stopOpacity={0}/><Stop offset={.65} stopColor="#FFD080" stopOpacity={.15}/><Stop offset={1} stopColor="#FFF3C4" stopOpacity={.9}/>
-      </LinearGradient></Defs>
-      <AnimatedRect y={5} height={HEIGHT-10} fill={`url(#${gradientId}cursor)`} animatedProps={cursor}/>
       <AnimatedRect y={5} height={HEIGHT-10} fill="#FFF3C4" stroke={mode==='light'?c.action:'none'} strokeWidth={mode==='light'?.5:0} animatedProps={edge}/>
     </Svg>}
   </View>;
