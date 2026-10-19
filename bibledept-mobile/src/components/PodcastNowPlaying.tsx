@@ -10,8 +10,8 @@ import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveform
 
 export function PodcastNowPlaying({onOpen}:{onOpen:(day:number)=>void}) {
   const audio=usePodcast(),{c,s}=useThemedStyles(styles);
-  const details=useRef<View>(null), left=useRef(0),dragGeneration=useRef(0),dragActive=useRef(false);
-  const [size,setSize]=useState({width:0,height:56}),[scrubbing,setScrubbing]=useState(false),[preview,setPreview]=useState<number|null>(null);
+  const details=useRef<View>(null), left=useRef(0),dragGeneration=useRef(0),dragActive=useRef(false),didDrag=useRef(false);
+  const [size,setSize]=useState({width:0,height:56}),[scrubbing,setScrubbing]=useState(false),[touching,setTouching]=useState(false),[preview,setPreview]=useState<number|null>(null);
   const latest=useRef(audio),previewRef=useRef<number|null>(null);latest.current=audio;
   const progress=preview??(audio.duration>0?audio.position/audio.duration:0);
   function previewAt(x:number) {
@@ -22,8 +22,8 @@ export function PodcastNowPlaying({onOpen}:{onOpen:(day:number)=>void}) {
     onMoveShouldSetPanResponderCapture:(_event,state)=>latest.current.status.isLoaded&&!latest.current.error&&Math.abs(state.dx)>4&&Math.abs(state.dx)>Math.abs(state.dy),
     onPanResponderGrant:(_event,state)=>{
       const x=state.moveX, generation=++dragGeneration.current;
-      dragActive.current=true;
-      setScrubbing(true);
+      dragActive.current=true;didDrag.current=true;
+      setScrubbing(true);setTouching(true);
       details.current?.measureInWindow(origin=>{if(dragActive.current&&generation===dragGeneration.current){left.current=origin;previewAt(x);}});
     },
     onPanResponderMove:(_event,state)=>previewAt(state.moveX),
@@ -31,9 +31,9 @@ export function PodcastNowPlaying({onOpen}:{onOpen:(day:number)=>void}) {
       dragActive.current=false;dragGeneration.current++;
       const value=previewRef.current;
       if(value!==null)latest.current.seek(value*latest.current.duration);
-      setScrubbing(false);
+      setScrubbing(false);setTouching(false);
     },
-    onPanResponderTerminate:()=>{dragActive.current=false;dragGeneration.current++;setScrubbing(false);previewRef.current=null;setPreview(null);},
+    onPanResponderTerminate:()=>{dragActive.current=false;dragGeneration.current++;setScrubbing(false);setTouching(false);previewRef.current=null;setPreview(null);},
     onPanResponderTerminationRequest:()=>false,
   }),[size.width]);
   useEffect(()=>{
@@ -45,7 +45,7 @@ export function PodcastNowPlaying({onOpen}:{onOpen:(day:number)=>void}) {
     const timer=setTimeout(()=>{setPreview(null);previewRef.current=null;},2000);
     return()=>clearTimeout(timer);
   },[preview,scrubbing]);
-  useEffect(()=>{dragActive.current=false;dragGeneration.current++;setPreview(null);previewRef.current=null;setScrubbing(false);},[audio.episode?.day]);
+  useEffect(()=>{dragActive.current=false;dragGeneration.current++;setPreview(null);previewRef.current=null;setScrubbing(false);setTouching(false);},[audio.episode?.day]);
   if(!audio.episode)return null;
   return <View pointerEvents="box-none" style={s.position}>
     <View style={s.player}>
@@ -53,8 +53,9 @@ export function PodcastNowPlaying({onOpen}:{onOpen:(day:number)=>void}) {
         <GlassPressable accessibilityRole="button" accessibilityLabel={`Open podcast for day ${audio.episode.day}`} accessibilityHint="Drag horizontally to change playback position. Additional actions skip 15 seconds."
           accessibilityActions={[{name:'increment',label:'Forward 15 seconds'},{name:'decrement',label:'Back 15 seconds'}]}
           onAccessibilityAction={event=>audio.seek(audio.position+(event.nativeEvent.actionName==='increment'?15:-15))}
-          onPress={()=>{if(!scrubbing)onOpen(audio.episode!.day);}} style={s.details}>
-          <View pointerEvents="none" style={StyleSheet.absoluteFill}><MiniPodcastWaveform samples={getPodcastReferenceSamples(audio.episode.day)??audio.samples} width={size.width} height={size.height} progress={progress} scrubbing={scrubbing}/></View>
+          onPressIn={()=>{didDrag.current=false;setTouching(true);}} onPressOut={()=>{if(!dragActive.current)setTouching(false);}}
+          onPress={()=>{if(!didDrag.current)onOpen(audio.episode!.day);}} style={s.details}>
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}><MiniPodcastWaveform samples={getPodcastReferenceSamples(audio.episode.day)??audio.samples} width={size.width} height={size.height} progress={progress} scrubbing={scrubbing} touching={touching}/></View>
           <View pointerEvents="none" style={s.text}><Text numberOfLines={1} style={s.title}>Day {audio.episode.day} · {audio.episode.reading}</Text><Text style={s.meta}>{audio.error?'Couldn’t play episode':audio.loading?'Loading episode…':`${audioTime(progress*audio.duration)} / ${audioTime(audio.duration)} · ${audio.playbackRate}×`}</Text></View>
         </GlassPressable>
       </View>
