@@ -7,9 +7,9 @@ import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { Icon } from './Icon';
 import { ActionButton, Field, IconButton, Notice } from './ui';
 
-type Props = { visible: boolean; selectedDay: number; currentDay: number; finished: boolean; onSelect: (day: number) => void; onClose: () => void };
+type Props = { visible: boolean; selectedDay: number; currentDay: number; finished: boolean; completedDays?:readonly number[]; onSelect: (day: number) => void; onClose: () => void };
 
-export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect, onClose }: Props) {
+export function DayPicker({ visible, selectedDay, currentDay, finished, completedDays=[], onSelect, onClose }: Props) {
   const {c,s}=useThemedStyles(styles);
   const { width, fontScale } = useWindowDimensions();
   const [page, setPage] = useState(0), [draft, setDraft] = useState(''), [error, setError] = useState('');
@@ -70,7 +70,7 @@ export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect
           </View>
           <View onLayout={event => setGridWidth(event.nativeEvent.layout.width)} style={s.grid}>
             {Array.from({ length: last - first + 1 }, (_, index) => first + index).map(day => {
-              const current = day === currentDay, selected = day === selectedDay, done = day < currentDay || finished;
+              const current = day === currentDay, selected = day === selectedDay, done = day < currentDay || finished || completedDays.includes(day);
               return <GlassPressable key={day} accessibilityRole="button" accessibilityLabel={'Day ' + day + ', ' + getReadingPlanDay(day)!.label + (current ? ', your current day' : '') + (done ? ', completed' : '')} accessibilityState={{ selected }} onPress={() => select(day)} tone={current ? "primary" : selected ? "selected" : "neutral"} style={({ pressed }) => [s.day, { width: cellWidth }, done && s.done, current && s.current, selected && s.selected, pressed && s.pressed]}>
                 <View style={s.dayNumber}><Text style={[s.dayText, current && s.currentText]}>{day}</Text></View>
                 {done && <View style={s.completionMarker}><Icon name="check" size={14} color={current ? c.onAction : c.success}/></View>}

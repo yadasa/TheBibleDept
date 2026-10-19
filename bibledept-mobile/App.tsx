@@ -82,7 +82,8 @@ function AppShell() {
     [visited, setVisited] = useState<Tab[]>(["Home"]),
     [reference, setReference] = useState<string>(),
     [translation, setTranslation] = useState<Translation>("web"),
-    [revision, setRevision] = useState(0);
+    [revision, setRevision] = useState(0),
+    [podcastRequestRevision, setPodcastRequestRevision] = useState(0);
   const journeyRef = useRef<PageJourney>({ from: 2, to: 2 }),
     position = useRef(2),
     page = useRef(new Animated.Value(2)).current,
@@ -291,6 +292,7 @@ function AppShell() {
                                   <BibleHub
                                     active={active}
                                     requestRevision={revision}
+                                    podcastRequestRevision={podcastRequestRevision}
                                     initialReference={reference}
                                     initialTranslation={translation}
                                     onAccount={() => setTab("Account")}
@@ -321,6 +323,7 @@ function AppShell() {
             plan.selectDay(day);
             setReference(undefined);
             setRevision(value => value + 1);
+            setPodcastRequestRevision(value => value + 1);
             setTab("Bible");
           }} />
           <LiquidBottomNav

@@ -1,33 +1,109 @@
-import { ComponentProps, createContext, useCallback, useContext, useEffect, useRef } from 'react';
-import { ScrollView } from 'react-native';
+import { ComponentProps, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { Platform, ScrollView, View } from 'react-native';
 import { usePlan } from '../services/PlanProvider';
 
-const Context=createContext(()=>{});
-export const useScreenScroll=()=>useContext(Context);
-export function ScreenScrollView({active=true,resetOnPlanDayChange=false,...props}:ComponentProps<typeof ScrollView>&{active?:boolean;resetOnPlanDayChange?:boolean}) {
-  const ref=useRef<ScrollView>(null),{selectedDay}=usePlan();
-  const offset=useRef({x:0,y:0}),activeRef=useRef(active),restorePending=useRef(true);
-  if(activeRef.current!==active){activeRef.current=active;if(active)restorePending.current=true;}
-  const top=useCallback(()=>{
-    offset.current={x:0,y:0};
-    if(activeRef.current){ref.current?.scrollTo({y:0,animated:false});restorePending.current=false;}
-    else restorePending.current=true;
-  },[]);
-  const restore=useCallback(()=>{
-    if(!activeRef.current||!restorePending.current)return;
-    ref.current?.scrollTo({...offset.current,animated:false});
-    restorePending.current=false;
-  },[]);
-  useEffect(()=>{
-    if(!active)return;
-    const frame=requestAnimationFrame(restore);
-    return()=>cancelAnimationFrame(frame);
-  },[active,restore]);
-  useEffect(()=>{if(resetOnPlanDayChange)top();},[selectedDay,resetOnPlanDayChange,top]);
-  return <Context.Provider value={top}><ScrollView {...props} ref={ref} scrollEventThrottle={props.scrollEventThrottle??16} onScroll={event=>{
-    // display:none can emit a zero offset. Keep the last real position until
-    // the visible panel has laid out and its saved offset is restored.
-    if(activeRef.current&&!restorePending.current)offset.current={...event.nativeEvent.contentOffset};
-    props.onScroll?.(event);
-  }} onLayout={event=>{props.onLayout?.(event);if(activeRef.current&&restorePending.current)requestAnimationFrame(restore);}}/></Context.Provider>;
+export type ScreenScrollMetrics = Readonly<{ offsetY: number; viewportHeight: number; contentHeight: number; active: boolean; restoring: boolean; userInitiated: boolean }>;
+type Controls = {
+  top: () => void;
+  scrollTo: (options: { y: number; animated?: boolean }) => void;
+  getMetrics: () => ScreenScrollMetrics;
+  subscribe: (listener: (metrics: ScreenScrollMetrics) => void) => () => void;
+  measureContent: (target: View | null, listener: (bounds: { top: number; bottom: number }) => void) => void;
+  registerAnchor: (name: string, target: View | null) => () => void;
+  scrollToAnchor: (name: string) => void;
+};
+const empty: Controls = { top: () => {}, scrollTo: () => {}, getMetrics: () => ({ offsetY: 0, viewportHeight: 0, contentHeight: 0, active: false, restoring: true, userInitiated: false }), subscribe: () => () => {}, measureContent: () => {}, registerAnchor: () => () => {}, scrollToAnchor: () => {} };
+const Context = createContext<Controls>(empty);
+export const useScreenScroll = () => useContext(Context).top;
+export const useScreenScrollControls = () => useContext(Context);
+
+export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, ...props }: ComponentProps<typeof ScrollView> & { active?: boolean; resetOnPlanDayChange?: boolean }) {
+  const ref = useRef<ScrollView>(null), viewport = useRef<View>(null), { selectedDay } = usePlan();
+  const offset = useRef({ x: 0, y: 0 }), activeRef = useRef(active), restorePending = useRef(true);
+  const viewportHeight = useRef(0), contentHeight = useRef(0);
+  const listeners = useRef(new Set<(metrics: ScreenScrollMetrics) => void>());
+  const anchors = useRef(new Map<string, View>()), pendingAnchor = useRef<string | null>(null);
+  const anchorFrame = useRef<number | null>(null), anchorGeneration = useRef(0);
+  const userInitiated = useRef(false);
+  if (activeRef.current !== active) { activeRef.current = active; userInitiated.current = false; if (active) restorePending.current = true; }
+  const getMetrics = useCallback((): ScreenScrollMetrics => ({ offsetY: offset.current.y, viewportHeight: viewportHeight.current, contentHeight: contentHeight.current, active: activeRef.current, restoring: restorePending.current, userInitiated: userInitiated.current }), []);
+  const notify = useCallback(() => { const value = getMetrics(); listeners.current.forEach(listener => listener(value)); }, [getMetrics]);
+  const scrollTo = useCallback(({ y, animated = false }: { y: number; animated?: boolean }) => {
+    if (!Number.isFinite(y)) return;
+    pendingAnchor.current = null;
+    anchorGeneration.current++;
+    userInitiated.current = false;
+    offset.current = { x: 0, y: Math.max(0, y) };
+    if (activeRef.current) { ref.current?.scrollTo({ y: offset.current.y, animated }); restorePending.current = false; }
+    else restorePending.current = true;
+    notify();
+  }, [notify]);
+  const top = useCallback(() => scrollTo({ y: 0 }), [scrollTo]);
+  const measureContent = useCallback((target: View | null, listener: (bounds: { top: number; bottom: number }) => void) => {
+    if (!target || !activeRef.current || !viewport.current) return;
+    viewport.current.measureInWindow((_scrollX, scrollY) => {
+      target.measureInWindow((_x, y, _width, height) => {
+        if (activeRef.current && height > 0 && Number.isFinite(y) && Number.isFinite(scrollY)) {
+          const top = y - scrollY + offset.current.y;
+          listener({ top, bottom: top + height });
+        }
+      });
+    });
+  }, []);
+  const resolveAnchor = useCallback(() => {
+    const name = pendingAnchor.current, target = name ? anchors.current.get(name) : undefined;
+    if (!name || !target || !activeRef.current) return;
+    const generation = anchorGeneration.current;
+    measureContent(target, bounds => {
+      if (pendingAnchor.current !== name || generation !== anchorGeneration.current) return;
+      scrollTo({ y: Math.max(0, bounds.top - 12), animated: false });
+    });
+  }, [measureContent, scrollTo]);
+  const scheduleAnchor = useCallback(() => {
+    if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current);
+    anchorFrame.current = requestAnimationFrame(() => { anchorFrame.current = null; resolveAnchor(); });
+  }, [resolveAnchor]);
+  const controls = useMemo<Controls>(() => ({ top, scrollTo, getMetrics,
+    subscribe: listener => { listeners.current.add(listener); return () => { listeners.current.delete(listener); }; },
+    measureContent,
+    registerAnchor: (name, target) => {
+      if (target) { anchors.current.set(name, target); if (pendingAnchor.current === name) scheduleAnchor(); }
+      else anchors.current.delete(name);
+      return () => { if (anchors.current.get(name) === target) anchors.current.delete(name); };
+    },
+    scrollToAnchor: name => { pendingAnchor.current = name; anchorGeneration.current++; scheduleAnchor(); },
+  }), [top, scrollTo, getMetrics, measureContent, scheduleAnchor]);
+  const restore = useCallback(() => {
+    if (!activeRef.current || !restorePending.current) return;
+    ref.current?.scrollTo({ ...offset.current, animated: false });
+    restorePending.current = false;
+    userInitiated.current = false;
+    notify();
+    scheduleAnchor();
+  }, [notify, scheduleAnchor]);
+  useEffect(() => {
+    if (!active) return;
+    const frame = requestAnimationFrame(restore);
+    return () => cancelAnimationFrame(frame);
+  }, [active, restore]);
+  // Reset before descendant passive effects request a restored reading place
+  // or the podcast anchor. A later parent effect would erase that request.
+  useLayoutEffect(() => { if (resetOnPlanDayChange) top(); }, [selectedDay, resetOnPlanDayChange, top]);
+  useEffect(() => () => { if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current); }, []);
+  const beginUserScroll=()=>{pendingAnchor.current=null;anchorGeneration.current++;userInitiated.current=true;};
+  const webGestures=Platform.OS==='web'?{
+    onWheel:beginUserScroll,
+    onKeyDown:(event:{key:string})=>{if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))beginUserScroll();},
+  }:{};
+  return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1}}><ScrollView {...props} {...webGestures} ref={ref} scrollEventThrottle={props.scrollEventThrottle ?? 32}
+    onScroll={event => {
+      if (activeRef.current && !restorePending.current) { offset.current = { ...event.nativeEvent.contentOffset }; notify(); }
+      props.onScroll?.(event);
+    }}
+    onScrollBeginDrag={event => { beginUserScroll();props.onScrollBeginDrag?.(event); }}
+    onTouchStart={event=>{beginUserScroll();props.onTouchStart?.(event);}}
+    onPointerDown={event=>{beginUserScroll();props.onPointerDown?.(event);}}
+    onContentSizeChange={(width, height) => { contentHeight.current = height; props.onContentSizeChange?.(width, height); notify(); scheduleAnchor(); }}
+    onLayout={event => { viewportHeight.current = event.nativeEvent.layout.height; props.onLayout?.(event); if (activeRef.current && restorePending.current) requestAnimationFrame(restore); else { notify(); scheduleAnchor(); } }}
+  /></View></Context.Provider>;
 }

@@ -27,7 +27,8 @@ export function HomeScreen({
     notes = useNotes(),
     plan = usePlan(),
     day = getReadingPlanDay(plan.currentDay)!;
-  const complete = plan.finished ? 365 : plan.currentDay - 1,
+  const complete = plan.completedDays.length,
+    dayComplete = plan.completedDays.includes(day.day),
     percent = Math.round((complete / 365) * 100),
     chapters = getPlanChapters(day.day),
     lastNote = notes.notes.find((n) => !!n.comment);
@@ -63,10 +64,10 @@ export function HomeScreen({
         <Text style={s.reference}>{day.label}</Text>
         <Text style={s.meta}>
           {chapters.length} chapters ·{" "}
-          {plan.finished ? "Plan complete" : "Your next reading"}
+          {plan.finished ? "Plan complete" : dayComplete ? "Day complete" : "Your next reading"}
         </Text>
         <ActionButton
-          title={plan.finished ? "Read again" : `Read day ${day.day}`}
+          title={plan.finished ? "Read again" : dayComplete ? `Review day ${day.day}` : `Read day ${day.day}`}
           icon="arrowRight"
           disabled={!plan.ready}
           onPress={onRead}
