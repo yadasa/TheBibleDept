@@ -48,6 +48,12 @@ labels, 1×/1.25×/1.5×/2× speeds with pitch correction, an exact episode-page
 and Apple/Spotify follow links. The follow links open the show, rather than a
 specific episode.
 
+Playback speeds open from a gauge/current-rate button. The choices close after
+four seconds without interaction, when a rate is selected, or when the button is
+tapped again. Compact fifteen-second arrow targets flank the round play/pause
+button. The teaching card has no outline; provider attribution stays in these
+implementation notes rather than product copy.
+
 `src/state/PodcastProvider.tsx` owns one global `expo-audio` player above the page
 and theme providers. It starts without a source and attaches an MP3 only when the
 reader presses Play. Switching chapters, browsing other days, changing tabs, or

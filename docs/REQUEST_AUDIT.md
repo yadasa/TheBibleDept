@@ -30,10 +30,16 @@ as proof that a native feature worked on an iPhone.
 | Complete a lesson after reading and listening, excluding the final two minutes | All chapters must reach their loaded text end through real scrolling, and genuine listened intervals must cover the teaching. Seeking past audio is excluded. Completion and modal acknowledgement persist locally. |
 | Congratulate the completed day | One day-specific congratulations modal appears after durable completion. Calendar and Home counts include automatic and out-of-order completions. |
 | Ease every waveform touch interaction | Press brightness, seek preview, release, mini-player expansion and blurred/sharp crossfade use eased UI-thread transitions. |
-| Neighboring-bar influence, 67% uninfluenced cap and thicker white indicator | Completed after optimization in its own pushed commit. Actual live amplitude eases across three neighbors on either side, reaching zero influence at four pitches. The maximum rises from 67% toward 100% at the current bar. Both indicators are 2.5 px; the mini silhouette retains its requested static behavior. |
+| Neighboring-bar influence, 67% uninfluenced cap and thicker white indicator | Actual live amplitude eases with a four-pitch past falloff and a sharper two-pitch future falloff. The maximum rises from 67% toward 100% at the current bar. Its minimum is 67% of the preceding measured bars' average, interpreted as 33% below that average. The floor tapers with neighboring influence and does not feed back through its own modulation. Both indicators remain 2.5 px. |
 | Visible amplitude differences without a flat-looking plot | The full waveform now uses a fixed linear scale from the episode's reference peak. Day 1's paused plot spans about 29–51 px of a 76 px area instead of 14–18 px. Later loud samples cannot change unrelated bars' scale. |
 | Anchor height follows the recent bars | Both white indicators average the four preceding displayed bars, with an eased 180 ms height change. The full anchor remains centered; the mini anchor remains bottom-aligned. Preview measurement matched 35.0075 px for both the anchor and its four-bar average. |
 | One orange throughout the active app | `#F05A00`, the full waveform's existing orange, is the shared pigment for both themes, actions, glass, highlights, circles and both players. Brightness/transparency variants derive from that pigment. Small text retains readable theme ink; logos and distinct gold/sage highlights retain their source colors. |
+| Muted future audio and a fixed anchor guide | Future bars use neutral luminance gray and 67% of their previous opacity. Complementary clips keep gray or blurred future bars out of played orange. A separate 1 px translucent guide keeps a regular height behind the averaged anchor; the mini guide follows its drag expansion, never live RMS. |
+| Collapse playback speeds into an icon | A gauge/current-rate button opens the choices, closes after four seconds without interaction, and closes on selection or a second tap. Timers clean up on day change and unmount. Browser checks passed for all three dismissal paths. |
+| Cleaner fifteen-second skips and no teaching outline | Compact 44-point circular-arrow targets flank a round play/pause control. The Daily teaching card has no border. Foreground SVG icons now render above the glass pigment. |
+| Fix Reading plan / Search layout and remove the line | Equal-width rounded targets have 48-point height and no bottom borders. At 320 px both are 134 px wide, with full labels and one selected tab. Search drafts survive switching views. |
+| Remove technical product copy | Visible provider/build/storage explanations and raw runtime errors have been replaced with reader-facing instructions. Deliberate validation stays useful; underlying causes remain in development diagnostics. Internet, sign-in and privacy guidance remain. |
+| Reintegrate highlighting, comments and automatic Notes updates | Both readers expose Highlight & note, a guest account entry, signed-in verse hold and range selection, inline save/copy actions, and tap-to-edit saved highlights. Highlights/comments still use the existing private annotation document and live Notes subscription. |
 | True subtle lateral page motion blur | The earlier snapshot/exposure implementation was removed after regressions. Clean continuous page transitions are present; a native directional blur is not currently implemented. |
 | Continue audio while locked/backgrounded | **Unresolved and explicitly deferred by the user.** Actual Expo Go tests stop with sampling enabled and disabled. Force-quitting iOS also stops playback. No further audio-session/build changes were made after the deferral. |
 
@@ -87,7 +93,7 @@ iOS bytecode export was 4,194,936 bytes: 13,340 bytes (0.32%) above the earlier
 baseline, including the added eased neighboring response. This is JavaScript
 bytecode size, not the size of an installed iPhone app.
 
-Final follow-up verification passed **77 unit tests**, TypeScript, and web, iOS
+The preceding follow-up verification passed **77 unit tests**, TypeScript, and web, iOS
 and Android exports after the clipped trail, averaged anchors, spatial nav mask
 and shared orange palette. The mask's normal and inverted icon rows aligned in
 the browser during travel, with a 21 px rounded clip and exactly five accessible
@@ -100,8 +106,29 @@ Playback continued through Home and back to the measured podcast anchor. The
 final preview had no captured warnings/errors and no document overflow at either
 390 px or the restored 704 px preview width.
 
-The final matched iOS bytecode is 4,199,820 bytes, 18,224 bytes (0.44%) above the
+That matched iOS bytecode was 4,199,820 bytes, 18,224 bytes (0.44%) above the
 original export baseline. The new spatial mask intentionally retains a second
 visual icon row. These additions preserve the earlier rendering and loading
 optimizations; no signed-device performance result is implied. Each completed
 fix was committed and pushed separately.
+
+### Latest controls, copy and annotation verification
+
+All **87 unit tests**, TypeScript, and fresh web/iOS/Android exports passed.
+Browser checks confirmed the compact controls, four-second speed dismissal,
+selection/retap dismissal, borderless teaching card, neutral future bars and
+the reader switcher at 320 and 390 px without horizontal overflow. At 320 px the
+Reading plan label's client/scroll widths both measured 92 px, without truncation.
+
+An isolated preview used only `demo-bibledept` Auth/Firestore with matching local
+rules. A disposable account saved an orange Luke 1:1–3 highlight and comment from
+the plan. The comment appeared in Notes automatically; editing it in Notes was
+reflected in the reopened Search passage. The saved note survived reload, and
+sign-out hid the private record. No real church account or production record was
+used. The temporary preview server was stopped; port 8081 remains the main preview.
+The broader backend integration suites were not rerun for these UI changes.
+
+The latest matched iOS bytecode is 4,214,368 bytes, 32,772 bytes (0.78%) above the
+original export baseline. Native long-press/text-copy coexistence and the latest
+material appearance still need physical iPhone review. The visible selection
+toolbar provides an alternative to holding a verse. Locked audio remains deferred.
