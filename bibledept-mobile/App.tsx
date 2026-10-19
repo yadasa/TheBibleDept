@@ -251,7 +251,7 @@ function AppShell() {
     Bible: "Bible",
     Prayer: "Prayer journal",
     Notes: "Your notes",
-    Account: "Your account",
+    Account: "",
   };
   return (
     <GlassProvider target={grainTarget}>
@@ -398,7 +398,7 @@ function AppShell() {
                                     onPassage={openPassage}
                                   />
                                 ) : (
-                                  <AccountPage />
+                                  <AccountPage onOpenPlan={openPlan} onReadPassage={openPassage} onOpenPrayer={openPrayer} onOpenNotes={openNotes}/>
                                 )}
                               </PodcastPageContent>
                             </ScreenScrollView>

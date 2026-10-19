@@ -1,104 +1,22 @@
-import { GlassPressable as Pressable } from "../components/Glass";
-import { StyleSheet, Text, View } from "react-native";
-import { useAuth } from "../services/AuthProvider";
-import { Colors, typography as t, useTheme, useThemedStyles } from "../theme";
-import { ActionButton, Notice } from "../components/ui";
-import { Field } from "../components/ui";
-import { useState } from "react";
-import { useHabit } from "../services/HabitProvider";
-import { ReminderSettings } from "../components/ReminderSettings";
+import { useState } from 'react';
+import { useAuth } from '../services/AuthProvider';
+import { useTheme } from '../theme';
+import { useReadingText } from '../components/ReaderControls';
+import { useScreenScroll } from '../components/ScreenScrollView';
+import { AccountLink, AccountPage } from '../components/account/AccountPage';
+import { AppearancePage } from '../components/account/AppearancePage';
+import { ReadingPreferencesPage } from '../components/account/ReadingPreferencesPage';
+import { RemindersPage } from '../components/account/RemindersPage';
+import { AccountTransition } from '../components/account/AccountTransition';
 
-export function SettingsScreen({ onBack }: { onBack: () => void }) {
-  const { user } = useAuth(),
-    { mode, setMode, error } = useTheme(),
-    { s } = useThemedStyles(styles);
-  const habit = useHabit(),
-    [zone, setZone] = useState(
-      Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-    );
-  if (!user) return null;
-  return (
-    <View>
-      <ActionButton
-        title="Back to account"
-        secondary
-        icon="chevronLeft"
-        onPress={onBack}
-      />
-      <Text accessibilityRole="header" style={s.title}>
-        Settings
-      </Text>
-      <Text style={s.label}>Appearance</Text>
-      <Text style={s.body}>
-        Choose light or dark mode.
-      </Text>
-      <View style={s.choices}>
-        {(["dark", "light"] as const).map((value) => (
-          <Pressable
-            key={value}
-            accessibilityRole="radio"
-            accessibilityLabel={`${value} mode`}
-            aria-checked={mode === value}
-            accessibilityState={{ checked: mode === value }}
-            onPress={() => setMode(value)}
-            style={[s.choice, mode === value && s.selected]}
-          >
-            <Text style={s.choiceText}>
-              {value === "dark" ? "Dark" : "Light"}
-              {mode === value ? " ✓" : ""}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <Text style={s.body}>
-        Choose the look that’s easiest on your eyes.
-      </Text>
-      {!!error && <Notice text={error} error />}
-      <View style={{ marginTop: 32 }}>
-        <Text style={s.label}>Reading streaks</Text>
-        {habit.ready ? (
-          <Notice
-            text={`Reading days are counted in ${habit.zone}. Finish a whole chapter to count a reading day.`}
-          />
-        ) : (
-          <>
-            <Notice text="Choose the time zone used to count your reading days. It will stay the same when you travel. Existing reading dates will be kept as you recorded them." />
-            <Field
-              label="Reading time zone"
-              value={zone}
-              onChangeText={setZone}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="America/Chicago"
-            />
-            <ActionButton
-              title="Confirm reading time zone"
-              loading={habit.busy}
-              onPress={() => void habit.configure(zone.trim()).catch(() => {})}
-            />
-          </>
-        )}
-        {!!habit.error && <Notice text={habit.error} error />}
-      </View>
-      <ReminderSettings />
-    </View>
-  );
+export type SettingsSection='home'|'appearance'|'reading'|'reminders';
+export function SettingsScreen({onBack,initialSection='home'}:{onBack:()=>void;initialSection?:SettingsSection}) {
+  const {user}=useAuth(),{mode}=useTheme(),{preferredTranslation}=useReadingText(),top=useScreenScroll(),[page,setPage]=useState<SettingsSection>(initialSection);
+  function open(next:SettingsSection){setPage(next);top();}
+  if(!user)return null;
+  return <AccountTransition pageKey={page}>{page==='appearance'?<AppearancePage onBack={()=>open('home')}/>:page==='reading'?<ReadingPreferencesPage onBack={()=>open('home')}/>:page==='reminders'?<RemindersPage onBack={()=>open('home')} onReadingPreferences={()=>open('reading')}/>:<AccountPage title="Preferences" intro="Appearance, reading, and reminders." onBack={onBack}>
+    <AccountLink icon="settings" title="Appearance" detail={`${mode==='dark'?'Dark':'Light'} mode`} onPress={()=>open('appearance')}/>
+    <AccountLink icon="book" title="Reading preferences" detail={`${preferredTranslation==='kjv'?'King James Version':'World English Bible'}, text size, and reading days`} onPress={()=>open('reading')}/>
+    <AccountLink icon="bell" title="Reminders" detail="Your reading times, quiet hours, and pauses" onPress={()=>open('reminders')}/>
+  </AccountPage>}</AccountTransition>;
 }
-const styles = (c: Colors) =>
-  StyleSheet.create({
-    title: { ...t.title, color: c.ink, marginTop: 24, marginBottom: 24 },
-    label: { ...t.section, color: c.ink },
-    body: { ...t.meta, color: c.muted, marginTop: 8 },
-    choices: { flexDirection: "row", gap: 12, marginTop: 16 },
-    choice: {
-      flex: 1,
-      minHeight: 52,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: c.controlBorder,
-      borderRadius: 4,
-      backgroundColor: c.surface,
-    },
-    selected: { borderColor: c.action, backgroundColor: c.tint },
-    choiceText: { ...t.button, color: c.ink },
-  });
