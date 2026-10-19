@@ -1,6 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, needsPodcastSessionActivation, PLAYBACK_RATES, podcastDuration, podcastSampleLevel, recordPodcastSample } from '../src/services/podcastAudio';
+import { canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, needsPodcastSessionActivation, PLAYBACK_RATES, podcastDuration, podcastSampleLevel, podcastSampleTime, recordPodcastSample } from '../src/services/podcastAudio';
+
+test('iOS zero PCM timestamps follow the real player clock, including after seeks and speed changes', () => {
+  const original = emptyPodcastSamples();
+  let samples = original;
+  for (const playbackTime of [3.25, 48.5, 12.75, 62.5]) {
+    const timestamp = podcastSampleTime(0, playbackTime, 'ios');
+    assert.equal(timestamp, playbackTime);
+    samples = recordPodcastSample(samples, { timestamp: timestamp!, channels: [{ frames: [.5] }] }, 96)!.samples;
+    assert.equal(samples[Math.floor(playbackTime)], .5);
+  }
+  assert.equal(samples[0], 0);
+  assert.equal(original[3], 0);
+});
+
+test('nonzero native PCM clocks retain stale-packet checks and invalid clocks never gain waveform peaks', () => {
+  assert.equal(podcastSampleTime(10.1, 10.2, 'ios'), 10.1);
+  assert.equal(podcastSampleTime(10.1, 10.2, 'web'), 10.1);
+  assert.equal(podcastSampleTime(0, 60, 'web'), null);
+  assert.equal(podcastSampleTime(4, 60, 'ios'), null);
+  for (const value of [NaN, Infinity, -1]) {
+    assert.equal(podcastSampleTime(value, 10, 'ios'), null);
+    assert.equal(podcastSampleTime(0, value, 'ios'), null);
+  }
+  assert.equal(podcastSampleTime(0, 0, 'ios'), 0);
+});
 
 test('lock-screen playback can reactivate a released session without resuming a deliberately paused player', () => {
   const paused = { playing: false, timeControlStatus: 'paused', isLoaded: true, error: null };

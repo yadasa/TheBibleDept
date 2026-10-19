@@ -7,7 +7,7 @@ import { AppState, Platform } from 'react-native';
 import { getDayPodcast } from '../services/podcasts';
 import {
   canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, PLAYBACK_RATES,
-  needsPodcastSessionActivation, podcastDuration, recordPodcastSample,
+  needsPodcastSessionActivation, podcastDuration, podcastSampleTime, recordPodcastSample,
 } from '../services/podcastAudio';
 
 export { PLAYBACK_RATES } from '../services/podcastAudio';
@@ -126,10 +126,9 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const onSample = useCallback((sample: AudioSample) => {
     if (disableSamplingForPlaybackCheck || !alive.current || !appActive.current || !episodeRef.current || !readyRef.current || !wantsPlayback.current || !rawStatus.current.playing) return;
     const activeDuration = podcastDuration(player.duration, lastDuration.current || episodeRef.current.durationSeconds);
-    // A queued packet from before a seek/source change must not draw peaks at
-    // another point in the episode. Native PCM timestamps use the media clock.
-    if (Math.abs(sample.timestamp - player.currentTime) > 2) return;
-    const recorded = recordPodcastSample(bins.current, sample, activeDuration);
+    const timestamp = podcastSampleTime(sample.timestamp, player.currentTime, Platform.OS);
+    if (timestamp === null) return;
+    const recorded = recordPodcastSample(bins.current, { ...sample, timestamp }, activeDuration);
     if (!recorded) return;
     bins.current = recorded.samples;
     sampleLevel.current = recorded.liveLevel;

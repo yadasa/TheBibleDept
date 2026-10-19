@@ -28,6 +28,14 @@ export type PodcastPcmSample = {
   channels: { frames: readonly number[] }[];
 };
 
+export function podcastSampleTime(timestamp: number, playbackTime: number, platform: string): number | null {
+  if (!Number.isFinite(timestamp) || timestamp < 0 || !Number.isFinite(playbackTime) || playbackTime < 0) return null;
+  // SDK57's iOS AudioTapProcessor currently emits 0 for every PCM packet.
+  // The player's native media clock still follows seeks and playback speed.
+  const time = platform === 'ios' && timestamp === 0 ? playbackTime : timestamp;
+  return Math.abs(time - playbackTime) <= 2 ? time : null;
+}
+
 export function podcastDuration(value: number, fallback = 0): number {
   if (Number.isFinite(value) && value > 0) return value;
   return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
