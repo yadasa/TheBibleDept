@@ -1,5 +1,6 @@
+import { GlassPressable as Pressable } from "./Glass";
 import { useId, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { control, radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { Icon, IconName } from './Icon';
 
@@ -7,7 +8,7 @@ export function ActionButton({ title, onPress, disabled = false, loading = false
   const {c,s}=useThemedStyles(styles);
   const [focused,setFocused]=useState(false);
   const color = variant === 'primary' ? c.onAction : variant === 'ghost' ? c.action : c.ink;
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onPress={onPress} style={({pressed})=>[s.button, variant === 'secondary' && s.secondary, variant === 'ghost' && s.ghost, focused&&s.focused, pressed && s.pressed, (disabled || loading) && s.disabled]}>
+  return <Pressable tone={variant === 'primary' ? 'primary' : variant === 'ghost' ? 'subtle' : 'neutral'} accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onPress={onPress} style={({pressed})=>[s.button, variant === 'secondary' && s.secondary, variant === 'ghost' && s.ghost, focused&&s.focused, pressed && s.pressed, (disabled || loading) && s.disabled]}>
     {loading ? <ActivityIndicator color={color} /> : <><Text style={[s.buttonText, {color}]}>{title}</Text>{icon && <Icon name={icon} size={20} color={color}/>}</>}
   </Pressable>;
 }

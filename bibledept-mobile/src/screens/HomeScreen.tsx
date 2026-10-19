@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { GlassPressable as Pressable, GlassSurface } from "../components/Glass";
+import { StyleSheet, Text, View } from "react-native";
 import { shiftDate } from "../../shared/habits";
 import { ActionButton, Notice } from "../components/ui";
 import { Icon, IconName } from "../components/Icon";
@@ -50,7 +51,7 @@ export function HomeScreen({
         A little reading. A deeper understanding.{`\n`}A rhythm you can return
         to.
       </Text>
-      <View style={s.reading}>
+      <GlassSurface style={s.reading}>
         <View style={s.topline}>
           <Text style={s.eyebrow}>THE 365-DAY PLAN</Text>
           <Icon name="book" color={c.action} />
@@ -83,7 +84,7 @@ export function HomeScreen({
             }}
           />
         </View>
-      </View>
+      </GlassSurface>
       {!!plan.error && (
         <>
           <Notice text={plan.error} error />
@@ -312,12 +313,7 @@ const styles = (c: Colors) =>
     },
     intro: { ...t.body, color: c.muted, marginTop: 16, marginBottom: 28 },
     reading: {
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderTopWidth: 3,
-      borderTopColor: c.orange,
-      borderRadius: 4,
+      borderRadius: 20,
       padding: 22,
     },
     topline: {

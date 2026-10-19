@@ -1,6 +1,7 @@
+import { GlassPressable as Pressable } from "../components/Glass";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Icon, IconName } from '../components/Icon';
 import { ActionButton, Field, Notice } from '../components/ui';
 import { authError, useAuth } from '../services/AuthProvider';

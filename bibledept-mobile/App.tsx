@@ -14,6 +14,15 @@ import { BlurTargetView } from "expo-blur";
 import { ThemeProvider, useTheme, typography as t } from "./src/theme";
 import { BrandLogo } from "./src/components/BrandLogo";
 import { GrainBackground } from "./src/components/GrainBackground";
+import { GlassProvider } from "./src/components/Glass";
+import { PageMask } from "./src/components/PageMask";
+import { PageBackdrop } from "./src/components/PageBackdrop";
+import { MotionBlur } from "./src/components/MotionBlur";
+import {
+  pagePosition,
+  pagesCrossed,
+  PageJourney,
+} from "./src/services/tabPaging";
 import {
   LiquidBottomNav,
   tabOrder,
@@ -70,14 +79,13 @@ function AppShell() {
     [reference, setReference] = useState<string>(),
     [translation, setTranslation] = useState<Translation>("web"),
     [revision, setRevision] = useState(0);
-  const [scene, setScene] = useState<{
-      from: Tab | null;
-      to: Tab;
-      direction: number;
-    }>({ from: null, to: "Home", direction: 1 }),
+  const journeyRef = useRef<PageJourney>({ from: 2, to: 2 }),
+    position = useRef(2),
+    page = useRef(new Animated.Value(2)).current,
     displayed = useRef<Tab>("Home"),
     slide = useRef(new Animated.Value(1)).current,
     blurTarget = useRef<View | null>(null),
+    grainTarget = useRef<View | null>(null),
     [panelWidth, setPanelWidth] = useState(400);
   function openPassage(ref: string, version: Translation) {
     setReference(ref);
@@ -120,23 +128,34 @@ function AppShell() {
       subscription.remove();
     };
   }, []);
-  const beginTransition = useCallback((next: Tab, immediate: boolean) => {
-    const from = displayed.current,
-      direction = tabOrder.indexOf(next) > tabOrder.indexOf(from) ? 1 : -1;
-    Keyboard.dismiss();
-    setVisited((value) => (value.includes(next) ? value : [...value, next]));
-    displayed.current = next;
-    if (immediate || next === from) {
-      setScene({ from: null, to: next, direction });
-      return;
-    }
-    setScene({ from, to: next, direction });
-  }, []);
+  const beginTransition = useCallback(
+    (next: Tab, immediate: boolean) => {
+      const to = tabOrder.indexOf(next),
+        from = immediate ? to : position.current;
+      Keyboard.dismiss();
+      setVisited((value) => [
+        ...new Set([...value, ...pagesCrossed(from, to)]),
+      ]);
+      displayed.current = next;
+      journeyRef.current = { from, to };
+      position.current = from;
+      page.setValue(from);
+    },
+    [page],
+  );
   const settle = useCallback((next: Tab) => {
-    if (next === displayed.current)
-      setScene((value) => ({ ...value, from: null }));
+    if (next === displayed.current) position.current = tabOrder.indexOf(next);
   }, []);
-  useEffect(() => () => slide.stopAnimation(), []);
+  useEffect(() => {
+    const listener = slide.addListener(({ value }) => {
+      position.current = pagePosition(journeyRef.current, value);
+      page.setValue(position.current);
+    });
+    return () => {
+      slide.removeListener(listener);
+      slide.stopAnimation();
+    };
+  }, [slide, page]);
   const headings: Record<Tab, string> = {
     Home: "",
     Bible: "Bible",
@@ -145,140 +164,198 @@ function AppShell() {
     Account: "Your account",
   };
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
-      <StatusBar style={mode === "dark" ? "light" : "dark"} />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
-          <GrainBackground />
-          <View style={{ borderBottomWidth: 1, borderBottomColor: c.border }}>
-            <View
-              style={{
-                width: "100%",
-                maxWidth: 720,
-                alignSelf: "center",
-                paddingHorizontal: 20,
-                minHeight: 72,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <BrandLogo />
-              <Text style={{ ...t.meta, color: c.muted }}>
-                READ. UNDERSTAND. GROW.
-              </Text>
+    <GlassProvider target={grainTarget}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
+        <StatusBar style={mode === "dark" ? "light" : "dark"} />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
+            <View>
+              <GrainBackground />
+              <View
+                style={{
+                  width: "100%",
+                  maxWidth: 720,
+                  alignSelf: "center",
+                  paddingHorizontal: 20,
+                  minHeight: 84,
+                  paddingVertical: 16,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <BrandLogo />
+                <Text style={{ ...t.meta, color: c.muted }}>
+                  READ. UNDERSTAND. GROW.
+                </Text>
+              </View>
             </View>
-          </View>
-          <View
-            onLayout={(e) => setPanelWidth(e.nativeEvent.layout.width)}
-            style={{ flex: 1, overflow: "hidden" }}
-          >
-            {tabOrder
-              .filter((item) => visited.includes(item) || item === scene.to)
-              .map((item) => {
-                const active = item === scene.to,
-                  show = active || item === scene.from;
-                const translate = scene.from
-                  ? active
-                    ? slide.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [scene.direction * panelWidth, 0],
-                      })
-                    : slide.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, -scene.direction * panelWidth],
-                      })
-                  : 0;
-                return (
-                  <Animated.View
-                    key={item}
-                    testID={`scene-${item}`}
-                    pointerEvents={active ? "auto" : "none"}
-                    aria-hidden={!active}
-                    accessibilityElementsHidden={!active}
-                    importantForAccessibility={
-                      active ? "auto" : "no-hide-descendants"
-                    }
+            <View
+              testID="page-viewport"
+              onLayout={(e) => setPanelWidth(e.nativeEvent.layout.width)}
+              style={{ flex: 1, overflow: "hidden" }}
+            >
+              <MotionBlur progress={slide}>
+                <Animated.View
+                  testID="page-background-track"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: panelWidth * tabOrder.length,
+                    transform: [
+                      {
+                        translateX: page.interpolate({
+                          inputRange: [0, tabOrder.length - 1],
+                          outputRange: [0, -(tabOrder.length - 1) * panelWidth],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <BlurTargetView
+                    ref={grainTarget}
+                    pointerEvents="none"
                     style={{
                       position: "absolute",
                       inset: 0,
-                      display: show ? "flex" : "none",
-                      transform: [{ translateX: translate }],
+                      backgroundColor: c.background,
                     }}
                   >
-                    <ScreenScrollView
-                      active={active}
-                      resetOnPlanDayChange={item === "Bible"}
-                      contentContainerStyle={{ flexGrow: 1 }}
-                      keyboardShouldPersistTaps="handled"
-                      keyboardDismissMode="on-drag"
-                    >
-                      <View
-                        style={{
-                          width: "100%",
-                          maxWidth: 720,
-                          alignSelf: "center",
-                          paddingHorizontal: 20,
-                          paddingTop: 24,
-                          paddingBottom: 124,
-                        }}
-                      >
-                        {!!headings[item] && (
-                          <Text
-                            accessibilityRole="header"
+                    <PageBackdrop />
+                  </BlurTargetView>
+                </Animated.View>
+                <PageMask>
+                  <Animated.View
+                    testID="page-track"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: panelWidth * tabOrder.length,
+                      transform: [
+                        {
+                          translateX: page.interpolate({
+                            inputRange: [0, tabOrder.length - 1],
+                            outputRange: [
+                              0,
+                              -(tabOrder.length - 1) * panelWidth,
+                            ],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    {/* CSS masks form a backdrop root. A matching inner backdrop
+                      lets glass blur real pixels, while the outer one remains
+                      visible wherever the content mask reaches zero alpha. */}
+                    <PageBackdrop />
+                    {tabOrder
+                      .filter((item) => visited.includes(item))
+                      .map((item) => {
+                        const active = item === tab;
+                        return (
+                          <View
+                            key={item}
+                            testID={`scene-${item}`}
+                            pointerEvents={active ? "auto" : "none"}
+                            aria-hidden={!active}
+                            {...(Platform.OS === "web"
+                              ? { inert: !active }
+                              : {})}
+                            accessibilityElementsHidden={!active}
+                            importantForAccessibility={
+                              active ? "auto" : "no-hide-descendants"
+                            }
                             style={{
-                              ...t.title,
-                              color: c.ink,
-                              marginBottom: 20,
+                              position: "absolute",
+                              top: 0,
+                              bottom: 0,
+                              left: tabOrder.indexOf(item) * panelWidth,
+                              width: panelWidth,
                             }}
                           >
-                            {headings[item]}
-                          </Text>
-                        )}
-                        {item === "Home" ? (
-                          <HomeScreen
-                            onRead={read}
-                            onAccount={() => setTab("Account")}
-                            onPrayer={() => setTab("Prayer")}
-                            onNotes={() => setTab("Notes")}
-                          />
-                        ) : item === "Bible" ? (
-                          <BibleHub
-                            active={active}
-                            requestRevision={revision}
-                            initialReference={reference}
-                            initialTranslation={translation}
-                            onAccount={() => setTab("Account")}
-                          />
-                        ) : item === "Prayer" ? (
-                          <PrayerScreen onAccount={() => setTab("Account")} />
-                        ) : item === "Notes" ? (
-                          <NotesScreen
-                            onAccount={() => setTab("Account")}
-                            onPassage={openPassage}
-                          />
-                        ) : (
-                          <AccountScreen />
-                        )}
-                      </View>
-                    </ScreenScrollView>
+                            <ScreenScrollView
+                              active={active}
+                              resetOnPlanDayChange={item === "Bible"}
+                              contentContainerStyle={{ flexGrow: 1 }}
+                              keyboardShouldPersistTaps="handled"
+                              keyboardDismissMode="on-drag"
+                            >
+                              <View
+                                style={{
+                                  width: "100%",
+                                  maxWidth: 720,
+                                  alignSelf: "center",
+                                  paddingHorizontal: 20,
+                                  paddingTop: 24,
+                                  paddingBottom: 168,
+                                }}
+                              >
+                                {!!headings[item] && (
+                                  <Text
+                                    accessibilityRole="header"
+                                    style={{
+                                      ...t.title,
+                                      color: c.ink,
+                                      marginBottom: 20,
+                                    }}
+                                  >
+                                    {headings[item]}
+                                  </Text>
+                                )}
+                                {item === "Home" ? (
+                                  <HomeScreen
+                                    onRead={read}
+                                    onAccount={() => setTab("Account")}
+                                    onPrayer={() => setTab("Prayer")}
+                                    onNotes={() => setTab("Notes")}
+                                  />
+                                ) : item === "Bible" ? (
+                                  <BibleHub
+                                    active={active}
+                                    requestRevision={revision}
+                                    initialReference={reference}
+                                    initialTranslation={translation}
+                                    onAccount={() => setTab("Account")}
+                                  />
+                                ) : item === "Prayer" ? (
+                                  <PrayerScreen
+                                    onAccount={() => setTab("Account")}
+                                  />
+                                ) : item === "Notes" ? (
+                                  <NotesScreen
+                                    onAccount={() => setTab("Account")}
+                                    onPassage={openPassage}
+                                  />
+                                ) : (
+                                  <AccountScreen />
+                                )}
+                              </View>
+                            </ScreenScrollView>
+                          </View>
+                        );
+                      })}
                   </Animated.View>
-                );
-              })}
-          </View>
-        </BlurTargetView>
-        <LiquidBottomNav
-          active={tab}
-          onNavigate={setTab}
-          onTransitionStart={beginTransition}
-          onSettled={settle}
-          progress={slide}
-          blurTarget={blurTarget}
-        />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                </PageMask>
+              </MotionBlur>
+            </View>
+          </BlurTargetView>
+          <LiquidBottomNav
+            active={tab}
+            onNavigate={setTab}
+            onTransitionStart={beginTransition}
+            onSettled={settle}
+            progress={slide}
+            blurTarget={blurTarget}
+          />
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </GlassProvider>
   );
 }

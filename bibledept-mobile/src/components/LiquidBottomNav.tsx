@@ -7,17 +7,11 @@ import {
   Text,
   View,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { useTheme } from "../theme";
 import { Icon, IconName } from "./Icon";
-export const tabOrder = [
-  "Notes",
-  "Prayer",
-  "Home",
-  "Bible",
-  "Account",
-] as const;
-export type Tab = (typeof tabOrder)[number];
+import { GlassBackdrop } from "./Glass";
+import { journeyDuration, tabOrder, Tab } from "../services/tabPaging";
+export { tabOrder, Tab } from "../services/tabPaging";
 const icons: Record<Tab, IconName> = {
   Notes: "notes",
   Prayer: "heart",
@@ -45,7 +39,7 @@ export function useReducedMotion() {
   }, []);
   return reduced;
 }
-/** Port of yadasa/church LiquidBottomNav: 0/.24/.72/1 keyframes, 430ms, same stretch formula. */
+/** Church stretch keyframes share one clock with the continuous page track. */
 export function LiquidBottomNav({
   active,
   onNavigate,
@@ -64,7 +58,7 @@ export function LiquidBottomNav({
   const { colors: c, mode } = useTheme(),
     reduced = useReducedMotion(),
     [width, setWidth] = useState(0);
-  const cell = (width - 2 - 14 - 16) / 5,
+  const cell = (width - 14 - 16) / 5,
     target = 7 + tabOrder.indexOf(active) * (cell + 4);
   const [frames, setFrames] = useState({
     left: [target, target, target, target],
@@ -94,15 +88,20 @@ export function LiquidBottomNav({
       trailing = Math.min(stretch * 0.48, 34);
     const resized = lastWidth.current !== 0 && lastWidth.current !== width;
     lastWidth.current = width;
-    if (reduced || !initialized.current || resized) {
+    if (
+      reduced ||
+      !initialized.current ||
+      resized ||
+      (Math.abs(delta) < 0.01 && Math.abs(from.width - cell) < 0.01)
+    ) {
       initialized.current = true;
       visual.current = { left: target, width: cell };
       setFrames({
         left: [target, target, target, target],
         width: [cell, cell, cell, cell],
       });
-      progress.setValue(1);
       start.current(active, true);
+      progress.setValue(1);
       settled.current(active);
       return;
     }
@@ -113,8 +112,8 @@ export function LiquidBottomNav({
       width: [from.width, from.width + stretch, cell + trailing, cell],
     };
     setFrames(next);
-    progress.setValue(0);
     start.current(active, false);
+    progress.setValue(0);
     const listener = progress.addListener(({ value }) => {
       const stops = [0, 0.24, 0.72, 1],
         i = value < 0.24 ? 0 : value < 0.72 ? 1 : 2,
@@ -126,7 +125,7 @@ export function LiquidBottomNav({
     });
     Animated.timing(progress, {
       toValue: 1,
-      duration: 430,
+      duration: journeyDuration(0, Math.abs(delta) / (cell + 4)),
       easing: Easing.bezier(0.22, 0.82, 0.18, 1),
       useNativeDriver: false,
     }).start(({ finished }) => {
@@ -163,23 +162,12 @@ export function LiquidBottomNav({
           minHeight: 76,
           borderRadius: 29,
           overflow: "hidden",
-          borderWidth: 1,
-          borderColor:
-            mode === "dark" ? "rgba(255,245,245,.35)" : "rgba(255,255,255,.85)",
           backgroundColor:
             mode === "dark" ? "rgba(40,36,31,.10)" : "rgba(255,245,245,.10)",
-          boxShadow:
-            "0 14px 40px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.3)",
+          boxShadow: "0 14px 40px rgba(0,0,0,.24)",
         }}
       >
-        <BlurView
-          tint={mode === "dark" ? "dark" : "light"}
-          intensity={90}
-          blurTarget={blurTarget}
-          blurMethod="dimezisBlurView"
-          blurReductionFactor={2}
-          style={{ position: "absolute", inset: 0 }}
-        />
+        <GlassBackdrop target={blurTarget} />
         {width > 0 && (
           <Animated.View
             testID="navigation-indicator"
@@ -189,12 +177,8 @@ export function LiquidBottomNav({
               top: 7,
               bottom: 7,
               borderRadius: 21,
-              backgroundColor:
-                mode === "dark" ? "rgba(255,145,77,.90)" : "rgba(183,67,0,.94)",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,.22)",
-              boxShadow:
-                "inset 0 1px 2px rgba(255,255,255,.32), 0 2px 9px rgba(0,0,0,.16)",
+              overflow: "hidden",
+              boxShadow: "0 2px 9px rgba(0,0,0,.16)",
               left: progress.interpolate({
                 inputRange: [0, 0.24, 0.72, 1],
                 outputRange: frames.left,
@@ -204,7 +188,9 @@ export function LiquidBottomNav({
                 outputRange: frames.width,
               }),
             }}
-          />
+          >
+            <GlassBackdrop tone="primary" target={blurTarget} />
+          </Animated.View>
         )}
         <View
           accessibilityRole="tablist"

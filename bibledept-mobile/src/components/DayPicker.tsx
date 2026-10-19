@@ -1,3 +1,4 @@
+import { GlassPressable } from "./Glass";
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,25 +57,25 @@ export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect
             <IconButton name="close" label="Close day picker" onPress={close}/>
           </View>
           <Text style={s.selection}>Viewing day {selectedDay} · {getReadingPlanDay(selectedDay)!.label}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={'Open your current day, Day ' + currentDay + (finished ? ', plan complete' : '')} onPress={() => select(currentDay)} style={({ pressed }) => [s.currentSpot, pressed && s.pressed]}>
+          <GlassPressable accessibilityRole="button" accessibilityLabel={'Open your current day, Day ' + currentDay + (finished ? ', plan complete' : '')} onPress={() => select(currentDay)} style={({ pressed }) => [s.currentSpot, pressed && s.pressed]}>
             <Icon name={finished ? 'checkCircle' : 'book'} size={20} color={c.action}/>
             <Text style={s.currentSpotText}>{finished ? 'Plan complete' : 'Your current day'}<Text style={s.currentSpotDay}> · Day {currentDay}</Text></Text>
             <Icon name="arrowRight" size={18} color={c.action}/>
-          </Pressable>
+          </GlassPressable>
 
           <View style={s.paging}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Previous 30 days" accessibilityState={{ disabled: page === 0 }} disabled={page === 0} onPress={() => setPage(value => value - 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, page === 0 && s.disabled]}><Icon name="chevronLeft" size={20}/></Pressable>
+            <GlassPressable accessibilityRole="button" accessibilityLabel="Previous 30 days" accessibilityState={{ disabled: page === 0 }} disabled={page === 0} onPress={() => setPage(value => value - 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, page === 0 && s.disabled]}><Icon name="chevronLeft" size={20}/></GlassPressable>
             <Text accessibilityLiveRegion="polite" style={s.range}>Days {first}–{last}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Next 30 days" accessibilityState={{ disabled: last === 365 }} disabled={last === 365} onPress={() => setPage(value => value + 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, last === 365 && s.disabled]}><Icon name="chevronRight" size={20}/></Pressable>
+            <GlassPressable accessibilityRole="button" accessibilityLabel="Next 30 days" accessibilityState={{ disabled: last === 365 }} disabled={last === 365} onPress={() => setPage(value => value + 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, last === 365 && s.disabled]}><Icon name="chevronRight" size={20}/></GlassPressable>
           </View>
           <View onLayout={event => setGridWidth(event.nativeEvent.layout.width)} style={s.grid}>
             {Array.from({ length: last - first + 1 }, (_, index) => first + index).map(day => {
               const current = day === currentDay, selected = day === selectedDay, done = day < currentDay || finished;
-              return <Pressable key={day} accessibilityRole="button" accessibilityLabel={'Day ' + day + ', ' + getReadingPlanDay(day)!.label + (current ? ', your current day' : '') + (done ? ', completed' : '')} accessibilityState={{ selected }} onPress={() => select(day)} style={({ pressed }) => [s.day, { width: cellWidth }, done && s.done, current && s.current, selected && s.selected, pressed && s.pressed]}>
+              return <GlassPressable key={day} accessibilityRole="button" accessibilityLabel={'Day ' + day + ', ' + getReadingPlanDay(day)!.label + (current ? ', your current day' : '') + (done ? ', completed' : '')} accessibilityState={{ selected }} onPress={() => select(day)} tone={current ? "primary" : selected ? "selected" : "neutral"} style={({ pressed }) => [s.day, { width: cellWidth }, done && s.done, current && s.current, selected && s.selected, pressed && s.pressed]}>
                 <View style={s.dayNumber}><Text style={[s.dayText, current && s.currentText]}>{day}</Text></View>
-                {done && <View style={s.completionMarker}><Icon name="check" size={14} color={current ? c.onOrange : c.success}/></View>}
+                {done && <View style={s.completionMarker}><Icon name="check" size={14} color={current ? c.onAction : c.success}/></View>}
                 {current && <Text style={s.currentMarker}>Now</Text>}
-              </Pressable>;
+              </GlassPressable>;
             })}
           </View>
           <View style={s.legend}><View style={s.legendItem}><Icon name="check" size={16} color={c.success}/><Text style={s.legendText}>Complete</Text></View><View style={s.legendItem}><View style={s.selectedKey}/><Text style={s.legendText}>Viewing</Text></View></View>
@@ -109,7 +110,7 @@ const styles=(c:Colors)=>StyleSheet.create({
   dayNumber: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }, dayText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: c.ink },
   completionMarker: { position: 'absolute', top: 2, right: 2 },
   done: { backgroundColor: c.successTint }, current: { backgroundColor: c.orange, borderColor: c.orange }, selected: { borderColor: c.ink, borderWidth: 2 },
-  currentText: { fontWeight: '800', color:c.onOrange }, currentMarker: { ...t.meta, color: c.onOrange, fontWeight: '600', textAlign: 'center' },
+  currentText: { fontWeight: '800', color:c.onAction }, currentMarker: { ...t.meta, color: c.onAction, fontWeight: '600', textAlign: 'center' },
   legend: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginTop: 12 }, legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 }, legendText: { ...t.meta, color: c.muted },
   selectedKey: { width: 14, height: 14, borderColor: c.ink, borderWidth: 2, borderRadius: 2 },
   jump: { flexDirection: 'row', alignItems: 'flex-end', gap: 12, marginTop: 20, flexWrap: 'wrap' }, input: { flex: 1, minWidth: 140 }, jumpAction: { marginBottom: 16, minWidth: 112 },

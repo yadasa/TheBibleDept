@@ -1,6 +1,7 @@
+import { GlassPressable as Pressable } from "./Glass";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { Translation } from '../services/bible';
 import { useThemedStyles, Colors, typography as t } from '../theme';
 import { IconButton, Notice } from './ui';

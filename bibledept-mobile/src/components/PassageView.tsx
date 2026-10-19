@@ -1,3 +1,4 @@
+import { GlassPressable } from "./Glass";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Passage } from "../services/bible";
@@ -165,7 +166,7 @@ export function PassageView({ passage }: { passage: Passage }) {
                   content
                 )}
                 {!selecting && note && note.verseStart === verse.verse && (
-                  <Pressable
+                  <GlassPressable
                     accessibilityRole="button"
                     accessibilityLabel={`Edit note on verse ${verse.verse}`}
                     onPress={() => setEditing(note)}
@@ -182,7 +183,7 @@ export function PassageView({ passage }: { passage: Passage }) {
                       {note.comment || "Highlighted · Add a comment"}
                       {note.pending ? " · Syncing…" : ""}
                     </Text>
-                  </Pressable>
+                  </GlassPressable>
                 )}
               </>
             );

@@ -10,7 +10,6 @@ export function BrandLogo({ large = false }: { large?: boolean }) {
       style={{
         width: large ? 208 : 128,
         height: ((large ? 208 : 128) * 229) / 580,
-        alignSelf: "flex-start",
       }}
     />
   );

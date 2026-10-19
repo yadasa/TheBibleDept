@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { GlassPressable as Pressable } from "../components/Glass";
+import { StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../services/AuthProvider";
 import { Colors, typography as t, useTheme, useThemedStyles } from "../theme";
 import { ActionButton, Notice } from "../components/ui";

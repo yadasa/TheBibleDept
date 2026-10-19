@@ -1,5 +1,6 @@
+import { GlassPressable as Pressable } from "../components/Glass";
 import { useCallback, useEffect, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, View } from 'react-native';
 import { BibleScreen } from './BibleScreen';
 import { PlanScreen } from './PlanScreen';
 import { Icon } from '../components/Icon';

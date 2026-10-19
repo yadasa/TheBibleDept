@@ -1,9 +1,9 @@
+import { GlassPressable as Pressable } from "./Glass";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   View,
@@ -115,6 +115,11 @@ export function AnnotationEditor({
               {highlightColors.map((value) => (
                 <Pressable
                   key={value}
+                  glassColor={
+                    value === "none"
+                      ? undefined
+                      : highlightBackground(value, mode === "dark") + "B8"
+                  }
                   accessibilityRole="radio"
                   accessibilityLabel={`${value} highlight`}
                   aria-checked={value === color}

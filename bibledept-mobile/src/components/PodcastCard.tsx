@@ -1,3 +1,4 @@
+import { GlassPressable } from "./Glass";
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
@@ -73,9 +74,9 @@ function EpisodePlayer({episode}:{episode:Episode}) {
     </Pressable>
     <View style={s.times}><Text style={s.time}>{audioTime(position)}</Text><Text style={s.time}>{audioTime(duration)}</Text></View>
     <View style={s.controls}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Rewind podcast 15 seconds" accessibilityState={{disabled:!status.isLoaded||!!problem}} disabled={!status.isLoaded||!!problem} onPress={()=>seek(position-15)} style={({pressed})=>[s.skip,pressed&&s.pressed,(!status.isLoaded||!!problem)&&s.disabled]}><View style={s.reverse}><Icon name="refresh" size={22}/></View><Text style={s.skipText}>15s</Text></Pressable>
+      <GlassPressable accessibilityRole="button" accessibilityLabel="Rewind podcast 15 seconds" accessibilityState={{disabled:!status.isLoaded||!!problem}} disabled={!status.isLoaded||!!problem} onPress={()=>seek(position-15)} style={({pressed})=>[s.skip,pressed&&s.pressed,(!status.isLoaded||!!problem)&&s.disabled]}><View style={s.reverse}><Icon name="refresh" size={22}/></View><Text style={s.skipText}>15s</Text></GlassPressable>
       <View style={s.play}><ActionButton title={problem?'Retry episode':status.playing?'Pause episode':'Play episode'} icon={problem?'refresh':status.playing?'pause':'play'} onPress={toggle} loading={loading}/></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Forward podcast 15 seconds" accessibilityState={{disabled:!status.isLoaded||!!problem}} disabled={!status.isLoaded||!!problem} onPress={()=>seek(position+15)} style={({pressed})=>[s.skip,pressed&&s.pressed,(!status.isLoaded||!!problem)&&s.disabled]}><Icon name="refresh" size={22}/><Text style={s.skipText}>15s</Text></Pressable>
+      <GlassPressable accessibilityRole="button" accessibilityLabel="Forward podcast 15 seconds" accessibilityState={{disabled:!status.isLoaded||!!problem}} disabled={!status.isLoaded||!!problem} onPress={()=>seek(position+15)} style={({pressed})=>[s.skip,pressed&&s.pressed,(!status.isLoaded||!!problem)&&s.disabled]}><Icon name="refresh" size={22}/><Text style={s.skipText}>15s</Text></GlassPressable>
     </View>
     {loading&&<Notice text="Opening the episode…"/>}
     {!!problem&&<Notice text={error||'The audio stream could not load. Retry or open the episode below.'} error/>}
