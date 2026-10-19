@@ -1,0 +1,84 @@
+# Request audit and optimization review
+
+Reviewed October 18, 2026. This audit distinguishes implemented code, browser checks,
+physical-device feedback, and release work. It does not treat a successful bundle
+as proof that a native feature worked on an iPhone.
+
+## Requested behavior
+
+| Request | Current result |
+| --- | --- |
+| Replace CarryBible branding and use the supplied domain | Active app uses BibleDept / The Bible Dept. and `thebibledept.com`. Historical repository setup is preserved. |
+| Publish to `yadasa/TheBibleDept`, with separate incremental pushes | Each completed part in this revision has its own commit and push. |
+| Free app, Firebase SDK, email/phone sign-in, app links | Existing Firebase implementation and native link configuration are preserved. There is no giving or checkout in the active app. Live native SMS and public universal links still require their documented native/deployment setup. |
+| Stream Scripture and postpone offline Bible downloads | WEB/KJV chapters stream through bible-api.com; the bounded memory cache remains. No offline Bible download was added. |
+| Map every PDF reading day locally and start new readers at Day 1 | The complete compact 365-day map remains bundled. Calendar, current day, selected day and continuation are implemented. |
+| Match the daily podcast to the day's reading | All 365 days have official RedCircle episode metadata and publisher/platform links, bundled locally. Audio streams on demand. |
+| Website/style-guide branding, natural copy and AM/PM settings | Existing copy and 12-hour controls are preserved. Both semantic themes remain supported. |
+| Keep the latest app visible in the preview | The active app runs on port 8081. The preview is refreshed against this checkout. |
+| Restore the Church bottom navigation | Full frosted shell restored from the local Church component/playground, with the orange selected pill and existing stretch motion. Paint layers are isolated to avoid ghosted labels. |
+| Correct horizontal layout and interrupted navigation | Explicit page widths, vertical-only scroll restoration, non-scrollable web clipping and exact final track positions are implemented. Browser checks passed at 390 and 704 px. |
+| Remove the hard glass opacity seam | Invalid native SVG values and clipped gradient edges were repaired. Native blur no longer sits under a masked ancestor. The latest physical iPhone result still needs confirmation. |
+| Five orange circles, larger, higher and shifted right | Each page owns a separate measured SVG viewport, local gradient definition and circular radius. They travel on the page track. The background extends beneath navigation and safe areas. |
+| Real orange podcast waveforms, including visible paused bars | Every episode has 96 genuine build-time RMS values; active playback supplies live PCM. Reference data totals 66,394 bytes. No audio is bundled or uploaded. |
+| Progress gradient and 1.25× / 1.5× / 2× speeds | Native media clock controls progress and pitch-corrected speeds. The bright progress accent fades backward over about 1.5 bar pitches. |
+| Persistent player across pages | Global provider and mini controls remain active while pages change. Browser playback/navigation checks pass. |
+| Waveform behind mini-player text | Static, bottom-aligned silhouette; maximum bar height is 33% at rest and 67% while dragging. Only played color advances. Blur/sharpness and expansion ease on the UI thread. |
+| Drag the waveform and return directly to its full player | Drag seeks on release without changing pages. Tapping the mini-player opens the correct day and measured podcast section, retained through late layout changes. |
+| Remember the reader's place | Day/chapter/scroll position persists locally per guest/account. Restores and podcast jumps do not count as reading. |
+| Complete a lesson after reading and listening, excluding the final two minutes | All chapters must reach their loaded text end through real scrolling, and genuine listened intervals must cover the teaching. Seeking past audio is excluded. Completion and modal acknowledgement persist locally. |
+| Congratulate the completed day | One day-specific congratulations modal appears after durable completion. Calendar and Home counts include automatic and out-of-order completions. |
+| Ease every waveform touch interaction | Press brightness, seek preview, release, mini-player expansion and blurred/sharp crossfade use eased UI-thread transitions. |
+| Neighboring-bar influence, 67% uninfluenced cap and thicker white indicator | Completed after optimization in its own pushed commit. Actual live amplitude eases across three neighbors on either side, reaching zero influence at four pitches. The maximum rises from 67% toward 100% at the current bar. Both indicators are 2.5 px; the mini silhouette retains its requested static behavior. |
+| True subtle lateral page motion blur | The earlier snapshot/exposure implementation was removed after regressions. Clean continuous page transitions are present; a native directional blur is not currently implemented. |
+| Continue audio while locked/backgrounded | **Unresolved and explicitly deferred by the user.** Actual Expo Go tests stop with sampling enabled and disabled. Force-quitting iOS also stops playback. No further audio-session/build changes were made after the deferral. |
+
+## Optimization completed before the waveform falloff change
+
+| Check | Before | After |
+| --- | --- | --- |
+| Full-player SVG nodes retained during the same 1.2-second playback observation | 3 of 121 rectangles | 122 of 122 rectangles |
+| Mini-player SVG nodes retained during playback | 4 of 130 rectangles | 257 of 257 rectangles |
+| Runtime grain pattern rectangles, web | 3,000 | 0; two cached tiled layers |
+| Latest Bible request after four canceled queued selections, deterministic clock | 10,500 ms under the previous reservation algorithm | 2,100 ms; actual starts retain their 2,100 ms spacing |
+| Unused native dependencies | Masked-view and browser-auth packages | Both removed, including the unused config plugin |
+
+The extra stable mini-player rectangles support a blurred/sharp crossfade without
+recreating their native objects during playback. The six density/theme grain PNGs
+total 120,916 bytes; every tile and a repeated 3×3 arrangement matched the original
+SVG's decoded pixels using the same rasterizer. The duplicate header grain was
+removed. Neither the background nor its grain runs a continuous animation.
+
+Matched iOS exports with source maps measured 4,181,596 bytes before the final
+rendering work and 4,193,640 bytes afterward, a 12,044-byte increase for the new
+UI-thread feedback. This is a deliberate rendering tradeoff, not a bundle-size
+reduction claim. Source maps stay in ignored review exports. The app does not ship
+downloaded podcast audio, rasterization tools, or FFmpeg.
+
+This pass preserved Firebase, phone-auth infrastructure, Scripture, notes,
+prayers, highlights, reminders, local reading data and official podcast sources.
+It did not run a broad dependency upgrade or delete legacy projects that remain
+part of this repository. Native FPS, memory and installed binary size were not
+measured; browser node retention is not an iPhone frame-rate benchmark.
+
+## Verification and remaining work
+
+Optimization checkpoint: all 65 unit tests, TypeScript, dependency compatibility,
+web export and iOS export passed. Real browser checks covered playback across
+pages, paused waveforms, full/mini dragging, keyboard seeking, the podcast anchor,
+rapid navigation reversals, five local circles, full-height background and no
+horizontal document overflow at 390 × 844 and 704 × 884.
+
+Remaining device/release checks: physical glass seam and touch appearance,
+screen-lock audio when resumed later, signed native SMS/push/link validation and
+native transition performance. Listening coverage deliberately does not award
+unobserved status gaps longer than 2.5 seconds, because a remote seek during a
+suspended JS interval cannot be distinguished from listening.
+
+After the separate falloff change, all **69 unit tests**, TypeScript, and fresh
+web/iOS exports passed. Browser playback showed changing live bar geometry,
+visible measured bars on pause, a 2.5 px cursor and a 1.5-pitch backward accent.
+The document remained 390 px wide at the phone-size viewport. The final matched
+iOS bytecode export is 4,194,936 bytes: 13,340 bytes (0.32%) above the earlier
+baseline, including the added eased neighboring response. This is JavaScript
+bytecode size, not the size of an installed iPhone app.

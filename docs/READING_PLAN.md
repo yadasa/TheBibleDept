@@ -29,32 +29,87 @@ loads only the selected chapter instead of prefetching a whole day's passages.
 For example, use `fetchPassage("Jude 1", "web")`; its existing
 `single_chapter_book_matching=indifferent` option requests the whole chapter.
 The mapping is not tied to January 1 or any other calendar start date.
+The Bible client keeps up to 20 passages in memory for five minutes. Actual API
+starts remain at least 2.1 seconds apart; canceled queued selections leave no
+reserved slots behind. The 15-second network timeout starts when a request is sent.
 
 ## Current day and navigation
 
-New readers start on Day 1. Today shows the current day's passages and opens that
+New readers start on Day 1. Home shows the current day's passages and opens that
 day in the Bible tab. The reading-plan panel offers:
 
-- A current-day marker and completed-day progress bar.
-- **Continue to day N**, which finishes the current plan day and saves the next spot.
-- **Choose day**, with a numbered grid, 30-day pages, and a jump-to-day input.
-- **Return to current day** when browsing another day.
+- A current-day marker, chapter reading checks, and completed-day markers in the day grid.
+- **Continue to day N** after automatic completion, which saves the next current day.
+- **Mark day N complete & continue** for readers who choose to mark the day manually.
+- **Days**, which opens a numbered grid with 30-day pages and a jump-to-day input.
+- **Return to day N** when browsing another day.
 - Chapter buttons, WEB/KJV selection, and retryable online reading.
 - A matching [official podcast player](PODCASTS.md) below the reading for every day.
 
-Browsing does not move the saved current day. Finishing Day 365 marks the plan complete;
-there is no Day 366. The separate Search passages tab still supports free-form references
-and the existing Firebase reading-history action.
+Browsing does not move the saved current day. Automatic completion also leaves that
+day open; the reader chooses when to continue. **Complete the plan** finishes Day 365;
+there is no Day 366. The separate Search tab still supports free-form references and
+the existing Firebase reading-history action.
 
-`PlanProvider` persists only `[currentDay, finishedFlag]` with AsyncStorage, separately
-for the guest and each signed-in account on this device. Neither the mapping nor this
-plan position is stored in Firestore. Reopening resumes the saved day; reinstalling the
-app or clearing its local storage starts a fresh local plan. This is independent of the
-existing Firebase reading-history and prayer features.
+The mini-player shortcut opens the playing episode's day and scrolls to the actual
+podcast card. That anchor follows later layout changes until a genuine reading scroll,
+an explicit top/day/mode action, or navigation away cancels it. It does not replace the
+saved reading position or count the chapters passed by the jump as read.
 
-Validation includes complete chapter coverage, mixed-book days, invalid saved positions,
-reopening, isolated user state, failed local writes, and double-tap protection. Browser
-checks covered Day 1, continuing to/restoring Day 2, mixed-book Day 54, and browsing Day 365.
+## Local reading and lesson completion
+
+`PlanProvider` keeps the current day separately from each lesson's reading progress.
+For every visited lesson, the app stores the last chapter and rounded vertical scroll
+offset, read chapter indexes, completion flag, and congratulations acknowledgment.
+Reading position writes are debounced by 600 ms and flushed when the panel is left or
+the app enters the background. Returning to the lesson restores its saved chapter and
+position after the passage loads. Scripture itself still requires an online request.
+
+A chapter earns its reading check only when its loaded text reaches the visible end
+of the reading viewport during a genuine vertical scroll. The check allows space for
+the overlaid mini-player and navigation. Taps, horizontal waveform drags, stale wheel
+input, saved-position restores, and programmatic jumps do not qualify. Hidden panels,
+loading placeholders, and failed or empty passages cannot qualify either. This records
+scroll progress, not comprehension.
+
+Podcast completion uses observed playback intervals, independently of the waveform.
+Intervals must cover the episode from the beginning through its actual duration minus
+120 seconds, with a one-second timing tolerance. Episodes of two minutes or less require
+their full duration. Explicit seeks and source changes break continuity; skipped
+distances, buffering, implausible clock jumps, and unobserved status gaps over 2.5 seconds
+are not awarded as listening. Skipped sections must be played later to fill the gaps.
+Listening intervals are stored compactly in tenths of a second and saved about every
+five seconds, on pause, backgrounding, episode end, and qualification.
+
+Once all chapters have reading checks and the matching podcast qualifies, the lesson
+is automatically marked complete. Reading and listening may finish in either order,
+including while another page is open. The completion record is written successfully
+before the **Congratulations!** modal appears. **Keep going** dismisses it and saves
+the acknowledgment so reopening does not repeat a dismissed celebration. A failed
+completion write leaves the lesson uncompleted and reports an error; a failed
+acknowledgment write leaves the modal open with an error. Manual completion and
+continuation remain available separately.
+
+All three local stores use AsyncStorage with a separate key for the guest and each
+signed-in account on this device:
+
+| Store | Key prefix | Saved data |
+| --- | --- | --- |
+| Current plan position | `bibledept.plan.v1:` | `[currentDay, finishedFlag]` |
+| Lesson reading progress | `bibledept.lessons.v1:` | Compact day/chapter/offset/read/completed/acknowledged rows |
+| Podcast listening coverage | `bibledept.podcast-coverage.v1:` | Day, actual duration, and merged played intervals |
+
+Neither the passage mapping nor these positions, reading checks, listening intervals,
+or lesson completion flags are stored in Firestore. They do not sync across devices.
+Reinstalling the app or clearing its local storage starts a fresh local plan. Existing
+Firebase chapter-history, reading-streak, note, and prayer actions remain separate.
+
+Unit validation covers the extracted chapter map, owner isolation, position reopening,
+both completion orders, seek gaps, invalid local data, durable acknowledgments, failed
+writes, genuine scroll intent, and double-tap protection. Historical browser checks
+covered Day 1, continuing to/restoring Day 2, mixed-book Day 54, and browsing Day 365;
+they predate automatic lesson completion. Current device-specific playback validation
+is tracked in [Podcast details](PODCASTS.md).
 
 ## Complete day-to-passage map
 

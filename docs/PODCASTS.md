@@ -71,33 +71,97 @@ last known position where possible. Normal network buffering still occurs.
 ## Audio-driven waveform
 
 [`react-native-waveforms`](https://github.com/arbeetrate/react-native-waveforms)
-0.1.3 supplies `PlayerWaveform`, with a custom SVG bar renderer in
-`src/components/PodcastWaveform.tsx`. The stream's playback clock controls progress;
-the library's independent 1× animation is disabled so seeking and faster speeds
-stay aligned.
+0.1.3 supplies `PlayerWaveform`, with custom SVG renderers in
+`src/components/PodcastWaveform.tsx` and `MiniPodcastWaveform.tsx`. The native media
+clock controls progress at every playback speed. The library's independent 1×
+timer is disabled; UI-thread animation eases the controlled progress clip and
+touch feedback. Stable renderer functions and memoized bar components retain SVG
+nodes across updates.
 
-Expo Audio's `useAudioSampleListener` provides decoded PCM during playback. The
-engine measures each channel's RMS, keeps the louder channel, and stores the peak
-in one of 96 bins based on the sample's actual media timestamp. It does not average
-opposite stereo phases into silence. The current displayed bar follows the latest measured
-level after downsampling, so older peaks cannot mask quiet speech; UI sample updates are limited to roughly 10 per second. The level resets
-on pause/end while historical peaks remain for the active episode.
+### Complete reference silhouettes
 
-Unmeasured or skipped sections have no invented peaks. They render a low baseline,
-with the caption **The waveform fills in as you listen.** A perceptual square-root
-scale makes quieter speech visible. Listened bars are orange, with a contrasting
-gradient at the current progress edge fading backward over approximately 1.5 bar
-pitches. Samples remain in memory; no waveform data is uploaded to Firebase.
-The PCM tap and UI sample timer stop while the app is inactive or backgrounded,
-without pausing the transport. Sampling resumes when the app returns. Audio heard
-in the background may therefore leave gaps in the waveform history.
+`src/data/bibledept-podcast-waveforms.json` bundles 96 genuine RMS measurements for
+each of the 365 episodes. Its 66,394 bytes include compact 8-bit amplitudes, matching
+stream IDs and decoded durations. A development script streamed and decoded the
+actual public MP3s through FFmpeg, measured equal time bins and retained only those
+small values. The app does not run FFmpeg, download a second MP3 for analysis,
+bundle podcast audio or upload waveform data to Firebase.
 
-iPhone sampling uses the playback audio and requests no microphone access. Web
-sampling uses an anonymous-CORS audio source and a browser analyser. Android
-sampling is deliberately disabled because Expo Audio requires `RECORD_AUDIO`
-permission for it; the player reports that visualization is unavailable there
-without asking for microphone permission. Android playback controls remain
-available. An unsupported visualizer does not prevent listening.
+Every day's complete shape is visible before Play and while paused. These are
+reference-stream measurements: RedCircle can insert different ads or change an
+episode on a later request. The stored decoded duration records the analyzed
+variant; its normalized silhouette is not an exact time map for every subsequent
+ad variant. The player always uses its currently loaded duration for playback and
+seeking.
+
+### Live PCM and spatial response
+
+Expo Audio's `useAudioSampleListener` supplies real decoded PCM during foreground
+playback. The engine measures each channel's RMS, keeps the louder channel and
+records its peak in the corresponding one of 96 time bins. Opposite stereo phases
+are not averaged into silence. Heard bins from the active stream replace reference
+values, including actual silence; reference values remain available elsewhere.
+
+The installed SDK 57 iOS [PCM tap](https://github.com/expo/expo/blob/sdk-57/packages/expo-audio/ios/AudioTapProcessor.m)
+reports zero sample timestamps. For those iOS packets, the provider uses the native
+player's current time. Valid nonzero timestamps retain stale-packet checks. This
+keeps sampling aligned after seeks and speed changes without synthesizing samples.
+PCM publication is limited to roughly ten updates per second. The tap and pending
+UI publication stop when the app becomes inactive/backgrounded and resume in the
+foreground; the complete reference silhouette remains visible throughout.
+
+The large player applies its live response after visual downsampling, so an older
+peak cannot mask quiet speech. Uninfluenced and paused bars preserve their relative
+measured heights at a maximum of 67% of the waveform area. While playing, the actual
+current PCM level also influences neighboring bars with a symmetric smoothstep
+falloff that reaches zero four bar pitches away. The permitted height rises toward
+100% at the current native playback bar. Changed heights ease over 150 ms on the UI
+thread; previewing a seek moves the indicator but does not move the live-audio
+response until the transport actually seeks.
+
+Listened bars are orange. A bright gradient at the listening edge fades backward
+over approximately 1.5 bar pitches, with a 2.5-pixel light indicator. Tap and
+horizontal drag seek on release; vertical scrolling remains available. Seeking,
+press feedback and release ease rather than remounting the waveform.
+
+### Mini player and platform behavior
+
+The mini player uses only the static reference measurements behind its episode
+label. Its full silhouette remains bottom-aligned during playback and pause; only
+the played color advances. Maximum bar height eases from 33% at rest to 67% while
+dragging. Stable blurred/sharp layers crossfade to reveal the waveform during a
+drag and soften it again on release. Its current-position indicator is also
+2.5 pixels wide. Dragging commits a seek on release; tapping opens the correct
+day's full player.
+
+iPhone sampling uses playback audio and requests no microphone access. Web uses
+an anonymous-CORS audio source and a browser analyser. Android live PCM sampling
+is deliberately disabled because Expo Audio requires `RECORD_AUDIO` for it;
+Android still displays the complete reference waveform and supports playback,
+speed controls and seeking without a microphone prompt. A platform without live
+analysis keeps its reference shape instead of claiming visualization is unavailable.
+
+## Listening coverage and lesson completion
+
+Listening progress is separate from the visual waveform. Native status events
+record genuine played time intervals using the loaded duration and playback rate.
+Explicit seeks, source changes, buffering and implausible clock jumps break
+continuity; skipping to the end does not count as listening to the skipped portion.
+Unobserved status gaps longer than 2.5 seconds receive no credit, because a remote
+seek during suspended JavaScript cannot be distinguished from actual listening.
+
+An episode longer than two minutes qualifies when covered intervals form a
+continuous prefix from its beginning through `loadedDuration - 120 seconds`.
+Small native-update gaps use a one-second merge tolerance. Short clips require
+their full length; an unknown duration never qualifies. Coverage is stored locally
+per guest/account, in compact intervals, and flushed about every five seconds and
+on pause, backgrounding, completion or close. It is not inferred from the progress
+cursor, the reference waveform or cloud records.
+
+Automatic day completion additionally requires all assigned chapters to reach
+the end of their loaded Scripture through actual scrolling. Completion and its
+day-specific congratulations acknowledgement persist locally. A separate memoized
+listening context keeps frequent PCM updates from rerendering reading screens.
 
 ## Background playback and device checks
 
@@ -109,16 +173,19 @@ The engine registers lock-screen metadata with the episode/day title, Dr. Manny
 Arango, and The Bible Dept., plus seek controls, and clears them when dismissed.
 
 The dependencies are compatible with Expo Go SDK 57 and the iOS JavaScript bundle
-exports successfully. These are configuration/bundle checks, not physical-device
-confirmation. Actual iPhone PCM sampling, locked-screen controls, and background
-playback still need device validation. A signed native app must retain the
-background capability. Force quitting the app on iOS stops playback; the engine
-does not auto-resume after a restart.
+exports successfully. These checks do not establish working screen-lock audio on
+a physical iPhone. Force quitting iOS stops playback, and the engine does not
+auto-resume after a restart.
 
-## Lock-screen regression repair
+## Deferred lock-screen issue
 
-The first physical iPhone lock test stopped playback. The repair removes a
-redundant pre-replace pause and sets `keepAudioSessionActive` on the global player:
+Physical iPhone Expo Go tests stopped playback when the screen locked, both with
+live PCM sampling enabled and in a controlled run where no sampling tap was ever
+installed. **The problem remains unresolved and the user explicitly deferred it.**
+No further audio-session or build work is part of the completed UI revisions.
+
+The existing engine removes a redundant pre-replace pause and sets
+`keepAudioSessionActive` on the global player:
 SDK 57's delayed pause deactivation can otherwise run while a replacement stream
 is buffering. Explicit Pause, Close, errors, and completion release the session;
 serialized native calls prevent an old pause from deactivating a newer play.
@@ -129,28 +196,12 @@ lifecycle diagnostics log state changes without account data or stream URLs.
 These changes follow the installed SDK's [session implementation](https://github.com/expo/expo/blob/sdk-57/packages/expo-audio/ios/AudioModule.swift).
 [Expo Go's SDK 57 host](https://github.com/expo/expo/blob/sdk-57/apps/expo-go/ios/Exponent/Supporting/Info.plist)
 already declares audio background mode; no blanket Expo Go restriction is assumed.
-The repaired build passes TypeScript, unit tests, browser playback checks, and iOS
-export. The repeat physical lock-screen test also stopped playback, so the device
-problem remains unresolved.
-
-For a controlled Expo Go comparison, start a fresh Metro process in PowerShell:
-
-```powershell
-$env:EXPO_PUBLIC_PODCAST_DISABLE_SAMPLING = '1'
-npx expo start --go --lan --port 8081
-```
-
-Fully reload the project on the phone before playing. In development this flag
-prevents the PCM tap from ever being installed; the same stream, transport,
-session, and lock-screen setup remain active. The waveform stays flat during this
-test. Lifecycle diagnostics include UTC wall time, the native playback position,
-and `samplingDisabled: true`, without account data or media URLs. The comparison
-result is still pending. Remove the process variable and restart Metro to restore
-sampling; production builds ignore the flag.
-
-The shared frosted controls now use one continuous low-contrast sheen over the
-real backdrop blur. The reported vertical opacity seam still needs confirmation
-on the iPhone.
+Neither the native configuration nor successful browser playback proves the
+deferred iPhone issue is fixed. A development-only
+`EXPO_PUBLIC_PODCAST_DISABLE_SAMPLING=1` switch remains available for reproducible
+comparison; it disables live analysis, not the bundled reference silhouette.
+Normal runs leave it off, and production builds ignore it. Lifecycle diagnostics
+include UTC time and native playback state without account data or media URLs.
 
 ## Refresh and verify
 
@@ -173,21 +224,22 @@ python scripts/update-podcast-map.py --feed-file path/to/feed.xml --check
 The metadata is intentionally local and stable. A normal app launch does not download
 or parse the multi-megabyte RSS feed, and no extra cloud service is needed.
 
-Current audio/UI verification on 2026-10-18: TypeScript and all 44 unit tests pass.
-The preceding navigation/audio repair passed iOS JavaScript export. The audio tests cover real PCM levels and stereo
-phase handling, timestamp-based bins and unheard gaps, invalid clocks, endpoint
-binning, finite duration/seek guards, and speed choices. Native configuration
-introspection confirmed the iOS audio background mode without a microphone
-permission declaration.
+To regenerate reference waveforms, run from the repository root with Python 3.12
+and FFmpeg on PATH:
 
-Current browser review confirmed real PCM peaks from Day 1, persistent playback
-across Home/Notes/Account and day browsing, 1.5×/2× playback, waveform tap and
-keyboard seeking, replay from the end, and the bright progress marker at phone
-width. AM/PM controls were checked in an isolated local account, including midnight;
-both display themes were reviewed. No browser console errors were observed.
+```sh
+python scripts/build-podcast-waveforms.py --workers 3
+```
 
-The earlier player review confirmed Day 1's actual stream, play/pause, skipping,
-seeking, and Day 131's reading-range note. Its old page-local stop behavior has
-been replaced by the global provider above. Earlier Firebase/backend integration
-results remain the recorded baseline; they were not rerun for this audio/UI
-revision. Physical iPhone checks remain outstanding.
+The script bounds concurrent public-stream decoding, skips matching completed
+entries and saves only amplitudes/source IDs/durations. `--start`/`--end` limit
+the day range; `--refresh` intentionally rebuilds existing references. Decoding
+occurs during development, never in a normal app launch.
+
+See [the request audit](REQUEST_AUDIT.md#verification-and-remaining-work) for final
+test totals, export results, browser checks and remaining device work. Scoped
+audio tests cover real PCM/stereo handling, the iOS zero-timestamp fallback,
+reference integrity for every day, spatial falloff and height bounds, seek guards,
+owner-scoped persistence and genuine listened intervals. Earlier Firebase/backend
+integration results remain their recorded baseline; this audio/UI revision does
+not claim to have rerun those backend checks.
