@@ -31,6 +31,7 @@ import {
 } from "./src/components/LiquidBottomNav";
 import { ReadingTextProvider } from "./src/components/ReaderControls";
 import { ScreenScrollView } from "./src/components/ScreenScrollView";
+import { NativeScrollFade } from "./src/components/NativeScrollFade";
 import { BibleHub } from "./src/screens/BibleHub";
 import { AccountScreen } from "./src/screens/AccountScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
@@ -407,6 +408,7 @@ function AppShell() {
                       })}
                   </Animated.View>
                 </PageMask>
+                <NativeScrollFade page={page} panelWidth={panelWidth} contentTop={contentTop} screenHeight={screenHeight}/>
               </>
             </View>
           </BlurTargetView>
