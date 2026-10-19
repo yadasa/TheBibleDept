@@ -1,5 +1,7 @@
 # Request audit and optimization review
 
+**Latest acceptance: October 19, 2026.** See the complete [request checklist](REQUEST_CHECKLIST.md) for current statuses and the final review below. Earlier measurements remain here as historical checkpoints.
+
 Reviewed October 18, 2026. This audit distinguishes implemented code, browser checks,
 physical-device feedback, and release work. It does not treat a successful bundle
 as proof that a native feature worked on an iPhone.
@@ -132,3 +134,99 @@ The latest matched iOS bytecode is 4,214,368 bytes, 32,772 bytes (0.78%) above t
 original export baseline. Native long-press/text-copy coexistence and the latest
 material appearance still need physical iPhone review. The visible selection
 toolbar provides an alternative to holding a verse. Locked audio remains deferred.
+
+## October 19 final UI, account, and optimization review
+
+The [complete request checklist](REQUEST_CHECKLIST.md) is the current status ledger.
+This batch adds bounded book/chapter/verse and translation dropdowns, remembered
+reading preferences, a compact Home introduction, responsive header wrapping,
+the sign-in logo removal, visible/non-shrinking icon hosts, glass edge highlights,
+frosted teaching, a saturated mini waveform and interruption-safe fade/blur presence.
+Profile, reading progress, appearance, reading preferences and reminder subpages
+use shared styling, eased route feedback and reduced-motion behavior. Required
+sign-in and first-use onboarding remain documented drafts, not enabled flows.
+
+The optional official Day 000 uses a separate intro tuple and 96 real RMS bins.
+Its audio was played in the browser and its mini shortcut returned to the intro
+player at a visible heading position. Returning to Day 1 retained the original
+reading index. Intro listening cannot earn 365-day credit.
+
+### Final checks
+
+- **101 unit tests passed**, including cancellation, passage constraints, single-verse
+  link normalization, mini-player reopening, bounded-request races, and reading-end
+  visibility after a programmatic jump to the player.
+- **TypeScript passed.** Fresh web, iOS and Android exports succeeded from the final
+  source in ignored `.expo/20261019-final`. No compile/export is presented as a
+  signed-device test.
+- Browser widths **320 and 390 px** had matching document widths; the retained track
+  measured exactly five page widths. At 320 px the slogan moved below the logo.
+  The main 704 px preview also had no document overflow. Quick five-tab reversals
+  selected one accessible destination and settled on its exact page.
+- The current QA server used only `demo-bibledept` and a fictional example.test
+  account. Profile-name saving, theme switching, preferred KJV selection, actual
+  time-zone confirmation, a new single-tap Scripture highlight/comment, its
+  immediate Notes entry/reopening, and a saved private prayer were checked.
+- Book selection limited Jude to its single chapter and 25 actual verse choices.
+  A single verse filtered locally without an extra network request. Long time-zone
+  menus initially rendered 23 choices rather than every available zone.
+- Daily and intro streams loaded; pause, midpoint seek, waveform visibility,
+  visible unclipped speed choices, 1.25× selection and mini-player dismissal were
+  checked. Mid-exit web styles showed a real changing blur filter and opacity,
+  followed by removal of the retained card. Native blur still needs an iPhone.
+- Six actual screen captures and three rendered phone compositions were inspected.
+  All three WebP assets total **603,250 bytes**, down from **6,194,759 bytes** of
+  generated PNGs, without resizing. They live outside the app bundle. The README
+  identifies the mockups and local sample data; raw captures/prompts are retained.
+
+### Changes that reduce work or avoid glitches
+
+Retained page components and navigation have stable memo boundaries/callbacks.
+Idle preparation mounts one page at a time and pauses during a tab journey;
+visited state is not rewritten when all needed scenes already exist. This removes
+avoidable render work on a tap while preserving the existing nav geometry and
+motion. Native tap latency, FPS and memory were not measured.
+
+Dropdowns now virtualize long lists. Glass uses a stable native View icon host;
+press dimming eases on a separate layer, preserving opaque native blur ancestors.
+The teaching card clips its frost rather than its menu. Mini-player exit retains
+only the last presentation until its transition finishes and ignores stale callbacks.
+
+The demo Functions worker initially failed to cold-load. Reading time-zone setup
+now has a **20-second UI deadline**, including credential preparation, with retry
+guidance and late-confirmation recovery. A subsequent real demo confirmation
+succeeded. The server migration allowance remains unchanged. No shared emulator
+reset or production account/settings mutation was used for this test.
+
+A separate regression was found during visual review: a real wheel gesture wholly
+below Scripture could credit the chapter after a programmatic podcast jump. The
+Scripture end must now still be visible inside the unobscured viewport. Seeks and
+programmatic jumps remain excluded from reading/listening credit.
+
+Final iOS bytecode is **4,258,076 bytes**: 43,708 bytes above the preceding 4,214,368
+checkpoint, and 76,480 bytes (1.83%) above the original 4,181,596-byte baseline.
+The new account pages and interactions increase code size; this is not a claim of
+a smaller installed app. Reading/episode/waveform JSON totals **100,045 bytes**.
+There is no bundled MP3, offline Bible, renderer/FFmpeg binary or marketing image
+in the active app export. Backend integration suites were not rerun for this UI
+batch; the targeted client/demo checks above are the new evidence.
+
+### Honest remaining boundaries
+
+NIV needs licensed access, which the owner confirmed is absent. Native directional
+page blur remains unimplemented. Offline Bible downloads and locked/background
+audio remain explicitly deferred. Physical native appearance/touch/accessibility,
+live SMS/email/push/public links, and the intended project's release deployment
+still require the checks in the [launch plans](launch/README.md) and
+[release review](APP_RELEASE_REVIEW.md). None is silently marked complete.
+
+Directional filtering itself is available in Expo Go: the installed SVG library's
+[iOS filter uses CIMotionBlur](https://github.com/software-mansion/react-native-svg/blob/v15.15.4/apple/Filters/RNSVGFeGaussianBlur.mm#L75-L91)
+for unequal X/Y values, and [SDK 57 includes support for Skia](https://docs.expo.dev/versions/v57.0.0/sdk/skia/).
+Safe application to the live page track remains unresolved. SVG's
+[ForeignObject renderer bypasses normal hit testing](https://github.com/software-mansion/react-native-svg/blob/v15.15.4/apple/Elements/RNSVGForeignObject.mm#L93-L96)
+and rasterizes native child layers; Skia's
+[ordinary-view input requires an asynchronous snapshot](https://github.com/Shopify/react-native-skia/blob/v2.6.2/apps/docs/docs/snapshot-views.md).
+Those paths are not verified replacements for the current interactive forms,
+scrolling and glass. This is an unfinished integration, not a blanket claim that
+Expo Go cannot render directional blur.

@@ -32,4 +32,6 @@ Do not deploy a gate, change production authentication settings, migrate local d
 - [Habit setup and platform limits](../HABIT_FEATURES_SETUP.md)
 - [App links](../APP_LINKS.md)
 - [Current request and verification ledger](../REQUEST_AUDIT.md)
+- [Complete request checklist](../REQUEST_CHECKLIST.md)
+- [Licensed NIV setup](../NIV_SETUP.md)
 - [Style and taste guide](../style-guide/README.md)
