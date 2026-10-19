@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarRecencyOffset, readingCalendar, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingGlowProfile, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');
@@ -30,4 +30,16 @@ test('consecutive-day brightness rises gradually and caps at 21 days', () => {
   assert.equal(readingRunIntensity(365), 1);
   assert.equal(readingRunColor('#F05A00', 1), 'rgb(240,90,0)');
   assert.equal(readingRunColor('#F05A00', 21), 'rgb(254,245,240)');
+});
+
+test('whiter squares pulse more visibly with a two-second full-cycle speed range', () => {
+  const orange=readingGlowProfile(1),middle=readingGlowProfile(11),white=readingGlowProfile(21);
+  assert.equal(orange.cycleMs-white.cycleMs,2000);
+  assert.ok(orange.cycleMs>middle.cycleMs&&middle.cycleMs>white.cycleMs);
+  assert.ok(orange.maxOpacity<middle.maxOpacity&&middle.maxOpacity<white.maxOpacity);
+  for(let run=1;run<=365;run++){
+    const profile=readingGlowProfile(run);
+    assert.ok(profile.minOpacity>=0&&profile.minOpacity<profile.maxOpacity&&profile.maxOpacity<=1);
+  }
+  assert.deepEqual(readingGlowProfile(365),white);
 });

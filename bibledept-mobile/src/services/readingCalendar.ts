@@ -25,6 +25,16 @@ export function readingRunColor(orange: string, run: number) {
     `rgb(${[r,g,b].map(hex => Math.round(parseInt(hex,16) + (255 - parseInt(hex,16)) * lift)).join(',')})`);
 }
 
+/** Full brighten/dim cycle: orange 5.2 s, near-white 3.2 s. */
+export function readingGlowProfile(run: number) {
+  const intensity=readingRunIntensity(run);
+  return {
+    cycleMs:5200-2000*intensity,
+    minOpacity:.08+.32*intensity,
+    maxOpacity:.2+.8*intensity,
+  };
+}
+
 /** Position recent activity at the right edge rather than opening on empty old weeks. */
 export function calendarRecencyOffset(latest: string, first: string, viewport: number, cellSize: number) {
   const column=Math.max(0,Math.min(25,Math.floor(dateDistance(latest,first)/7)));
