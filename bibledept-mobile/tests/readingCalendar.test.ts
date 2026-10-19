@@ -1,12 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readingCalendar, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');
   assert.equal(result.total, 4);
   assert.equal(result.current, 2);
   assert.deepEqual([...result.runs.values()], [1,2,1,2]);
+});
+
+test('calendar opens around recent activity rather than empty older weeks', () => {
+  assert.equal(calendarRecencyOffset('2026-10-19','2026-04-26',350,25),408);
+  assert.equal(calendarRecencyOffset('2026-04-27','2026-04-26',350,25),0);
+  assert.ok(calendarRecencyOffset('2026-09-19','2026-04-26',350,25)<408);
 });
 
 test('current streak survives today before reading but expires after a missed day', () => {

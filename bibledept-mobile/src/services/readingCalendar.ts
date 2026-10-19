@@ -1,4 +1,4 @@
-import { shiftDate, validDate } from '../../shared/habits';
+import { dateDistance, shiftDate, validDate } from '../../shared/habits';
 
 /** Calendar activity is dated reading history, independent of lesson numbers. */
 export function readingCalendar(days: readonly string[], today: string) {
@@ -23,4 +23,10 @@ export function readingRunColor(orange: string, run: number) {
   const lift = readingRunIntensity(run) * .94;
   return orange.replace(/#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i, (_, r, g, b) =>
     `rgb(${[r,g,b].map(hex => Math.round(parseInt(hex,16) + (255 - parseInt(hex,16)) * lift)).join(',')})`);
+}
+
+/** Position recent activity at the right edge rather than opening on empty old weeks. */
+export function calendarRecencyOffset(latest: string, first: string, viewport: number, cellSize: number) {
+  const column=Math.max(0,Math.min(25,Math.floor(dateDistance(latest,first)/7)));
+  return Math.max(0,8+(column+1)*(cellSize+4)-4-viewport);
 }
