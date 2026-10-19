@@ -1,16 +1,16 @@
 # The Bible Department
 
-**Read Scripture, understand it, and grow together.**
+**A daily Bible reading plan with teaching from Dr. Manny Arango.**
 
-The Bible Department, also known as **BibleDept**, is a Bible study and community app project built to help people develop a consistent reading habit, understand Scripture, and put what they learn into practice. It brings Bible reading, guided studies, discussion, prayer, and ministry tools into a shared experience for individuals, small groups, churches, and ministry teams.
+The Bible Department, also known as **BibleDept**, is a free app for following The Bible Dept.'s 365-day reading plan, reading Scripture, and listening to each day's podcast. Readers can also save private notes and prayers and track their reading days.
 
-The app's direction follows the experience described on the [Bible Dept website](https://www.thebibledept.com/): a structured journey through Scripture, practical teaching, and a community that helps people keep going.
+The app follows the reading plan and daily teaching described on the [Bible Dept website](https://www.thebibledept.com/). Older community, study, and ministry features remain in the repository as migration references; the active client's features are listed below.
 
 ## Purpose
 
-Many people begin a Bible reading plan with enthusiasm but lose momentum when passages become difficult or life gets busy. The Bible Department aims to make the next step clear: know what to read, receive help understanding it, and have people to discuss it with.
+Open your current plan day, read its chapters, and listen to the corresponding teaching. Your place in the plan stays on the device, so you can return to it or browse another day without losing your place.
 
-The goal is both understanding and application: build a sustainable rhythm of reading, reflection, prayer, and participation in community.
+An optional account saves notes, prayers, and reading history. Reading and listening do not require an account or payment.
 
 ## The public Bible Dept experience
 
@@ -39,17 +39,17 @@ BibleDept is a **free app**. The active client has no giving, checkout, subscrip
 | Available in the current client | Status |
 | --- | --- |
 | Website-inspired design | Default dark theme with orange accents, moving grain, borderless frosted buttons and plan card, and the original transparent navbar logo with safe top clearance. Signed-in users can choose Light or Dark under Account → Settings. |
-| Floating frosted navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The stretch/compress indicator, continuous page track, moving background and motion blur share one clock. Long jumps pass through intermediate pages; content fades to zero opacity at the scroll edges. |
-| Home | Next-reading card, honest device plan progress, private streak/week/best stats, reflection shortcuts, and the latest saved comment. |
+| Transparent floating navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The bar has no background; the selected glass pill retains its stretch/compress motion. Page motion uses subtle horizontal exposures derived from travel velocity, capped at 3 points. Long jumps pass through intermediate pages; content fades at the scroll edges. |
+| Home | Current reading, device plan progress, private streak/week/longest-streak stats, notes and prayer shortcuts, and the latest saved note. |
 | Online Bible reading | Real passages from bible-api.com, with World English Bible and King James Version selection. No API key required. |
 | Official 365-day plan | A compact 5.1 KB mapping bundled inside the app, Day 1 start, current-day marker, next-day continuation, chapter selection, and a numbered day picker with direct jump. Plan position saves only on the device. |
-| Daily podcast | Official episodes matched to all 365 days, with a player below each day's reading, episode-page links, and Apple/Spotify follow links. A compact local index streams audio only when requested. |
+| Daily podcast | Official RedCircle episodes matched to all 365 days. One global player continues across pages, with mini controls, real PCM-driven orange waveforms, a narrow gradient progress accent, seeking, and pitch-corrected 1×/1.25×/1.5×/2× speeds. Metadata stays bundled locally; audio streams on demand. Background audio and lock-screen controls are configured; physical-device validation is still needed. See [podcast implementation](docs/PODCASTS.md). |
 | Email accounts | Firebase email/password sign-in, free registration, password reset, and persistent native sessions. |
 | Reading progress | Whole-chapter completion from the plan or Search, confirmed reading time zone, server-owned daily credits and streak totals, longest streak, milestones, and persistent retry IDs. Plan position stays on the device. |
 | Highlights and Notes | Select a verse range, choose a highlight color, and add a private comment. Bible and Notes subscribe to the same Firestore records. Edit, delete, search loaded notes, load older notes, or reopen a passage. |
 | Private prayer journal | Save prayers and mark them answered in Firestore. |
 | Phone sign-in | SMS verification UI, resend handling, web reCAPTCHA, and native Firebase verification adapter implemented. Fictional emulator verification tested. Live SMS needs a configured hosted domain or signed native build and Firebase Phone setup. |
-| Optional reading reminders | Separate rhythm/welcome-back choices, preferred time, quiet hours, pause/off, device registration, bounded scheduler, frequency caps, receipts and account-scoped reading links implemented. Live delivery is disabled by default; signed-device validation and deployment are required. |
+| Optional reading reminders | Separate daily/welcome-back choices, AM/PM time pickers, quiet hours, pause/off, device registration, bounded scheduler, frequency caps, receipts and account-scoped reading links implemented. Live delivery is disabled by default; signed-device validation and deployment are required. |
 | App links | Validated passage/prayer/account routing and Expo Go links. Public universal links need website association deployment and a signed build. |
 
 Offline Bible downloads are postponed. Online requests are cached briefly in memory,
@@ -104,7 +104,9 @@ The retained projects reference Stream Chat, Branch, Mailchimp, video processing
 
 The retained source includes the [older mobile app](bibledept-app/README.md), [web dashboard](bibledept-dashboard/README.md), and [Firebase backend](bibledept-functions/README.md). The older app includes Android and iOS native projects.
 
-The app is branded **BibleDept**, with website and email references using **thebibledept.com**. TypeScript checks, 27 unit tests, two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports passed. Browser review covered phone-emulator sign-in, both themes and persistence, private Settings visibility, completion-to-streak updates, highlight/comment synchronization, note editing/opening, responsive layout, real backdrop blur in both themes, alpha fades, intermediate-page travel, and synchronized page/nav/motion blur. A signed native build and physical iPhone/Android validation are still needed before release. Real SMS, push delivery, public universal links, and native glass rendering have not been device-verified.
+The app is branded **BibleDept**, with website and email references using **thebibledept.com**. The current audio/UI revision passes TypeScript, **39 unit tests**, and an iOS JavaScript export. Native configuration introspection confirms `UIBackgroundModes: ["audio"]`. These checks do not build or sign an iPhone application and do not establish that PCM sampling, lock-screen controls, or background playback have worked on a physical device.
+
+Earlier verification recorded two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports, plus browser checks for authentication, themes, streaks, notes, and navigation. Those backend suites were not rerun for this audio/UI revision; see the [release review](docs/APP_RELEASE_REVIEW.md) for that baseline. Signed native builds and physical iPhone/Android review remain necessary. Real SMS, push delivery, public universal links, native glass, and native motion snapshots still need device validation.
 
 ## Learn more
 

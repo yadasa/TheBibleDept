@@ -42,17 +42,75 @@ and displays a note containing both ranges in the corresponding podcast card.
 
 ## Playback
 
-The Listen & Understand card appears below the day's Scripture and chapter controls.
-It offers in-app play/pause, 15-second rewind/forward, seeking, elapsed/duration
-labels, an exact episode-page link, and clearly labeled Apple/Spotify follow links.
-The follow links open the show; they are not presented as episode-specific links.
+The **Daily teaching** card appears below the day's Scripture and chapter controls.
+It offers play/pause, 15-second rewind/forward, waveform seeking, elapsed/duration
+labels, 1×/1.25×/1.5×/2× speeds with pitch correction, an exact episode-page link,
+and Apple/Spotify follow links. The follow links open the show, rather than a
+specific episode.
 
-`expo-audio` is supported by Expo Go on iPhone. The player starts with no source;
-the MP3 is attached only when the user presses Play. It streams on demand, does not
-autoplay, and does not download files for offline use. Switching chapters keeps the
-same episode; changing days or leaving the plan releases the player and stops it.
-This iteration uses foreground playback. It does not request recording/microphone
-permissions or promise playback while the device is locked.
+`src/state/PodcastProvider.tsx` owns one global `expo-audio` player above the page
+and theme providers. It starts without a source and attaches an MP3 only when the
+reader presses Play. Switching chapters, browsing other days, changing tabs, or
+changing theme keeps that episode playing. Another day's card shows which episode
+is active; pressing its Play button switches the stream. The mini player offers
+play/pause, close, and a shortcut back to the playing episode. Close stops and
+releases its source. Restarting the app does not restore an episode or autoplay.
+
+The MP3 streams directly from the publisher's RSS enclosure:
+
+```text
+https://audio3.redcircle.com/episodes/<stream-uuid>/stream.mp3
+```
+
+Playback uses `downloadFirst: false` and a 15-second preferred forward buffer. It
+does not create offline audio files or fetch a second copy of the whole MP3 for
+waveform analysis. Startup has a 20-second timeout with retry; seeks and playback
+positions use finite values clamped to the current duration. A retry keeps the
+last known position where possible. Normal network buffering still occurs.
+
+## Audio-driven waveform
+
+[`react-native-waveforms`](https://github.com/arbeetrate/react-native-waveforms)
+0.1.3 supplies `PlayerWaveform`, with a custom SVG bar renderer in
+`src/components/PodcastWaveform.tsx`. The stream's playback clock controls progress;
+the library's independent 1× animation is disabled so seeking and faster speeds
+stay aligned.
+
+Expo Audio's `useAudioSampleListener` provides decoded PCM during playback. The
+engine measures each channel's RMS, keeps the louder channel, and stores the peak
+in one of 96 bins based on the sample's actual media timestamp. It does not average
+opposite stereo phases into silence. The current displayed bar follows the latest measured
+level after downsampling, so older peaks cannot mask quiet speech; UI sample updates are limited to roughly 10 per second. The level resets
+on pause/end while historical peaks remain for the active episode.
+
+Unheard or skipped sections have no invented peaks. They render a low baseline,
+with the caption **The waveform fills in as you listen.** A perceptual square-root
+scale makes quieter speech visible. Listened bars are orange, with a contrasting
+gradient at the current progress edge fading backward over approximately 1.5 bar
+pitches. Samples remain in memory; no waveform data is uploaded to Firebase.
+
+iPhone sampling uses the playback audio and requests no microphone access. Web
+sampling uses an anonymous-CORS audio source and a browser analyser. Android
+sampling is deliberately disabled because Expo Audio requires `RECORD_AUDIO`
+permission for it; the player reports that visualization is unavailable there
+without asking for microphone permission. Android playback controls remain
+available. An unsupported visualizer does not prevent listening.
+
+## Background playback and device checks
+
+The audio session enables silent-mode playback, background playback, and
+`doNotMix` interruption behavior. The Expo Audio plugin enables background
+playback while disabling microphone permission and background recording. Resolved
+iOS native configuration was inspected and contains `UIBackgroundModes: ["audio"]`.
+The engine registers lock-screen metadata with the episode/day title, Dr. Manny
+Arango, and The Bible Dept., plus seek controls, and clears them when dismissed.
+
+The dependencies are compatible with Expo Go SDK 57 and the iOS JavaScript bundle
+exports successfully. These are configuration/bundle checks, not physical-device
+confirmation. Actual iPhone PCM sampling, locked-screen controls, and background
+playback still need device validation. A signed native app must retain the
+background capability. Force quitting the app on iOS stops playback; the engine
+does not auto-resume after a restart.
 
 ## Refresh and verify
 
@@ -75,8 +133,21 @@ python scripts/update-podcast-map.py --feed-file path/to/feed.xml --check
 The metadata is intentionally local and stable. A normal app launch does not download
 or parse the multi-megabyte RSS feed, and no extra cloud service is needed.
 
-Verification on 2026-10-18: TypeScript and all 18 unit tests passed. Browser testing
-played and paused Day 1's actual stream, skipped 15 seconds, sought through the bar,
-kept playback while changing chapters, and stopped/reset playback when changing to
-Day 131. The Day 131 reading-range note was displayed. The iOS JavaScript bundle
-also exported successfully; physical iPhone playback remains a device check.
+Current audio/UI verification on 2026-10-18: TypeScript, all 39 unit tests, and the
+iOS JavaScript export passed. The audio tests cover real PCM levels and stereo
+phase handling, timestamp-based bins and unheard gaps, invalid clocks, endpoint
+binning, finite duration/seek guards, and speed choices. Native configuration
+introspection confirmed the iOS audio background mode without a microphone
+permission declaration.
+
+Current browser review confirmed real PCM peaks from Day 1, persistent playback
+across Home/Notes/Account and day browsing, 1.5×/2× playback, waveform tap and
+keyboard seeking, replay from the end, and the bright progress marker at phone
+width. AM/PM controls were checked in an isolated local account, including midnight;
+both display themes were reviewed. No browser console errors were observed.
+
+The earlier player review confirmed Day 1's actual stream, play/pause, skipping,
+seeking, and Day 131's reading-range note. Its old page-local stop behavior has
+been replaced by the global provider above. Earlier Firebase/backend integration
+results remain the recorded baseline; they were not rerun for this audio/UI
+revision. Physical iPhone checks remain outstanding.

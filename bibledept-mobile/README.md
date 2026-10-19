@@ -13,9 +13,27 @@ npm start
 
 Install the current Expo Go on the iPhone, sign in with the same Expo account as the CLI, connect the phone and computer to the same local network, and scan the terminal QR code with the Camera app. This project targets Expo SDK 57. `npm run web` opens the same React Native UI in a browser for local verification.
 
-The client defaults to dark mode with visible grain, the website's transparent navbar logo, and floating frosted navigation adapted from the Church repo. Borderless frosted buttons and the plan card use real backdrop blur. A continuous page track and moving grain share the nav stretch/compress clock: 430 ms for adjacent tabs, up to 700 ms for a four-position jump. Intermediate pages pass through the viewport, motion blur clears on arrival, and scroll edges fade content to zero opacity while preserving the background. Tab order is Notes · Prayer · Home · Bible · Account. Signed-in users can choose Light or Dark in Account → Settings.
+The client defaults to dark mode with visible grain and the website's transparent navbar logo. The floating navigation has a transparent background and one selected glass pill, adapted from the Church repo. Borderless frosted buttons and the plan card retain backdrop blur. A continuous page track and moving grain share the nav stretch/compress clock: 430 ms for adjacent tabs, up to 700 ms for a four-position jump. Motion uses directional horizontal exposures tied to page velocity and capped at 3 points, rather than a Gaussian blur pulse. Web offsets the actual content; native captures the outgoing viewport once. Reduced motion skips the effect. Scroll edges fade content while preserving the background. Tab order is Notes · Prayer · Home · Bible · Account. Signed-in users can choose Light or Dark in Account → Settings.
 
 WEB/KJV reading, the 365-day plan, official daily podcasts, Firebase email/phone accounts, server-owned streaks, private prayer journals, verse highlights and comments synced into Notes, and optional reminder infrastructure are implemented. The chapter completion action saves a reading day; advancing the plan changes the device's saved place. Giving and payment SDKs are not included.
+
+## Podcast player
+
+One `expo-audio` player lives above the page and theme providers. An episode continues when you change tabs, browse another day, or change theme. The mini player offers play/pause, close, and a shortcut back to the active episode. Playing another day's episode replaces the stream. Closing the player stops it; restarting the app does not restore or autoplay an episode.
+
+Audio streams directly from the official RedCircle feed's MP3 endpoints. The compact day/episode index is bundled in the app. There is no cloud mapping, offline audio download, or extra whole-file fetch to generate a waveform.
+
+`react-native-waveforms` 0.1.3 renders `PlayerWaveform` using actual playback PCM from Expo Audio. Ninety-six timeline bins retain measured RMS peaks; the current bar responds to the latest sample. Unheard sections show a low baseline and fill as you listen. Orange progress has a contrasting accent fading backward over roughly 1.5 bar pitches. The stream clock controls seeking/progress, including at 1×, 1.25×, 1.5×, and 2× with pitch correction.
+
+The dependencies match Expo Go SDK 57, and the iOS JavaScript bundle exports successfully. iPhone PCM sampling, lock-screen controls, and background playback still require physical-device testing. Background playback is enabled in the audio plugin and session; resolved iOS configuration includes `UIBackgroundModes: ["audio"]`. Force quitting iOS stops playback. Android sampling is intentionally disabled because the SDK requires microphone permission for it; Android listening does not request that permission. See [podcast details](../docs/PODCASTS.md).
+
+## Settings and copy
+
+Reminder and quiet-hour times use AM/PM pickers; internal schedule values remain in 24-hour form. App copy now uses specific reading, teaching, note, and prayer instructions instead of repeated motivational slogans. [Design implementation](../docs/APP_DESIGN_IMPLEMENTATION.md) records the tone references and review criteria.
+
+## Verification
+
+The current audio/UI revision passes TypeScript, 39 unit tests, and iOS JavaScript export. Previous Firebase/backend integration results are documented in the [release review](../docs/APP_RELEASE_REVIEW.md); those suites were not rerun for this revision. Native export and configuration checks do not replace signed-device validation.
 
 Configure Firebase using ignored `.env.local`; see [local setup](../docs/LOCAL_TESTING.md), [habit/backend setup](../docs/HABIT_FEATURES_SETUP.md), [design implementation](../docs/APP_DESIGN_IMPLEMENTATION.md), and [release verification](../docs/APP_RELEASE_REVIEW.md). `npm run emulators` includes the active Functions codebase; `npm run test:emulators` uses an isolated disposable suite.
 
