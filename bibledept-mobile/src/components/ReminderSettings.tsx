@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Linking, Switch, Text, View } from "react-native";
-import { NotificationPreferences } from "../../shared/reminders";
 import {
   useNotifications,
   pushSupported,
 } from "../services/NotificationProvider";
 import { useHabit } from "../services/HabitProvider";
 import { useTheme, typography as t } from "../theme";
-import { ActionButton, Field, Notice } from "./ui";
+import { ActionButton, Notice } from "./ui";
+import { TimeField } from "./TimeField";
 export function ReminderSettings() {
   const n = useNotifications(),
     habit = useHabit(),
@@ -52,53 +52,48 @@ export function ReminderSettings() {
         paddingTop: 24,
       }}
     >
-      <Text style={{ ...t.section, color: c.ink }}>A gentle reminder</Text>
-      <Notice text="A little encouragement, when you want it. At most one reminder a day and three a week. You can pause or turn them off anytime." />
+      <Text style={{ ...t.section, color: c.ink }}>Reading reminders</Text>
+      <Notice text="Choose when you’d like a reminder. We send no more than one a day and three a week. You can pause or turn them off here." />
       {!pushSupported && (
-        <Notice text="Push delivery is available in signed iPhone and Android builds on a physical device. Preferences can be managed here; permission is requested only on your device." />
+        <Notice text="Notifications need the installed app on your phone. You can save your preferences here, but Expo Go and the browser preview won’t send reminders." />
       )}
       {toggle("Enable reading reminders", "enabled")}
-      {toggle("Keep my rhythm", "keepMyRhythm")}
-      <Notice text="An evening nudge when yesterday was a reading day and you haven’t read today." />
-      {toggle("Welcome me back", "welcomeMeBack")}
-      <Notice text="A gentle invitation after 3 and 10 days away, then we give you space." />
-      <Field
-        label="Reminder time (HH:mm)"
+      {toggle("Remind me after a missed day", "keepMyRhythm")}
+      <Notice text="If you read yesterday but haven’t read today, we’ll remind you at the time below." />
+      {toggle("Remind me after time away", "welcomeMeBack")}
+      <Notice text="We’ll send a reminder after 3 days away and another after 10 days. After that, reminders stop until you read again." />
+      <TimeField
+        label="Reminder time"
         value={draft.preferredLocalTime}
-        onChangeText={(v) => setDraft((p) => ({ ...p, preferredLocalTime: v }))}
-        placeholder="19:30"
-        maxLength={5}
+        onChange={(v) => setDraft((p) => ({ ...p, preferredLocalTime: v }))}
+        disabled={n.busy}
       />
-      <View style={{ flexDirection: "row", gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Field
+      <View>
+          <TimeField
             label="Quiet hours start"
             value={draft.quietHours.start}
-            onChangeText={(v) =>
+            disabled={n.busy}
+            onChange={(v) =>
               setDraft((p) => ({
                 ...p,
                 quietHours: { ...p.quietHours, start: v },
               }))
             }
-            maxLength={5}
           />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Field
+          <TimeField
             label="Quiet hours end"
             value={draft.quietHours.end}
-            onChangeText={(v) =>
+            disabled={n.busy}
+            onChange={(v) =>
               setDraft((p) => ({
                 ...p,
                 quietHours: { ...p.quietHours, end: v },
               }))
             }
-            maxLength={5}
           />
-        </View>
       </View>
       <Notice
-        text={`Times follow ${habit.zone || "your confirmed reading time zone"}. Use 15-minute steps. No sound or Focus bypass.`}
+        text={`Times use ${habit.zone || "your reading time zone"}. Choose a reminder time outside quiet hours. Reminders are silent and respect your phone’s Focus settings.`}
       />
       {pushSupported && (
         <ActionButton
