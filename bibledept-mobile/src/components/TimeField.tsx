@@ -88,5 +88,5 @@ const styles = (c: Colors) => StyleSheet.create({
   hour: { minHeight: 48, minWidth: 44, flexBasis: "22%", flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 8 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
   option: { flex: 1, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center", padding: 8 },
-  optionText: { ...t.button, color: c.ink, fontVariant: ["tabular-nums"] }, selected: { color: c.actionText, textDecorationLine: "underline" },
+  optionText: { ...t.button, color: c.ink, fontVariant: ["tabular-nums"] }, selected: { color: c.actionText, fontWeight: '800' },
 });
