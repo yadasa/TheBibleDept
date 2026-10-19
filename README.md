@@ -38,14 +38,18 @@ BibleDept is a **free app**. The active client has no giving, checkout, subscrip
 
 | Available in the current client | Status |
 | --- | --- |
-| Website-inspired orange, black, and warm-white design | Implemented across Today, Bible, Prayer, and Account. |
+| Website-inspired design | Default dark theme with orange accents, visible grain, and the original transparent navbar logo in the header and sign-in screen. Signed-in users can choose Light or Dark under Account → Settings. |
+| Floating frosted navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The stretch/compress indicator and directional page slides share one 430 ms animation clock. |
+| Home | Next-reading card, honest device plan progress, private streak/week/best stats, reflection shortcuts, and the latest saved comment. |
 | Online Bible reading | Real passages from bible-api.com, with World English Bible and King James Version selection. No API key required. |
 | Official 365-day plan | A compact 5.1 KB mapping bundled inside the app, Day 1 start, current-day marker, next-day continuation, chapter selection, and a numbered day picker with direct jump. Plan position saves only on the device. |
 | Daily podcast | Official episodes matched to all 365 days, with a player below each day's reading, episode-page links, and Apple/Spotify follow links. A compact local index streams audio only when requested. |
 | Email accounts | Firebase email/password sign-in, free registration, password reset, and persistent native sessions. |
-| Reading progress | Daily completion, recent reading history, and a streak calculated from saved dates. |
+| Reading progress | Whole-chapter completion from the plan or Search, confirmed reading time zone, server-owned daily credits and streak totals, longest streak, milestones, and persistent retry IDs. Plan position stays on the device. |
+| Highlights and Notes | Select a verse range, choose a highlight color, and add a private comment. Bible and Notes subscribe to the same Firestore records. Edit, delete, search loaded notes, load older notes, or reopen a passage. |
 | Private prayer journal | Save prayers and mark them answered in Firestore. |
-| Phone sign-in | Local emulator verification works in Expo Go; live SMS requires the optional signed iPhone development build. |
+| Phone sign-in | SMS verification UI, resend handling, web reCAPTCHA, and native Firebase verification adapter implemented. Fictional emulator verification tested. Live SMS needs a configured hosted domain or signed native build and Firebase Phone setup. |
+| Optional reading reminders | Separate rhythm/welcome-back choices, preferred time, quiet hours, pause/off, device registration, bounded scheduler, frequency caps, receipts and account-scoped reading links implemented. Live delivery is disabled by default; signed-device validation and deployment are required. |
 | App links | Validated passage/prayer/account routing and Expo Go links. Public universal links need website association deployment and a signed build. |
 
 Offline Bible downloads are postponed. Online requests are cached briefly in memory,
@@ -56,20 +60,13 @@ Firebase journals use `/bibledeptUsers/{uid}` to stay separate from an existing 
 app's records. Local emulator checks cover owner access, cross-user denial, and field validation.
 The Firebase project configuration belongs in the ignored `.env.local` file.
 
-## Planned reading habit features
+## Reading habits, reminders, and Notes
 
-The following implementation plans extend the current reading experience. **They are planning documents, not implemented or deployed features.**
+These features are implemented in the active client and its new `bibledept-mobile/functions` codebase. The [feature setup guide](docs/HABIT_FEATURES_SETUP.md) documents the Firestore schema, time-zone confirmation, legacy migration, retry behavior, notification policy, and live configuration. The [design implementation guide](docs/APP_DESIGN_IMPLEMENTATION.md) explains the Home layout, Church navigation port, frosted blur, transparent logo, grain, and synchronized highlights/comments.
 
-| Plan | Proposed behavior |
-| --- | --- |
-| [Daily reading streaks](docs/READING_STREAKS_PLAN.md) | One confirmed chapter per account-local day, shared completion across the plan and standalone reader, a weekly row, longest streak, milestones, and a server-owned Firestore daily ledger and summary. Includes timezone, retry, migration, security, and acceptance-test requirements. |
-| [Gentle reading push notifications](docs/READING_REMINDERS_PLAN.md) | Separate opt-ins for streak reminders and welcome-back invitations, preferred time, quiet hours, pause/off controls, one preferred device, account-wide frequency caps, completion checks before sending, and a bounded inactivity sequence. Includes Expo/Firebase architecture, delivery limits, and a signed-device pilot. |
+The original [streak plan](docs/READING_STREAKS_PLAN.md) and [gentle reminder plan](docs/READING_REMINDERS_PLAN.md) remain as design rationale, with links to the delivered implementation and its queue simplifications. Reading stays free and reminders remain optional. A completed plan day changes the saved device position; **I've finished this chapter** records the cloud reading day.
 
-The active app already calculates a basic streak from saved reading dates. The planned
-streak system also connects plan chapter completion to the same cloud service while
-keeping plan position saved on the device. Push reminders depend on that daily ledger;
-notification registration, permissions, backend scheduling, and delivery are future work.
-Reading stays free and reminders remain optional.
+The checked-in Firebase default is still `demo-bibledept`. No production project was selected or deployed in this batch, and no real SMS or push was sent. Live release needs the intended Firebase project, merged rules/indexes, native Firebase/APNs/FCM credentials, Expo project configuration, and physical-device testing. See the [release review](docs/APP_RELEASE_REVIEW.md) for verification and remaining release work.
 
 ## Retained source for future migration
 
@@ -78,27 +75,28 @@ These capabilities are present in that source and **are not yet ported into the 
 
 | Area | Existing capabilities |
 | --- | --- |
-| Bible reading | A Bible reader, translation selection, downloaded translation/database handling, verse highlighting, and verse sharing. |
+| Bible reading | Offline translation/database handling and the older verse-sharing interfaces. The active reader now has its own private highlights and comments. |
 | Guided studies | Reading plans, custom plan creation, reusable templates, scheduled daily activities, discussion prompts, and plan progress. |
 | Community | Group creation and invitations, group chat, direct messages, study discussions, and member participation. |
 | Prayer and application | Prayer requests and responses, gratitude prompts, action steps, and follow-up activities. |
-| Reading habits | Daily reminders, notifications, reading streaks, achievements, and progress reviews. |
+| Reading habits | Additional achievement screens and study-specific progress reviews. The active app now has its own streak and reminder implementation. |
 | Church and ministry administration | Organization, campus, group, member, and role management, plus dashboard statistics and plan management. |
 | Content creation | Video and sermon processing workflows, transcription hooks, and AI-assisted study-plan generation from sermon summaries. |
-| Account and app experience | Authentication and onboarding flows, profiles and settings, deep-link handling, dark mode, and multiple interface languages. |
+| Account and app experience | Expanded profiles, onboarding flows, and multiple interface languages. The active client has its own authentication, settings, links, and theme controls. |
 
 Legacy payment-related source is retained in the older projects but is excluded from the active free client. It is not part of the migration feature set.
 
 ## Application structure
 
-The repository contains the active client and three retained components:
+The repository contains the active client and its backend alongside three retained projects:
 
 | Component | Role | Technology |
 | --- | --- | --- |
-| `bibledept-mobile` | Active free iPhone client: online reading, account, prayer, and progress. | Expo SDK 57, React Native, TypeScript, Firebase JS SDK. |
+| `bibledept-mobile` | Active free iPhone/Android/web client: reading, notes, account/settings, prayer, and habits. | Expo SDK 57, React Native, TypeScript, Firebase JS SDK. |
+| `bibledept-mobile/functions` | Active habit API, migration, reminder scheduling/receipts, token binding, and account cleanup. | Node 22, TypeScript, Firebase Functions and Admin SDK. |
 | `bibledept-app` | Older native mobile source for gradual migration. | React Native and TypeScript. |
 | Web dashboard | Tools for leaders to manage people, groups, studies, campuses, campaigns, and reporting. | React, Next.js, and TypeScript. |
-| Backend | Authentication events, stored data, notifications, payments, invitations, scheduled work, and content-processing workflows. | Firebase Functions, Firestore, Authentication, and Storage. |
+| Retained backend | Older authentication events, notifications, payments, invitations, and content-processing workflows; a migration reference. | Firebase Functions, Firestore, Authentication, and Storage. |
 
 The retained projects reference Stream Chat, Branch, Mailchimp, video processing, AI content services, and older payment integrations. The current Expo client uses Firebase and the free Bible API.
 
@@ -106,7 +104,7 @@ The retained projects reference Stream Chat, Branch, Mailchimp, video processing
 
 The retained source includes the [older mobile app](bibledept-app/README.md), [web dashboard](bibledept-dashboard/README.md), and [Firebase backend](bibledept-functions/README.md). The older app includes Android and iOS native projects.
 
-The app has been rebranded to **BibleDept**, with website and email references using **thebibledept.com**. The Expo client's TypeScript checks, passage/link/date tests, emulator authentication/rule checks, browser preview, and iOS JavaScript bundle export have passed. A signed native build and end-to-end iPhone testing are still needed before release. Real SMS and public universal links have not been device-verified.
+The app is branded **BibleDept**, with website and email references using **thebibledept.com**. TypeScript checks, 24 unit tests, two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports passed. Browser review covered phone-emulator sign-in, both themes and persistence, private Settings visibility, completion-to-streak updates, highlight/comment synchronization, note editing/opening, responsive layout, and simultaneous page/nav motion. A signed native build and physical iPhone/Android validation are still needed before release. Real SMS, push delivery, public universal links, and native glass rendering have not been device-verified.
 
 ## Learn more
 

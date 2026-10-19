@@ -93,6 +93,10 @@ test("reminders respect local windows, quiet hours, cooldowns and the shared bud
     null,
   );
   assert.equal(reminderWindow(now + 3600000, zone, prefs), null);
+  assert.equal(
+    reminderWindow(Date.parse("2026-10-19T01:29:50Z"), zone, prefs)?.ttl,
+    10,
+  );
   assert.equal(inQuietHours(22 * 60, prefs.quietHours), true);
   assert.throws(() =>
     validatePreferences({ ...prefs, preferredLocalTime: "21:00" }),

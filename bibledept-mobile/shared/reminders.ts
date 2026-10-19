@@ -100,6 +100,7 @@ export function reminderWindow(
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hourCycle: "h23",
   }).formatToParts(now);
   const m =
@@ -110,7 +111,10 @@ export function reminderWindow(
   if (m < start || remaining <= 0 || inQuietHours(m, p.quietHours)) return null;
   let safe = 0;
   while (safe < remaining && !inQuietHours(m + safe, p.quietHours)) safe++;
-  return { today: localDate(now, zone), ttl: Math.min(900, safe * 60) };
+  const seconds =
+    Number(parts.find((p) => p.type === "second")!.value) + (now % 1000) / 1000;
+  const ttl = Math.floor(Math.min(900, safe * 60 - seconds));
+  return ttl > 0 ? { today: localDate(now, zone), ttl } : null;
 }
 export function reminderCandidate(
   now: number,
