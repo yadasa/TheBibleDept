@@ -47,8 +47,12 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
         {width>0&&weeks.flatMap((week,column)=>week.map((date,row)=>{
           const run=activity.runs.get(date)||0;if(run<2)return null;
           const intensity=readingRunIntensity(run);
-          return <View key={date} style={{position:'absolute',left:column*(cellSize+4)+4,top:row*(cellSize+4)+4,width:cellSize,height:cellSize,borderRadius:3,
-            backgroundColor:'rgba(255,188,66,0.01)',boxShadow:`0 0 2px rgba(240,90,0,${.45+intensity*.4}), 0 0 3px rgba(255,188,66,${.3+intensity*.4})`}}/>;
+          // A 1.5 px halo on each side stays inside the 4 px inter-square gap.
+          // Increase the close gold ring's opacity, rather than widening its blur.
+          return <View key={date} style={{position:'absolute',left:column*(cellSize+4)+2.5,top:row*(cellSize+4)+2.5,width:cellSize+3,height:cellSize+3,borderRadius:4.5,overflow:'hidden'}}>
+            <View style={{position:'absolute',left:1.5,top:1.5,width:cellSize,height:cellSize,borderRadius:3,
+              backgroundColor:'rgba(255,188,66,0.01)',boxShadow:`0 0 1px .6px rgba(255,199,73,${.2+intensity*.8}), 0 0 2px .25px rgba(255,174,38,${.22+intensity*.7})`}}/>
+          </View>;
         }))}
       </Animated.View>
       {weeks.map(week=><View key={week[0]} style={s.week}>
