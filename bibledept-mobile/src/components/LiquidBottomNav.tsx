@@ -148,7 +148,7 @@ export function LiquidBottomNav({
         style={{
           width: "100%",
           maxWidth: 420,
-          minHeight: 76,
+          minHeight: 70,
           borderRadius: 29,
           overflow: "hidden",
           backgroundColor: "transparent",
@@ -229,7 +229,7 @@ function TabGlyphs({item, iconColor, labelColor}:{item:Tab;iconColor:string;labe
 }
 
 const styles=StyleSheet.create({
-  item:{minHeight:60,alignItems:"center",justifyContent:"center",gap:4,borderRadius:21},
+  item:{minHeight:56,alignItems:"center",justifyContent:"center",gap:4,borderRadius:21},
   pressed:{transform:[{scale:.96}]},
   label:{fontSize:11,lineHeight:15,fontWeight:"800"},
 });
