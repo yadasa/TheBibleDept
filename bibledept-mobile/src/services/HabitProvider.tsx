@@ -217,7 +217,7 @@ function HabitSession({
     await run(async () => {
       if (!owner || !ready || !zone || !queueReady)
         throw new UserFacingError(
-          "Choose your reading time zone in Account → Settings before tracking reading days.",
+          "Choose your reading time zone in Account → Preferences before tracking reading days.",
         );
       const chapterId = chapterFromReference(passage.reference);
       if (!chapterId)
