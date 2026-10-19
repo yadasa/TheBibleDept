@@ -39,7 +39,7 @@ export function createBibleClient({ fetcher = fetch, interval = 2100, now = Date
       });
     });
   }
-  return async (input: string, translation: Translation = 'web', signal?: AbortSignal): Promise<Passage> => {
+  const request=async (input: string, translation: Translation = 'web', signal?: AbortSignal): Promise<Passage> => {
     const reference = input.trim().replace(/\s+/g, ' ');
     if (!reference || reference.length > 100) throw new UserFacingError('Enter a Bible reference, such as Luke 1 or John 3:16.');
     if (!['web', 'kjv'].includes(translation)) throw new UserFacingError('Choose WEB or KJV.');
@@ -79,6 +79,38 @@ export function createBibleClient({ fetcher = fetch, interval = 2100, now = Date
       signal?.removeEventListener('abort', abort);
     }
   };
+  type Pending={controller:AbortController;promise:Promise<Passage>;consumers:number;settled:boolean};
+  const pending=new Map<string,Pending>();
+  const keyFor=(input:string,translation:Translation)=>`${translation}:${input.trim().replace(/\s+/g,' ').toLowerCase()}`;
+  const peek=(input:string,translation:Translation='web')=>{
+    const saved=cache.get(keyFor(input,translation));
+    return saved&&saved.expires>now()?saved.passage:undefined;
+  };
+  const read=async(input:string,translation:Translation='web',signal?:AbortSignal):Promise<Passage>=>{
+    if(signal?.aborted)throw canceled();
+    const saved=peek(input,translation);if(saved)return saved;
+    const key=keyFor(input,translation);
+    let shared=pending.get(key);
+    if(!shared){
+      const controller=new AbortController();
+      const entry:Pending={controller,consumers:0,settled:false,promise:undefined as unknown as Promise<Passage>};
+      entry.promise=request(input,translation,controller.signal).finally(()=>{entry.settled=true;if(pending.get(key)===entry)pending.delete(key);});
+      pending.set(key,entry);shared=entry;
+    }
+    const entry=shared;
+    return new Promise<Passage>((resolve,reject)=>{
+      let finished=false;entry.consumers++;
+      const cleanup=()=>{
+        signal?.removeEventListener('abort',abort);entry.consumers--;
+        if(!entry.consumers&&!entry.settled){entry.controller.abort();if(pending.get(key)===entry)pending.delete(key);}
+      };
+      const abort=()=>{if(finished)return;finished=true;cleanup();reject(canceled());};
+      signal?.addEventListener('abort',abort,{once:true});
+      entry.promise.then(value=>{if(!finished){finished=true;cleanup();resolve(value);}},error=>{if(!finished){finished=true;cleanup();reject(error);}});
+      if(signal?.aborted)abort();
+    });
+  };
+  return Object.assign(read,{peek});
 }
 
 export const fetchPassage = createBibleClient();
