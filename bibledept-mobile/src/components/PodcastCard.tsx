@@ -1,10 +1,11 @@
-import { memo, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveforms';
 import { podcastAmplitudePeak } from '../services/podcastWaveform';
 import { usePodcast } from '../state/PodcastProvider';
+import { useScreenScrollControls } from './ScreenScrollView';
 import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { GlassPressable, GlassSurface } from './Glass';
 import { Icon } from './Icon';
@@ -22,9 +23,24 @@ const PodcastCardFrost=memo(function PodcastCardFrost() {
 });
 
 export function PodcastCard({day,active=true}:{day:number;active?:boolean}) {
-  const audio=usePodcast(),snapshot=useRef({day,audio});
-  if(active||snapshot.current.day!==day)snapshot.current={day,audio};
-  return <PodcastCardContent day={day} active={active} audio={snapshot.current.audio}/>;
+  const audio=usePodcast(),snapshot=useRef({day,audio}),controls=useScreenScrollControls();
+  const frame=useRef<View>(null),bounds=useRef<{top:number;bottom:number}|null>(null),visibleRef=useRef(false),[visible,setVisible]=useState(false);
+  const update=useCallback(()=>{
+    const metrics=controls.getMetrics(),area=bounds.current;
+    const next=!!(metrics.active&&area&&area.bottom>metrics.offsetY&&area.top<metrics.offsetY+metrics.viewportHeight-96);
+    if(visibleRef.current!==next){visibleRef.current=next;setVisible(next);}
+  },[controls]);
+  const measure=useCallback(()=>controls.measureContent(frame.current,area=>{bounds.current=area;update();}),[controls,update]);
+  useEffect(()=>{
+    let previous=controls.getMetrics();measure();update();
+    return controls.subscribe(metrics=>{
+      if(metrics.active&&(!previous.active||metrics.contentHeight!==previous.contentHeight||metrics.viewportHeight!==previous.viewportHeight))measure();
+      previous=metrics;update();
+    });
+  },[controls,day,measure,update]);
+  const presenting=active&&visible;
+  if(presenting||snapshot.current.day!==day)snapshot.current={day,audio};
+  return <View testID={presenting?'daily-podcast-live':'daily-podcast-idle'} ref={frame} collapsable={false} onLayout={measure}><PodcastCardContent day={day} active={presenting} audio={snapshot.current.audio}/></View>;
 }
 const PodcastCardContent=memo(function PodcastCardContent({day,active,audio}:{day:number;active:boolean;audio:ReturnType<typeof usePodcast>}) {
   const {c,s}=useThemedStyles(styles);
