@@ -7,6 +7,7 @@ import { ClipPath, Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg'
 import { audioTime } from '../services/podcasts';
 import { normalizePodcastAmplitude, previousPodcastBarHeight, renderedPodcastAmplitude } from '../services/podcastWaveform';
 import { useTheme } from '../theme';
+import { ORANGE_TONES, orangeAlpha } from '../themeColors';
 
 const BAR=3,GAP=2,HEIGHT=76,INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect);
@@ -48,7 +49,7 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
     {filled&&<Defs>
       <ClipPath id={`${config.id}clip`}><AnimatedRect x={0} y={0} height={height} animatedProps={clip}/></ClipPath>
       <AnimatedGradient id={config.id} gradientUnits="userSpaceOnUse" y1={0} y2={0} animatedProps={gradient}>
-        <Stop offset={0} stopColor={config.orange}/><Stop offset={.55} stopColor="#FFAA54"/><Stop offset={1} stopColor="#FFF3C4"/>
+        <Stop offset={0} stopColor={config.orange}/><Stop offset={.55} stopColor={ORANGE_TONES.light}/><Stop offset={1} stopColor="#FFF3C4"/>
       </AnimatedGradient>
     </Defs>}
     <G clipPath={filled?`url(#${config.id}clip)`:undefined}>
@@ -142,7 +143,7 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
       onPressOut={()=>{if(!dragging.current)setTouching(false);}}
       onPress={event=>{if(!didDrag.current)measureAndPreview(event.nativeEvent.pageX,++gestureVersion.current,true);}}>
       <RenderContext.Provider value={config}>{width>0&&<PlayerWaveform samples={amplitudes} inputRange={INPUT_RANGE} width={width} height={HEIGHT}
-        renderer={renderPodcastBars} barWidth={BAR} gap={GAP} rounded baseline="center" color={mode==='dark'?'#653014':'#E9BA9C'} progressColor={c.orange}
+        renderer={renderPodcastBars} barWidth={BAR} gap={GAP} rounded baseline="center" color={orangeAlpha(mode==='dark'?.42:.36)} progressColor={c.orange}
         // The stable renderer owns the eased clip; no 1x timer or responder
         // competes with the native playback clock or the page's vertical scroll.
         progress={1} isPlaying={false} animationDuration={0}/>}</RenderContext.Provider>

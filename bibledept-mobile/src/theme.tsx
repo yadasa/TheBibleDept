@@ -12,7 +12,7 @@ import { useAuth } from "./services/AuthProvider";
 import { colors, Colors, ThemeMode } from "./themeColors";
 import { ActivityIndicator, Text, View } from "react-native";
 export type { Colors, ThemeMode } from "./themeColors";
-export { BRAND_COLORS as brand } from "../../bibledept-app/src/config/color/palette";
+export { brand, BRAND_ORANGE, ORANGE_TONES, orangeAlpha } from "./themeColors";
 
 const Context = createContext({
   mode: "dark" as ThemeMode,

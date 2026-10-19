@@ -23,6 +23,7 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 import { useTheme } from "../theme";
+import { BRAND_ORANGE, ORANGE_TONES, orangeAlpha } from "../themeColors";
 
 type Target = RefObject<View | null>;
 type Tone = "neutral" | "primary" | "selected" | "subtle";
@@ -64,9 +65,7 @@ export function GlassBackdrop({
       : navigation
         ? dark ? "rgba(38,33,29,.48)" : "rgba(255,245,245,.48)"
       : tone === "selected"
-        ? dark
-          ? "rgba(255,145,77,.22)"
-          : "rgba(183,67,0,.14)"
+        ? orangeAlpha(dark ? .22 : .14)
         : dark
           ? `rgba(255,245,235,${tone === "subtle" ? ".025" : ".045"})`
           : "rgba(255,255,255,.30)");
@@ -116,8 +115,8 @@ export function GlassBackdrop({
             gradientUnits="userSpaceOnUse"
             x1={0} y1={0} x2={100} y2={100}
           >
-            <Stop offset={0} stopColor={dark ? "#FFAA70" : "#B74300"} stopOpacity={dark ? .94 : .99}/>
-            <Stop offset={1} stopColor={dark ? "#E96B1F" : "#8D2F00"} stopOpacity={dark ? .94 : .99}/>
+            <Stop offset={0} stopColor={ORANGE_TONES.light} stopOpacity={.98}/>
+            <Stop offset={1} stopColor={BRAND_ORANGE} stopOpacity={.96}/>
           </LinearGradient>}
           <LinearGradient
             id={id}
@@ -220,7 +219,7 @@ export function GlassPressable({
           },
           focused && {
             boxShadow:
-              "0 0 24px rgba(255,145,77,.32), 0 5px 18px rgba(0,0,0,.12)",
+              `0 0 24px ${orangeAlpha(.32)}, 0 5px 18px rgba(0,0,0,.12)`,
           },
         ];
       }}

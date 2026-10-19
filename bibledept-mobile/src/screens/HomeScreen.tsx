@@ -143,7 +143,7 @@ export function HomeScreen({
                   accessibilityLabel={`${date}: ${done ? "read" : today ? "today, not completed" : "no reading"}`}
                   style={s.weekDay}
                 >
-                  <Text style={[s.weekLabel, today && { color: c.action }]}>
+                  <Text style={[s.weekLabel, today && { color: c.actionText }]}>
                     {label}
                   </Text>
                   <View
@@ -445,7 +445,7 @@ const styles = (c: Colors) =>
       paddingVertical: 8,
     },
     noteComment: { ...t.body, color: c.ink, marginTop: 12 },
-    noteReference: { ...t.meta, color: c.action, marginTop: 10 },
+    noteReference: { ...t.meta, color: c.actionText, marginTop: 10 },
     footer: { alignItems: "center", paddingTop: 36, gap: 12 },
     shortRule: { width: 26, height: 2, backgroundColor: c.orange },
     footerText: { ...t.meta, fontSize: 11, color: c.muted, letterSpacing: 1 },

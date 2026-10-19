@@ -32,6 +32,6 @@ const styles=(c:Colors)=>StyleSheet.create({
   overlay:{flex:1,justifyContent:'center',paddingHorizontal:24,backgroundColor:'rgba(8,7,6,.72)'},
   card:{width:'100%',maxWidth:440,alignSelf:'center',padding:28,backgroundColor:c.background},
   seal:{width:62,height:62,borderRadius:31,backgroundColor:c.tint,justifyContent:'center',alignItems:'center',marginBottom:24},
-  eyebrow:{...t.label,color:c.action,letterSpacing:1.2,marginBottom:10},title:{...t.title,fontSize:32,lineHeight:38,color:c.ink},
+  eyebrow:{...t.label,color:c.actionText,letterSpacing:1.2,marginBottom:10},title:{...t.title,fontSize:32,lineHeight:38,color:c.ink},
   copy:{...t.body,fontSize:18,lineHeight:27,color:c.ink,marginTop:16},detail:{...t.body,color:c.muted,marginTop:12,marginBottom:20},
 });

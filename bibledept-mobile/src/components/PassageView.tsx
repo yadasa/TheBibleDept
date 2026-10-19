@@ -179,7 +179,7 @@ export function PassageView({ passage }: { passage: Passage }) {
                       paddingLeft: 12,
                     }}
                   >
-                    <Text style={{ ...t.meta, color: c.action }}>
+                    <Text style={{ ...t.meta, color: c.actionText }}>
                       {note.comment || "Highlighted · Add a note"}
                       {note.pending ? " · Syncing…" : ""}
                     </Text>
@@ -221,7 +221,7 @@ const styles = (c: Colors) =>
       color: c.ink,
     },
     translation: { ...t.meta, color: c.muted, marginTop: 6, marginBottom: 28 },
-    chapter: { ...t.label, color: c.action, marginTop: 16, marginBottom: 16 },
+    chapter: { ...t.label, color: c.actionText, marginTop: 16, marginBottom: 16 },
     verse: { color: c.ink, marginBottom: 16 },
-    number: { fontSize: 13, fontWeight: "600", color: c.action },
+    number: { fontSize: 13, fontWeight: "600", color: c.actionText },
   });

@@ -18,10 +18,11 @@ import { useAuth } from "../services/AuthProvider";
 import { removeAnnotation, saveAnnotation } from "../services/NotesProvider";
 import { useTheme, typography as t } from "../theme";
 import { ActionButton, Field, Notice } from "./ui";
+import { ORANGE_TONES } from "../themeColors";
 export const highlightBackground = (color: HighlightColor, dark: boolean) =>
   ({
     gold: dark ? "#443A1B" : "#FFF0B8",
-    orange: dark ? "#4A291A" : "#FFE0C9",
+    orange: dark ? ORANGE_TONES.darkTint : ORANGE_TONES.lightTint,
     sage: dark ? "#253D2D" : "#DDEEDF",
     none: "transparent",
   })[color];

@@ -73,7 +73,7 @@ export function NotesScreen({
             borderLeftColor: c.action,
           }}
         >
-          <Text style={{ ...t.label, color: c.action }}>
+          <Text style={{ ...t.label, color: c.actionText }}>
             {note.reference}:{note.verseStart}
             {note.verseStart === note.verseEnd
               ? ""

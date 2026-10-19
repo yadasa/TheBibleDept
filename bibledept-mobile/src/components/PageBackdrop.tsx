@@ -29,8 +29,8 @@ export const PageBackdrop = memo(function PageBackdrop() {
               track moves these page-sized viewports without stretching them. */}
             <RadialGradient key={`${tab}warm`} id={`${id}warm${index}`}
               gradientUnits="userSpaceOnUse" cx={pageWidth*.85} cy={Math.max(radius,size.height*.32)} r={radius}>
-              <Stop offset={0} stopColor="#F05A00" stopOpacity={dark ? .16 : .1}/>
-              <Stop offset={1} stopColor="#F05A00" stopOpacity={0}/>
+              <Stop offset={0} stopColor={c.orange} stopOpacity={dark ? .16 : .1}/>
+              <Stop offset={1} stopColor={c.orange} stopOpacity={0}/>
             </RadialGradient>
         </Defs>
         <Rect x={0} y={0} width={pageWidth} height={size.height} fill={`url(#${id}warm${index})`} />

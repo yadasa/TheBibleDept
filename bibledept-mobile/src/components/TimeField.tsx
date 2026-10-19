@@ -78,7 +78,7 @@ export function TimeField({ label, value, onChange, disabled = false }: {
 const styles = (c: Colors) => StyleSheet.create({
   field: { marginBottom: 20 }, label: { ...t.label, color: c.ink, marginBottom: 8 },
   value: { minHeight: 52, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  time: { ...t.body, color: c.ink, fontVariant: ["tabular-nums"] }, change: { ...t.label, color: c.action },
+  time: { ...t.body, color: c.ink, fontVariant: ["tabular-nums"] }, change: { ...t.label, color: c.actionText },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,.55)", justifyContent: "flex-end", alignItems: "center", paddingTop: 48 },
   sheet: { backgroundColor: c.background, width: "100%", maxWidth: 520, maxHeight: "100%", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   content: { padding: 20, paddingBottom: 24 }, heading: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 },
@@ -88,5 +88,5 @@ const styles = (c: Colors) => StyleSheet.create({
   hour: { minHeight: 48, minWidth: 44, flexBasis: "22%", flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 8 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },
   option: { flex: 1, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center", padding: 8 },
-  optionText: { ...t.button, color: c.ink, fontVariant: ["tabular-nums"] }, selected: { color: c.action, textDecorationLine: "underline" },
+  optionText: { ...t.button, color: c.ink, fontVariant: ["tabular-nums"] }, selected: { color: c.actionText, textDecorationLine: "underline" },
 });

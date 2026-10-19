@@ -141,7 +141,7 @@ const styles=(c:Colors)=>StyleSheet.create({
   emptyText: { ...typography.body, color: c.muted },
   prayerRow: { borderTopWidth: 1, borderColor: c.border, paddingTop: spacing[24], paddingBottom: spacing[16] },
   status: { flexDirection: 'row', alignItems: 'center', gap: spacing[8], marginBottom: spacing[12] },
-  statusText: { ...typography.meta, fontWeight: '600', color: c.action },
+  statusText: { ...typography.meta, fontWeight: '600', color: c.actionText },
   answered: { color: c.success },
   prayer: { ...typography.body, color: c.ink, lineHeight: 26, marginBottom: spacing[8] },
 });

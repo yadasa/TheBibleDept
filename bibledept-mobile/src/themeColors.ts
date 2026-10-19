@@ -1,15 +1,38 @@
+/** Every orange accent starts with the waveform's existing pigment. */
+export const BRAND_ORANGE = '#F05A00';
+const orangeRGB = [240, 90, 0] as const;
+const ink = '#0A0A09', paper = '#FFF5F5';
+function blendOrange(background: string, opacity: number): string {
+  const base = background.slice(1).match(/../g)!.map(channel => parseInt(channel, 16));
+  return '#' + orangeRGB.map((channel, index) => Math.round(channel * opacity + base[index] * (1 - opacity)).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+export function orangeAlpha(opacity: number): string {
+  const alpha = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 0;
+  return `rgba(${orangeRGB.join(',')},${alpha})`;
+}
+/** Brightness and transparency variants retain the same orange pigment. */
+export const ORANGE_TONES = {
+  base: BRAND_ORANGE,
+  light: blendOrange('#FFFFFF', .74),
+  highlight: blendOrange('#FFFFFF', .18),
+  darkTint: blendOrange(ink, .16),
+  lightTint: blendOrange(paper, .14),
+} as const;
+export const brand = { orange: BRAND_ORANGE, action: BRAND_ORANGE, ink, paper } as const;
+
 export const colors = {
   dark: {
     background: "#0A0A09",
     surface: "#1C1917",
     ink: "#FFF5F5",
     muted: "#BEB1A8",
-    orange: "#F05A00",
-    action: "#FF914D",
+    orange: BRAND_ORANGE,
+    action: BRAND_ORANGE,
+    actionText: "#FFF5F5",
     onAction: "#0A0A09",
     onOrange: "#0A0A09",
     border: "#443A33",
-    tint: "#39251A",
+    tint: ORANGE_TONES.darkTint,
     controlBorder: "#99877B",
     softInk: "#E9DBD3",
     error: "#FFAAA1",
@@ -21,12 +44,13 @@ export const colors = {
     surface: "#FFFFFF",
     ink: "#0A0A09",
     muted: "#74675F",
-    orange: "#F05A00",
-    action: "#B74300",
-    onAction: "#FFFFFF",
+    orange: BRAND_ORANGE,
+    action: BRAND_ORANGE,
+    actionText: "#0A0A09",
+    onAction: "#0A0A09",
     onOrange: "#0A0A09",
     border: "#E9DBD3",
-    tint: "#FFE7D9",
+    tint: ORANGE_TONES.lightTint,
     controlBorder: "#74675F",
     softInk: "#27231F",
     error: "#9F271E",

@@ -7,7 +7,7 @@ import { Icon, IconName } from './Icon';
 export function ActionButton({ title, onPress, disabled = false, loading = false, secondary = false, variant = secondary ? 'secondary' : 'primary', icon }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean; secondary?: boolean; variant?: 'primary' | 'secondary' | 'ghost'; icon?: IconName }) {
   const {c,s}=useThemedStyles(styles);
   const [focused,setFocused]=useState(false);
-  const color = variant === 'primary' ? c.onAction : variant === 'ghost' ? c.action : c.ink;
+  const color = variant === 'primary' ? c.onAction : variant === 'ghost' ? c.actionText : c.ink;
   return <Pressable tone={variant === 'primary' ? 'primary' : variant === 'ghost' ? 'subtle' : 'neutral'} accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} onPress={onPress} style={({pressed})=>[s.button, variant === 'secondary' && s.secondary, variant === 'ghost' && s.ghost, focused&&s.focused, pressed && s.pressed, (disabled || loading) && s.disabled]}>
     {loading ? <ActivityIndicator color={color} /> : <><Text style={[s.buttonText, {color}]}>{title}</Text>{icon && <Icon name={icon} size={20} color={color}/>}</>}
   </Pressable>;

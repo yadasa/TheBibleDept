@@ -122,10 +122,14 @@ falloff that reaches zero four bar pitches away. The permitted height rises towa
 thread; previewing a seek moves the indicator but does not move the live-audio
 response until the transport actually seeks.
 
-Listened bars are orange. A bright gradient at the listening edge fades backward
-over approximately 1.5 bar pitches, with a 2.5-pixel light indicator. Tap and
-horizontal drag seek on release; vertical scrolling remains available. Seeking,
-press feedback and release ease rather than remounting the waveform.
+Both waveforms use the shared `#F05A00` orange, with opacity and brightness variants
+derived from that pigment. A bright gradient at the listening edge fades backward
+over approximately 4.5 bar pitches, painted inside the bars rather than as an
+outside rectangular glow. The 2.5-pixel light indicator takes the average height
+of the preceding four displayed bars and eases height changes over 180 ms. It
+stays vertically centered in the large player. Tap and horizontal drag seek on
+release; vertical scrolling remains available. Seeking, press feedback and release
+ease rather than remounting the waveform.
 
 ### Mini player and platform behavior
 
@@ -134,8 +138,9 @@ label. Its full silhouette remains bottom-aligned during playback and pause; onl
 the played color advances. Maximum bar height eases from 33% at rest to 67% while
 dragging. Stable blurred/sharp layers crossfade to reveal the waveform during a
 drag and soften it again on release. Its current-position indicator is also
-2.5 pixels wide. Dragging commits a seek on release; tapping opens the correct
-day's full player.
+2.5 pixels wide and averages the preceding four displayed bars, keeping its
+bottom edge aligned with the bars while its height eases over 180 ms. Dragging
+commits a seek on release; tapping opens the correct day's full player.
 
 iPhone sampling uses playback audio and requests no microphone access. Web uses
 an anonymous-CORS audio source and a browser analyser. Android live PCM sampling
