@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarRecencyOffset, readingCalendar, readingGlowProfile, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');
@@ -37,11 +37,23 @@ test('whiter squares pulse their glow and fill more visibly with a two-second sp
   assert.equal(orange.cycleMs-white.cycleMs,2000);
   assert.ok(orange.cycleMs>middle.cycleMs&&middle.cycleMs>white.cycleMs);
   assert.ok(orange.maxOpacity<middle.maxOpacity&&middle.maxOpacity<white.maxOpacity);
-  assert.ok(orange.maxFillDim<middle.maxFillDim&&middle.maxFillDim<white.maxFillDim);
   for(let run=1;run<=365;run++){
     const profile=readingGlowProfile(run);
     assert.ok(profile.minOpacity>=0&&profile.minOpacity<profile.maxOpacity&&profile.maxOpacity<=1);
-    assert.ok(profile.maxFillDim>=.06&&profile.maxFillDim<=.28);
   }
   assert.deepEqual(readingGlowProfile(365),white);
+});
+
+test('square pulses add opaque warm light instead of fading or darkening toward gray', () => {
+  const channels=(color:string)=>color.match(/\d+/g)!.map(Number);
+  for(let run=1;run<=21;run++){
+    const {rest,peak}=readingFillColors('#F05A00',run),low=channels(rest),high=channels(peak);
+    assert.ok(rest.startsWith('rgb(')&&peak.startsWith('rgb('));
+    assert.equal(low.length,3);assert.equal(high.length,3);
+    low.forEach((value,index)=>assert.ok(high[index]>=value));
+    assert.ok(low[0]>=low[1]&&low[1]>=low[2]);
+    assert.ok(high[0]>=high[1]&&high[1]>=high[2]);
+  }
+  assert.equal(readingFillColors('#F05A00',1).rest,'rgb(240,90,0)');
+  assert.equal(readingFillColors('#F05A00',21).peak,'rgb(254,245,240)');
 });

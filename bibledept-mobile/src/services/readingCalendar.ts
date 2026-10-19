@@ -20,9 +20,18 @@ export function readingRunIntensity(run: number) {
 }
 
 export function readingRunColor(orange: string, run: number) {
-  const lift = readingRunIntensity(run) * .94;
+  return liftOrange(orange,readingRunIntensity(run)*.94);
+}
+
+function liftOrange(orange:string,lift:number) {
   return orange.replace(/#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i, (_, r, g, b) =>
     `rgb(${[r,g,b].map(hex => Math.round(parseInt(hex,16) + (255 - parseInt(hex,16)) * lift)).join(',')})`);
+}
+
+/** Opaque, warm colors: add light toward white rather than fading through black. */
+export function readingFillColors(orange:string,run:number) {
+  const intensity=readingRunIntensity(run);
+  return {rest:liftOrange(orange,.64*intensity),peak:liftOrange(orange,.06+.88*intensity)};
 }
 
 /** Full brighten/dim cycle: orange 5.2 s, near-white 3.2 s. */
@@ -32,7 +41,6 @@ export function readingGlowProfile(run: number) {
     cycleMs:5200-2000*intensity,
     minOpacity:.08+.32*intensity,
     maxOpacity:.2+.8*intensity,
-    maxFillDim:.06+.22*intensity,
   };
 }
 

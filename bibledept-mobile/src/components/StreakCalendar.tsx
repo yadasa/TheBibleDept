@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, interpolateColor, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { shiftDate } from '../../shared/habits';
 import { Colors, useThemedStyles, typography as t } from '../theme';
-import { calendarRecencyOffset, readingCalendar, readingGlowProfile, readingRunColor } from '../services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingRunColor } from '../services/readingCalendar';
 import { useReducedMotion } from './LiquidBottomNav';
 import { useScreenScrollControls } from './ScreenScrollView';
 
@@ -55,7 +55,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
         })}
       </View>)}
       <View testID="reading-streak-glow" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} animate={active&&foreground&&!reduced}/>)}
+        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} orange={c.orange} animate={active&&foreground&&!reduced}/>)}
       </View>
     </ScrollView>
     <View style={s.legend}><View style={[s.key,s.read]}/><Text style={s.meta}>Reading saved</Text><View style={[s.key,s.today]}/><Text style={s.meta}>Today</Text></View>
@@ -64,8 +64,9 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
 }
 
 type HaloPosition={date:string;column:number;row:number};
-function StreakHaloGroup({run,positions,cellSize,animate}:{run:number;positions:HaloPosition[];cellSize:number;animate:boolean}) {
-  const {cycleMs,minOpacity,maxOpacity,maxFillDim}=readingGlowProfile(run),pulse=useSharedValue(minOpacity);
+function StreakHaloGroup({run,positions,cellSize,orange,animate}:{run:number;positions:HaloPosition[];cellSize:number;orange:string;animate:boolean}) {
+  const {cycleMs,minOpacity,maxOpacity}=readingGlowProfile(run),pulse=useSharedValue(minOpacity);
+  const {rest,peak}=readingFillColors(orange,run),settledColor=readingRunColor(orange,run);
   useEffect(()=>{
     cancelAnimation(pulse);
     pulse.value=animate?minOpacity:(minOpacity+maxOpacity)/2;
@@ -73,9 +74,9 @@ function StreakHaloGroup({run,positions,cellSize,animate}:{run:number;positions:
     return()=>cancelAnimation(pulse);
   },[animate,cycleMs,minOpacity,maxOpacity,pulse]);
   const glowStyle=useAnimatedStyle(()=>({opacity:pulse.value}));
-  // Dim the fill on the glow's downbeat, preserving its exact color at the peak.
-  // One shared layer per intensity animates every matching square without rerenders.
-  const fillStyle=useAnimatedStyle(()=>({opacity:animate?maxFillDim*(1-Math.max(0,Math.min(1,(pulse.value-minOpacity)/(maxOpacity-minOpacity)))):0}));
+  // Animate opaque RGB colors directly. No fading surface or black dimming layer.
+  // Reanimated 4 shares this color style across matching squares on the UI thread.
+  const fillStyle=useAnimatedStyle(()=>({opacity:1,backgroundColor:animate?interpolateColor(Math.max(0,Math.min(1,(pulse.value-minOpacity)/(maxOpacity-minOpacity))),[0,1],[rest,peak]):settledColor}));
   return <View style={StyleSheet.absoluteFill}>
     <Animated.View testID={`reading-streak-glow-${run}`} style={[StyleSheet.absoluteFill,glowStyle]}>
     {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+4)+2.5,top:row*(cellSize+4)+2.5,width:cellSize+3,height:cellSize+3,borderRadius:4.5,overflow:'hidden'}}>
@@ -84,9 +85,9 @@ function StreakHaloGroup({run,positions,cellSize,animate}:{run:number;positions:
         backgroundColor:'rgba(255,188,66,0.01)',boxShadow:'0 0 1px .9px rgba(255,211,100,1), 0 0 2px .5px rgba(255,174,38,1)'}}/>
     </View>)}
     </Animated.View>
-    <Animated.View testID={`reading-streak-fill-${run}`} style={[StyleSheet.absoluteFill,fillStyle]}>
-      {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+4)+4,top:row*(cellSize+4)+4,width:cellSize,height:cellSize,borderRadius:3,backgroundColor:'#000000'}}/>)}
-    </Animated.View>
+    <View testID={`reading-streak-fill-${run}`} style={StyleSheet.absoluteFill}>
+      {positions.map(({date,column,row})=><Animated.View key={date} testID={`reading-streak-color-${date}`} style={[{position:'absolute',left:column*(cellSize+4)+4,top:row*(cellSize+4)+4,width:cellSize,height:cellSize,borderRadius:3,opacity:1},fillStyle]}/>)}
+    </View>
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({
