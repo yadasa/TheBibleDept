@@ -17,8 +17,17 @@ test('Day 1 carries all genuine reference bars before playback with its decoded 
   assert.ok(reference.duration > 120);
   assert.ok(reference.samples.every(value => Number.isFinite(value) && value >= 0 && value <= 1));
   assert.ok(new Set(reference.samples).size > 5, 'real speech must retain its measured variation');
-  assert.equal(getPodcastReferenceWaveform(0), undefined);
+  assert.equal(getPodcastReferenceWaveform(-1), undefined);
   assert.equal(getPodcastReferenceWaveform(366), undefined);
+});
+
+test('the optional introduction also has a genuine paused/future waveform', () => {
+  const reference=getPodcastReferenceWaveform(0)!;
+  assert.ok(reference);
+  assert.equal(reference.samples.length,PODCAST_SAMPLE_BINS);
+  assert.ok(reference.duration>120&&reference.duration<1800);
+  assert.ok(new Set(reference.samples).size>5);
+  assert.ok(reference.samples.every(value=>Number.isFinite(value)&&value>=0&&value<=1));
 });
 
 test('all 365 reference waveforms match the current episode IDs and retain finite measured samples', () => {

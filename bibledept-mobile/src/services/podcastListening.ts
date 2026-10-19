@@ -1,4 +1,5 @@
 import { addPodcastCoverage, decodePodcastCoverage, encodePodcastCoverage, PodcastsCoverage } from './podcastCoverage';
+import { getReadingPlanDay } from './readingPlan';
 
 export type PodcastPlaybackPoint = Readonly<{
   day: number; generation: number; position: number; duration: number;
@@ -7,7 +8,7 @@ export type PodcastPlaybackPoint = Readonly<{
 
 /** Only continuous, observed native playback can add listening coverage. */
 export function podcastPlayedSpan(previous: PodcastPlaybackPoint | null, next: PodcastPlaybackPoint): { from: number; to: number; duration: number } | undefined {
-  if (!previous || previous.day !== next.day || previous.generation !== next.generation || !previous.playing || previous.buffering || next.buffering
+  if (!getReadingPlanDay(next.day) || !previous || previous.day !== next.day || previous.generation !== next.generation || !previous.playing || previous.buffering || next.buffering
     || !Number.isFinite(next.duration) || next.duration <= 0 || !Number.isFinite(previous.position) || !Number.isFinite(next.position)
     || previous.position < 0 || next.position > next.duration || next.position <= previous.position) return;
   const elapsed = (next.time - previous.time) / 1000;
@@ -36,7 +37,7 @@ export function createPodcastCoverageStore(storage: Storage, key: string) {
       return opening;
     },
     add(day: number, span: { from: number; to: number; duration: number }) {
-      if (!loaded) return coverage;
+      if (!loaded || !getReadingPlanDay(day)) return coverage;
       coverage = { ...coverage, [day]: addPodcastCoverage(coverage[day], span) };
       return coverage;
     },

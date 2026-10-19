@@ -14,13 +14,14 @@ function uuid(value:string):string {
 
 export function getDayPodcast(day:number) {
   const plan=getReadingPlanDay(day);
-  if(!plan)return undefined;
-  const [guid,audioId,seconds]=data.episodes[day-1] as [string,string,number];
-  const reading=(data.readings as Record<string,string>)[String(day)]||plan.label;
-  return Object.freeze({day,title:`Day ${day}: ${reading}`,reading,durationSeconds:seconds,
+  const intro=day===0;
+  if(!intro&&!plan)return undefined;
+  const [guid,audioId,seconds]=(intro?data.intro.episode:data.episodes[day-1]) as [string,string,number];
+  const reading=intro?'Introduction':(data.readings as Record<string,string>)[String(day)]||plan!.label;
+  return Object.freeze({day,title:intro?data.intro.title:`Day ${day}: ${reading}`,reading,durationSeconds:seconds,
     audioUrl:`https://audio3.redcircle.com/episodes/${uuid(audioId)}/stream.mp3`,
     episodeUrl:`https://redcircle.com/shows/the-bible-dept/ep/${uuid(guid)}`,
-    rangeNote:reading!==plan.label?`Episode reading: ${reading}. Printed plan: ${plan.label}.`:undefined,
+    rangeNote:plan&&reading!==plan.label?`Episode reading: ${reading}. Printed plan: ${plan.label}.`:undefined,
   });
 }
 

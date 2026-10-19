@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import data from '../src/data/bibledept-podcasts.json';
 import { audioTime, getDayPodcast } from '../src/services/podcasts';
+import { getReadingPlanDay } from '../src/services/readingPlan';
 
 test('every plan day has its own publisher episode and HTTPS audio stream',()=>{
   assert.equal(data.episodes.length,365);
@@ -18,7 +19,20 @@ test('every plan day has its own publisher episode and HTTPS audio stream',()=>{
   assert.equal(pages.size,365);assert.equal(audio.size,365);
   assert.equal(getDayPodcast(1)?.title,'Day 1: Luke 1-3');
   assert.equal(getDayPodcast(365)?.title,'Day 365: 2 Chronicles 34-36');
-  for(const day of [0,366,1.5,NaN])assert.equal(getDayPodcast(day),undefined);
+  for(const day of [-1,366,1.5,NaN])assert.equal(getDayPodcast(day),undefined);
+});
+
+test('the official introduction is playable separately without becoming a reading-plan day',()=>{
+  const intro=getDayPodcast(0)!;
+  assert.equal(intro.title,'START HERE! Introducing The Bible Dept, Day 000');
+  assert.equal(intro.reading,'Introduction');
+  assert.equal(intro.durationSeconds,706);
+  assert.equal(intro.audioUrl,'https://audio3.redcircle.com/episodes/84aa09a5-8cf5-455d-b5ef-1967c6cd3da3/stream.mp3');
+  assert.equal(intro.episodeUrl,'https://redcircle.com/shows/the-bible-dept/ep/61b3e9e0-ceea-415c-b7ff-67ca617ca0e9');
+  assert.equal(intro.rangeNote,undefined);
+  assert.equal(getReadingPlanDay(0),undefined);
+  assert.equal(data.episodes.length,365);
+  assert.equal(getDayPodcast(1)?.title,'Day 1: Luke 1-3');
 });
 
 test('reviewed title differences are visible without changing the reading plan',()=>{

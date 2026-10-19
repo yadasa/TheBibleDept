@@ -49,3 +49,16 @@ test('listening persists locally per owner, survives reopening, and write order 
   assert.equal(podcastListeningProgress(reopened.value[1]).complete, true);
   assert.equal(data.has('uid1'), false);
 });
+
+test('playing the optional introduction never awards a numbered day or stores plan listening credit',async()=>{
+  assert.equal(podcastPlayedSpan(point({day:0}),point({day:0,position:10.2,time:1200})),undefined);
+  let saved='';
+  const store=createPodcastCoverageStore({getItem:async()=>null,setItem:async(_key,value)=>{saved=value;}},'intro-test');
+  await store.load();
+  store.add(0,{from:0,to:706,duration:706});
+  assert.deepEqual(store.value,{});
+  store.add(1,{from:0,to:480,duration:600});
+  await store.save();
+  assert.deepEqual(Object.keys(store.value),['1']);
+  assert.equal(saved,'[[1,6000,[[0,4800]]]]');
+});

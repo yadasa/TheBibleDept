@@ -57,15 +57,21 @@ def main() -> None:
     parser.add_argument("--end", type=int, default=365)
     parser.add_argument("--workers", type=int, default=3, help="Bound concurrent stream requests (1–4)")
     parser.add_argument("--refresh", action="store_true", help="Rebuild already-matching entries")
+    parser.add_argument("--intro", action="store_true", help="Also include the optional Day 000 introduction")
     args = parser.parse_args()
     if not 1 <= args.start <= args.end <= 365 or not 1 <= args.workers <= 4:
         parser.error("Choose days 1–365 and 1–4 workers")
-    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))["episodes"]
+    metadata = json.loads(CATALOG.read_text(encoding="utf-8"))
+    catalog = metadata["episodes"]
     data = json.loads(OUTPUT.read_text(encoding="utf-8")) if OUTPUT.exists() else {
         "version": 1, "bins": BINS, "sampleRate": SAMPLE_RATE, "encoding": "rms-u8-base64", "episodes": {},
     }
     jobs = [(day, catalog[day - 1][1]) for day in range(args.start, args.end + 1)
             if args.refresh or data["episodes"].get(str(day), [None])[0] != catalog[day - 1][1]]
+    if args.intro:
+        audio_id = metadata["intro"]["episode"][1]
+        if args.refresh or data["episodes"].get("0", [None])[0] != audio_id:
+            jobs.insert(0, (0, audio_id))
     started = time.monotonic()
     print(f"Decoding {len(jobs)} real streams with {args.workers} workers", flush=True)
     failures = []

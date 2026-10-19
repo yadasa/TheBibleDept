@@ -30,9 +30,10 @@ export function decodePodcastAmplitudes(encoded: string, count = PODCAST_SAMPLE_
 export function getPodcastReferenceWaveform(day: number): ReferenceWaveform | undefined {
   if (cache.has(day)) return cache.get(day);
   const row = (data.episodes as Record<string, unknown>)[String(day)];
+  const audioId=day===0?catalog.intro.episode[1]:catalog.episodes[day-1]?.[1];
   let value: ReferenceWaveform | undefined;
-  if (Number.isInteger(day) && day >= 1 && day <= catalog.episodes.length && data.version === 1 && data.bins === PODCAST_SAMPLE_BINS
-    && Array.isArray(row) && row[0] === catalog.episodes[day - 1][1] && Number.isFinite(row[1]) && row[1] > 0 && typeof row[2] === 'string') {
+  if (Number.isInteger(day) && day >= 0 && day <= catalog.episodes.length && data.version === 1 && data.bins === PODCAST_SAMPLE_BINS
+    && Array.isArray(row) && row[0] === audioId && Number.isFinite(row[1]) && row[1] > 0 && typeof row[2] === 'string') {
     const samples = decodePodcastAmplitudes(row[2]);
     if (samples) value = Object.freeze({ samples: Object.freeze(samples), duration: row[1] / 1000 });
   }

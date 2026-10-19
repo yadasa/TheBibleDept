@@ -10,9 +10,21 @@ FEED = 'https://feeds.redcircle.com/64849f8b-c8f4-4999-8ce6-d9d3450e0cf1'
 ROOT = Path(__file__).resolve().parents[1]
 PRINTED_LABELS = {42:'Philemon',43:'Titus',54:'2 Peter 1-3 & Jude',75:'2 & 3 John',243:'Obadiah'}
 REVIEWED_DIFFERENCES = {131:'Deuteronomy 19-22',166:'1 Kings 9-10',167:'1 Kings 11-14',237:'Ezekiel 40-44',238:'Ezekiel 45-48',320:'Job 24-28'}
+INTRO_GUID = '61b3e9e0-ceea-415c-b7ff-67ca617ca0e9'
 
 def normalize(value):
     return re.sub(r'[^a-z0-9]', '', value.lower().replace('psalms','psalm'))
+
+def media_metadata(item, label):
+    guid = item.findtext('guid','')
+    enclosure = item.find('enclosure')
+    audio = re.fullmatch(r'https://audio3\.redcircle\.com/episodes/([0-9a-f-]{36})/stream\.mp3',enclosure.get('url','') if enclosure is not None else '')
+    if not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}',guid) or not audio:
+        raise ValueError(f'Unexpected episode IDs or media URL: {label}')
+    duration = int(item.findtext('{http://www.itunes.com/dtds/podcast-1.0.dtd}duration','0'))
+    if duration <= 0 or enclosure.get('type') != 'audio/mpeg':
+        raise ValueError(f'Invalid media metadata: {label}')
+    return [guid.replace('-',''), audio[1].replace('-',''), duration]
 
 def build(raw, plan):
     channel = ET.fromstring(raw).find('channel')
@@ -20,7 +32,13 @@ def build(raw, plan):
         raise ValueError('Unexpected podcast feed')
     days = {}
     readings = {}
+    intro = None
     for item in channel.findall('item'):
+        if item.findtext('guid') == INTRO_GUID:
+            if intro is not None:
+                raise ValueError('Duplicate introduction')
+            intro = {'title':item.findtext('title'), 'episode':media_metadata(item,'introduction')}
+            continue
         match = re.match(r'^Day\s*(\d+)\s*[:\-–—]?\s*(.*)$',item.findtext('title',''),re.I)
         if not match:
             continue  # Trailers and announcements are not numbered plan days.
@@ -35,18 +53,12 @@ def build(raw, plan):
             if normalize(actual) != normalize(REVIEWED_DIFFERENCES.get(day,'')):
                 raise ValueError(f'Day {day} needs review: plan={expected!r}, podcast={actual!r}')
             readings[str(day)] = actual
-        guid = item.findtext('guid','')
-        enclosure = item.find('enclosure')
-        audio = re.fullmatch(r'https://audio3\.redcircle\.com/episodes/([0-9a-f-]{36})/stream\.mp3',enclosure.get('url','') if enclosure is not None else '')
-        if not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}',guid) or not audio:
-            raise ValueError(f'Unexpected episode IDs or media URL on day {day}')
-        duration = int(item.findtext('{http://www.itunes.com/dtds/podcast-1.0.dtd}duration','0'))
-        if duration <= 0 or enclosure.get('type') != 'audio/mpeg':
-            raise ValueError(f'Invalid media metadata on day {day}')
-        days[day] = [guid.replace('-',''), audio[1].replace('-',''), duration]
+        days[day] = media_metadata(item,f'day {day}')
     if set(days) != set(range(1,366)):
         raise ValueError(f'Missing numbered days: {sorted(set(range(1,366))-set(days))}')
-    return {'episodes':[days[day] for day in range(1,366)], 'readings':dict(sorted(readings.items(),key=lambda pair:int(pair[0])))}
+    if intro is None:
+        raise ValueError('Missing official Day 000 introduction')
+    return {'episodes':[days[day] for day in range(1,366)], 'readings':dict(sorted(readings.items(),key=lambda pair:int(pair[0]))), 'intro':intro}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -63,4 +75,4 @@ if __name__ == '__main__':
             raise SystemExit('Podcast metadata changed; review before updating.')
     else:
         target.write_text(encoded,encoding='utf-8')
-    print(f'365 verified episodes; {len(result["readings"])} reviewed range differences; {len(encoded.encode("utf-8")):,} bytes. No audio files downloaded.')
+    print(f'365 verified daily episodes plus optional introduction; {len(result["readings"])} reviewed range differences; {len(encoded.encode("utf-8")):,} bytes. No audio files downloaded.')
