@@ -4,6 +4,7 @@ import {
   RefObject,
   useContext,
   useId,
+  useEffect,
   useState,
 } from "react";
 import {
@@ -16,6 +17,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, {
   Defs,
   LinearGradient,
@@ -232,7 +234,7 @@ export function GlassPressable({
             ),
             overflow: "hidden",
             isolation: "isolate",
-            ...(Platform.OS !== "web" ? {opacity:1} : {}),
+            opacity:1,
             boxShadow: "0 5px 18px rgba(0,0,0,.12)",
           },
           focused && {
@@ -253,10 +255,17 @@ export function GlassPressable({
             behindContent edgeRadius={radius}
           />
           {typeof children === "function" ? children(state) : children}
-          {Platform.OS !== "web" && dim>0 && <View pointerEvents="none" accessible={false} aria-hidden
-            style={[StyleSheet.absoluteFill,{zIndex:2,borderRadius:radius,backgroundColor:c.background,opacity:dim}]}/>}
+          <GlassPressDim dim={dim} radius={radius} color={c.background}/>
         </>;
       }}
     </Pressable>
   );
+}
+
+/** Ease feedback on the foreground, keeping the native blur's ancestors opaque. */
+function GlassPressDim({dim,radius,color}:{dim:number;radius:number;color:string}) {
+  const opacity=useSharedValue(dim);
+  useEffect(()=>{opacity.value=withTiming(dim,{duration:160,easing:Easing.out(Easing.cubic),reduceMotion:ReduceMotion.System});},[dim,opacity]);
+  const motion=useAnimatedStyle(()=>({opacity:opacity.value}));
+  return <Animated.View pointerEvents="none" accessible={false} aria-hidden style={[StyleSheet.absoluteFill,{zIndex:2,borderRadius:radius,backgroundColor:color},motion]}/>;
 }
