@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { PropsWithChildren, RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { memo, PropsWithChildren, RefObject, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
@@ -36,7 +36,7 @@ import { AccountScreen } from "./src/screens/AccountScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { PrayerScreen } from "./src/screens/PrayerScreen";
 import { NotesScreen } from "./src/screens/NotesScreen";
-import { AuthProvider } from "./src/services/AuthProvider";
+import { AuthProvider, useAuth } from "./src/services/AuthProvider";
 import { ReadingProvider } from "./src/services/ReadingProvider";
 import { HabitProvider } from "./src/services/HabitProvider";
 import {
@@ -47,6 +47,20 @@ import { NotesProvider } from "./src/services/NotesProvider";
 import { parseAppLink } from "./src/services/links";
 import type { Translation } from "./src/services/bible";
 import { PlanProvider, usePlan } from "./src/services/PlanProvider";
+
+// Retained pages keep their own context updates, but unrelated pager renders
+// should not rebuild a reading, prayer draft or account form before motion.
+const HomePage = memo(HomeScreen);
+const BiblePage = memo(BibleHub);
+const PrayerPage = memo(PrayerScreen);
+const NotesPage = memo(NotesScreen);
+const AccountPage = memo(AccountScreen);
+const BottomNavigation = memo(LiquidBottomNav);
+const warmOrder: readonly Tab[] = ["Bible", "Prayer", "Account", "Notes"];
+function retainPages(current: Tab[], required: readonly Tab[]): Tab[] {
+  const missing = required.filter((item) => !current.includes(item));
+  return missing.length ? [...current, ...missing] : current;
+}
 
 export default function App() {
   return (
@@ -75,6 +89,7 @@ export default function App() {
 }
 function AppShell() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { mode, colors: c } = useTheme(),
     plan = usePlan(),
     notifications = useNotifications();
@@ -95,18 +110,77 @@ function AppShell() {
     [panelWidth, setPanelWidth] = useState(400),
     [screenHeight, setScreenHeight] = useState(800),
     [contentTop, setContentTop] = useState(84);
-  function openPassage(ref: string, version: Translation) {
+  const transitionInProgress = useRef(false),
+    requestedTab = useRef<Tab>("Home"),
+    visitedPages = useRef(visited),
+    latestPlan = useRef(plan);
+  visitedPages.current = visited;
+  latestPlan.current = plan;
+  const navigate = useCallback((next: Tab) => {
+    if (next === requestedTab.current) return;
+    requestedTab.current = next;
+    transitionInProgress.current = true;
+    const required = pagesCrossed(position.current, tabOrder.indexOf(next));
+    if (required.some((item) => !visitedPages.current.includes(item)))
+      setVisited((current) => retainPages(current, required));
+    setTab(next);
+  }, []);
+  const openAccount = useCallback(() => navigate("Account"), [navigate]);
+  const openPrayer = useCallback(() => navigate("Prayer"), [navigate]);
+  const openNotes = useCallback(() => navigate("Notes"), [navigate]);
+  const openPassage = useCallback((ref: string, version: Translation) => {
     setReference(ref);
     setTranslation(version);
     setRevision((v) => v + 1);
-    setTab("Bible");
-  }
-  function read() {
-    plan.returnToCurrent();
+    navigate("Bible");
+  }, [navigate]);
+  const openPlan = useCallback((day: number) => {
+    latestPlan.current.selectDay(day);
+    setReference(undefined);
+    setRevision((value) => value + 1);
+    navigate("Bible");
+  }, [navigate]);
+  const openPodcast = useCallback((day: number) => {
+    setPodcastRequestDay(day);
+    openPlan(day);
+    setPodcastRequestRevision((value) => value + 1);
+  }, [openPlan]);
+  const read = useCallback(() => {
+    latestPlan.current.returnToCurrent();
     setReference(undefined);
     setRevision((v) => v + 1);
-    setTab("Bible");
-  }
+    navigate("Bible");
+  }, [navigate]);
+  useEffect(() => {
+    if (visited.length === tabOrder.length) return;
+    let live = true,
+      idle: number | undefined,
+      retry: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      if (typeof requestIdleCallback === "function")
+        idle = requestIdleCallback(warmNext, { timeout: 1000 });
+      else retry = setTimeout(warmNext, 200);
+    };
+    const warmNext = () => {
+      idle = undefined;
+      retry = undefined;
+      if (!live) return;
+      if (transitionInProgress.current) {
+        retry = setTimeout(schedule, 120);
+        return;
+      }
+      const next = warmOrder.find((item) => !visited.includes(item));
+      if (next)
+        startTransition(() => setVisited((current) => retainPages(current, [next])));
+    };
+    schedule();
+    return () => {
+      live = false;
+      if (idle !== undefined && typeof cancelIdleCallback === "function")
+        cancelIdleCallback(idle);
+      if (retry !== undefined) clearTimeout(retry);
+    };
+  }, [visited]);
   useEffect(() => {
     if (notifications.intent) {
       notifications.consume();
@@ -120,7 +194,7 @@ function AppShell() {
       if (!route) return;
       if (route.tab === "Bible")
         openPassage(route.reference, route.translation);
-      else setTab(route.tab === "Today" ? "Home" : route.tab);
+      else navigate(route.tab === "Today" ? "Home" : route.tab);
     };
     let active = true;
     Linking.getInitialURL()
@@ -135,15 +209,16 @@ function AppShell() {
       active = false;
       subscription.remove();
     };
-  }, []);
+  }, [openPassage, navigate]);
   const beginTransition = useCallback(
     (next: Tab, immediate: boolean) => {
       const to = tabOrder.indexOf(next),
         from = immediate ? to : position.current;
       Keyboard.dismiss();
-      setVisited((value) => [
-        ...new Set([...value, ...pagesCrossed(from, to)]),
-      ]);
+      const required = pagesCrossed(from, to);
+      if (required.some((item) => !visitedPages.current.includes(item)))
+        setVisited((value) => retainPages(value, required));
+      transitionInProgress.current = !immediate && from !== to;
       displayed.current = next;
       journeyRef.current = { from, to };
       position.current = from;
@@ -153,6 +228,7 @@ function AppShell() {
   );
   const settle = useCallback((next: Tab) => {
     if (next !== displayed.current) return;
+    transitionInProgress.current = false;
     const index = tabOrder.indexOf(next);
     // Pin both the visible track and its clock after an interrupted journey.
     // A delayed progress notification must not move a settled page again.
@@ -204,7 +280,11 @@ function AppShell() {
                   justifyContent: "space-between",
                 }}
               >
-                <BrandLogo />
+                {tab==="Account"&&!user
+                  ? <View accessible accessibilityRole="image" accessibilityLabel="The Bible Dept." style={{width:128,height:128*229/580,flexShrink:0,justifyContent:"center"}}>
+                      <Text accessible={false} allowFontScaling={false} style={{fontSize:12,lineHeight:18,fontWeight:"800",letterSpacing:.7,color:c.ink}}>THE BIBLE DEPT.</Text>
+                    </View>
+                  : <BrandLogo />}
                 <Text style={{ ...t.meta, color: c.muted, flexShrink: 0, maxWidth: "100%" }}>
                   READ. UNDERSTAND. GROW.
                 </Text>
@@ -292,33 +372,33 @@ function AppShell() {
                                   </Text>
                                 )}
                                 {item === "Home" ? (
-                                  <HomeScreen
+                                  <HomePage
                                     onRead={read}
-                                    onAccount={() => setTab("Account")}
-                                    onPrayer={() => setTab("Prayer")}
-                                    onNotes={() => setTab("Notes")}
+                                    onAccount={openAccount}
+                                    onPrayer={openPrayer}
+                                    onNotes={openNotes}
                                   />
                                 ) : item === "Bible" ? (
-                                  <BibleHub
+                                  <BiblePage
                                     active={active}
                                     requestRevision={revision}
                                     podcastRequestRevision={podcastRequestRevision}
                                     podcastRequestDay={podcastRequestDay}
                                     initialReference={reference}
                                     initialTranslation={reference ? translation : undefined}
-                                    onAccount={() => setTab("Account")}
+                                    onAccount={openAccount}
                                   />
                                 ) : item === "Prayer" ? (
-                                  <PrayerScreen
-                                    onAccount={() => setTab("Account")}
+                                  <PrayerPage
+                                    onAccount={openAccount}
                                   />
                                 ) : item === "Notes" ? (
-                                  <NotesScreen
-                                    onAccount={() => setTab("Account")}
+                                  <NotesPage
+                                    onAccount={openAccount}
                                     onPassage={openPassage}
                                   />
                                 ) : (
-                                  <AccountScreen />
+                                  <AccountPage />
                                 )}
                               </PodcastPageContent>
                             </ScreenScrollView>
@@ -330,17 +410,10 @@ function AppShell() {
               </>
             </View>
           </BlurTargetView>
-          <PodcastNowPlaying onOpen={day => {
-            setPodcastRequestDay(day);
-            plan.selectDay(day);
-            setReference(undefined);
-            setRevision(value => value + 1);
-            setPodcastRequestRevision(value => value + 1);
-            setTab("Bible");
-          }} />
-          <LiquidBottomNav
+          <PodcastNowPlaying onOpen={openPodcast} />
+          <BottomNavigation
             active={tab}
-            onNavigate={setTab}
+            onNavigate={navigate}
             onTransitionStart={beginTransition}
             onSettled={settle}
             progress={slide}
