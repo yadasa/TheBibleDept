@@ -50,12 +50,12 @@ export function LiquidBottomNav({
 }: {
   active: Tab;
   onNavigate: (tab: Tab) => void;
-  onTransitionStart: (tab: Tab, immediate: boolean) => void;
+  onTransitionStart: (tab: Tab, immediate: boolean) => void | Promise<void>;
   onSettled: (tab: Tab) => void;
   progress: Animated.Value;
   blurTarget: RefObject<View | null>;
 }) {
-  const { colors: c, mode } = useTheme(),
+  const { colors: c } = useTheme(),
     reduced = useReducedMotion(),
     [width, setWidth] = useState(0);
   const cell = (width - 14 - 16) / 5,
@@ -112,30 +112,41 @@ export function LiquidBottomNav({
       width: [from.width, from.width + stretch, cell + trailing, cell],
     };
     setFrames(next);
-    start.current(active, false);
-    progress.setValue(0);
-    const listener = progress.addListener(({ value }) => {
-      const stops = [0, 0.24, 0.72, 1],
-        i = value < 0.24 ? 0 : value < 0.72 ? 1 : 2,
-        fraction = (value - stops[i]) / (stops[i + 1] - stops[i]);
-      visual.current = {
-        left: next.left[i] + (next.left[i + 1] - next.left[i]) * fraction,
-        width: next.width[i] + (next.width[i + 1] - next.width[i]) * fraction,
-      };
-    });
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: journeyDuration(0, Math.abs(delta) / (cell + 4)),
-      easing: Easing.bezier(0.22, 0.82, 0.18, 1),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished && seq === sequence.current) {
-        visual.current = { left: target, width: cell };
-        settled.current(active);
-      }
-    });
+    let listener: string | undefined;
+    // Native capture is bounded by MotionBlur; a superseded request must not
+    // restart an old journey after the user chooses another destination.
+    async function animate() {
+      const prepared = start.current(active, false);
+      // Hold both tracks at their real starting point while native capture
+      // completes; retaining progress=1 here would flash the new destination.
+      progress.setValue(0);
+      await prepared;
+      if (seq !== sequence.current) return;
+      listener = progress.addListener(({ value }) => {
+        const stops = [0, 0.24, 0.72, 1],
+          i = value < 0.24 ? 0 : value < 0.72 ? 1 : 2,
+          fraction = (value - stops[i]) / (stops[i + 1] - stops[i]);
+        visual.current = {
+          left: next.left[i] + (next.left[i + 1] - next.left[i]) * fraction,
+          width: next.width[i] + (next.width[i + 1] - next.width[i]) * fraction,
+        };
+      });
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: journeyDuration(0, Math.abs(delta) / (cell + 4)),
+        easing: Easing.bezier(0.22, 0.82, 0.18, 1),
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (finished && seq === sequence.current) {
+          visual.current = { left: target, width: cell };
+          settled.current(active);
+        }
+      });
+    }
+    void animate();
     return () => {
-      progress.removeListener(listener);
+      sequence.current += 1;
+      if (listener) progress.removeListener(listener);
       progress.stopAnimation();
     };
   }, [active, width, reduced]);
@@ -154,7 +165,7 @@ export function LiquidBottomNav({
       }}
     >
       <View
-        testID="frosted-navigation"
+        testID="transparent-navigation"
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
         style={{
           width: "100%",
@@ -162,12 +173,9 @@ export function LiquidBottomNav({
           minHeight: 76,
           borderRadius: 29,
           overflow: "hidden",
-          backgroundColor:
-            mode === "dark" ? "rgba(40,36,31,.10)" : "rgba(255,245,245,.10)",
-          boxShadow: "0 14px 40px rgba(0,0,0,.24)",
+          backgroundColor: "transparent",
         }}
       >
-        <GlassBackdrop target={blurTarget} />
         {width > 0 && (
           <Animated.View
             testID="navigation-indicator"
