@@ -1,13 +1,13 @@
 import {
-  AudioPlayer, AudioSample, AudioStatus, setAudioModeAsync,
+  AudioPlayer, AudioSample, AudioStatus, setAudioModeAsync, setIsAudioActiveAsync,
   useAudioPlayer, useAudioPlayerStatus, useAudioSampleListener,
 } from 'expo-audio';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { getDayPodcast } from '../services/podcasts';
 import {
-  clampPodcastPosition, emptyPodcastSamples, PLAYBACK_RATES,
-  podcastDuration, recordPodcastSample,
+  canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, PLAYBACK_RATES,
+  needsPodcastSessionActivation, podcastDuration, recordPodcastSample,
 } from '../services/podcastAudio';
 
 export { PLAYBACK_RATES } from '../services/podcastAudio';
@@ -40,12 +40,20 @@ const audioMode = { playsInSilentMode: true, shouldPlayInBackground: true, allow
 // microphone-dependent sampling disabled. Listening never requests a mic.
 function SampleListener({ player, listener }: { player: AudioPlayer; listener: (sample: AudioSample) => void }) {
   useAudioSampleListener(player, listener);
+  useEffect(() => () => {
+    // On iOS the SDK hook removes its subscription but leaves the native PCM
+    // processing tap enabled. Remove that tap while the UI is backgrounded.
+    try { player.setAudioSamplingEnabled(false); } catch {}
+  }, [player]);
   return null;
 }
 
 export function PodcastProvider({ children }: { children: ReactNode }) {
   const player = useAudioPlayer(null, {
     updateInterval: 200, downloadFirst: false, preferredForwardBufferDuration: 15,
+    // SDK57's automatic 100ms deactivation sees a buffering player as idle.
+    // Own session release explicitly instead of racing that delayed task.
+    keepAudioSessionActive: true,
     ...(Platform.OS === 'web' ? { crossOrigin: 'anonymous' as const } : {}),
   });
   const status = useAudioPlayerStatus(player);
@@ -54,6 +62,9 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const [sourceReady, setSourceReady] = useState(false), [playbackRate, setPlaybackRate] = useState(1);
   const [samples, setSamples] = useState(emptyPodcastSamples), [liveLevel, setLiveLevel] = useState(0);
   const [hasSamples, setHasSamples] = useState(false);
+  const [appState, setAppState] = useState(AppState.currentState);
+  const appActive = useRef(AppState.currentState === 'active');
+  const [sessionQueue] = useState(createPodcastSessionQueue);
   const [samplingSupported, setSamplingSupported] = useState(Platform.OS !== 'android' && player.isAudioSamplingSupported);
   const episodeRef = useRef<Episode | null>(null), generation = useRef(0), command = useRef(0);
   const alive = useRef(true), wantsPlayback = useRef(false), readyRef = useRef(false);
@@ -62,8 +73,10 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const publishedAt = useRef(0), publishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resume = useRef<{ position: number; generation: number; command: number } | null>(null);
   const loadedGeneration = useRef(-1);
-  const modePreparation = useRef<Promise<void> | null>(null);
+  const lockScreenGeneration = useRef(-1);
+  const sessionReleased = useRef(false), sessionActivation = useRef<number | null>(null);
   const rawStatus = useRef(status);
+  const previousPlaying = useRef(false), previousError = useRef<string | null>(null);
   rawStatus.current = status;
 
   const hasLoadedStatus = sourceReady && status.isLoaded && !status.error;
@@ -80,6 +93,14 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     if (publishTimer.current) clearTimeout(publishTimer.current);
     publishTimer.current = null;
   }
+  function diagnostic(event: string, state = rawStatus.current) {
+    if (!__DEV__ || !episodeRef.current) return;
+    console.info('[BibleDept audio]', event, {
+      playing: state.playing, buffering: state.isBuffering, loaded: state.isLoaded,
+      position: Number.isFinite(state.currentTime) ? Math.round(state.currentTime) : 0,
+      control: state.timeControlStatus, hasError: !!state.error,
+    });
+  }
   function publish() {
     stopPublishing();
     if (!alive.current) return;
@@ -90,15 +111,17 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   }
   function fail(message = streamError) {
     if (!alive.current) return;
+    command.current++;
     wantsPlayback.current = false;
     resume.current = null;
     try { player.pause(); } catch {}
     setStarting(false);
     setLiveLevel(0);
     setError(message);
+    releaseSession(command.current);
   }
   const onSample = useCallback((sample: AudioSample) => {
-    if (!alive.current || !episodeRef.current || !readyRef.current || !wantsPlayback.current || !rawStatus.current.playing) return;
+    if (!alive.current || !appActive.current || !episodeRef.current || !readyRef.current || !wantsPlayback.current || !rawStatus.current.playing) return;
     const activeDuration = podcastDuration(player.duration, lastDuration.current || episodeRef.current.durationSeconds);
     // A queued packet from before a seek/source change must not draw peaks at
     // another point in the episode. Native PCM timestamps use the media clock.
@@ -115,22 +138,59 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     alive.current = true;
-    modePreparation.current = setAudioModeAsync(audioMode);
-    modePreparation.current.catch(() => {
-      if (alive.current) setError('Audio isn’t available yet. Try playing the episode again.');
+    const subscription = AppState.addEventListener('change', next => {
+      try { diagnostic(next, player.currentStatus); } catch {}
+      appActive.current = next === 'active';
+      setAppState(next);
+      if (next !== 'active') {
+        stopPublishing();
+        sampleLevel.current = 0;
+        setLiveLevel(0);
+        try { player.setAudioSamplingEnabled(false); } catch {}
+      } else if (episodeRef.current && canSamplePodcast(next, Platform.OS, player.isAudioSamplingSupported)) {
+        // React may defer the bridge's unmount while iOS suspends JS. Restore
+        // the native tap explicitly even if both visibility renders coalesced.
+        try { player.setAudioSamplingEnabled(true); } catch {}
+      }
     });
     return () => {
       alive.current = false;
       generation.current++;
       command.current++;
+      subscription.remove();
       stopPublishing();
       try { player.pause(); player.clearLockScreenControls(); player.setAudioSamplingEnabled(false); } catch {}
+      if (Platform.OS !== 'web') void sessionQueue(() => !alive.current, () => setIsAudioActiveAsync(false)).catch(() => {});
     };
   }, [player]);
 
   useEffect(() => {
+    const unexpectedStop = previousPlaying.current && !status.playing &&
+      !appActive.current && wantsPlayback.current && !status.didJustFinish;
+    if (unexpectedStop) diagnostic('background playback stopped');
+    if (status.error && status.error !== previousError.current) diagnostic('playback error');
+    previousPlaying.current = status.playing;
+    previousError.current = status.error;
+  }, [status.playing, status.error, status.didJustFinish]);
+
+  useEffect(() => {
     if (!episodeRef.current) return;
     if (status.error) { fail(); return; }
+    // Native lock-screen Play bypasses AudioModule.play(), whose wrapper
+    // activates AVAudioSession. Restore a deliberately released session only
+    // when the current native player actually requests playback, never for a
+    // paused status or just because the app returned to the foreground.
+    if (Platform.OS !== 'web' && sessionActivation.current === null) {
+      try {
+        if (needsPodcastSessionActivation(sessionReleased.current, readyRef.current, player.currentStatus)) {
+          wantsPlayback.current = true;
+          const token = ++command.current;
+          void activateSession(token).catch(() => {
+            if (alive.current && command.current === token) fail();
+          });
+        }
+      } catch { /* A released native object is handled by provider cleanup. */ }
+    }
     if (status.isLoaded && player.isLoaded) {
       const currentGeneration = generation.current;
       if (loadedGeneration.current !== currentGeneration) {
@@ -160,13 +220,22 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
       }
     }
     // Remote lock-screen commands also update intent; they bypass our buttons.
-    if (status.playing) wantsPlayback.current = true;
+    if (status.playing) {
+      wantsPlayback.current = true;
+      if (lockScreenGeneration.current !== generation.current) {
+        configureMetadata(episodeRef.current);
+        lockScreenGeneration.current = generation.current;
+      }
+    }
     else if (status.isLoaded && !starting) wantsPlayback.current = false;
     if (status.didJustFinish || (!status.playing && status.isLoaded && !starting)) {
       sampleLevel.current = 0;
       setLiveLevel(0);
     }
-    if (status.didJustFinish) wantsPlayback.current = false;
+    if (status.didJustFinish) {
+      wantsPlayback.current = false;
+      releaseSession(command.current);
+    }
   }, [status, player]);
 
   useEffect(() => {
@@ -193,6 +262,26 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
       setSamplingSupported(player.isAudioSamplingSupported);
     } catch { setSamplingSupported(false); }
   }
+  function releaseSession(token: number) {
+    if (Platform.OS === 'web') return;
+    void sessionQueue(
+      () => alive.current && command.current === token && !wantsPlayback.current,
+      async () => { await setIsAudioActiveAsync(false); sessionReleased.current = true; },
+    ).catch(() => {});
+  }
+  function activateSession(token: number) {
+    sessionActivation.current = token;
+    return sessionQueue(
+      () => alive.current && command.current === token,
+      async () => {
+        await setAudioModeAsync(audioMode);
+        if (alive.current && command.current === token) {
+          await setIsAudioActiveAsync(true);
+          sessionReleased.current = false;
+        }
+      },
+    ).finally(() => { if (sessionActivation.current === token) sessionActivation.current = null; });
+  }
   function pause() {
     command.current++;
     wantsPlayback.current = false;
@@ -201,6 +290,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     try { player.pause(); } catch { fail(); }
     setStarting(false);
     publish();
+    releaseSession(command.current);
   }
   function start(value: Episode, replace: boolean) {
     const currentCommand = ++command.current;
@@ -213,6 +303,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
         generation.current++;
         readyRef.current = false;
         loadedGeneration.current = -1;
+        lockScreenGeneration.current = -1;
         setSourceReady(false);
         setStarting(true);
         stopPublishing();
@@ -228,7 +319,8 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
         lastDuration.current = same ? lastDuration.current : value.durationSeconds;
         episodeRef.current = value;
         setEpisode(value);
-        player.pause();
+        // replace() already pauses the old AVPlayer; an explicit pause here
+        // used to queue native session deactivation during the new buffer.
         player.replace({ uri: value.audioUrl });
         player.shouldCorrectPitch = true;
         player.setPlaybackRate(rateRef.current, 'high');
@@ -236,7 +328,6 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
           resume.current = { position: savedPosition, generation: generation.current, command: currentCommand };
         } else resume.current = null;
       }
-      configureMetadata(value);
       enableSampling();
       const state = rawStatus.current;
       if (!replace && (state.didJustFinish || lastPosition.current >= lastDuration.current - .1)) {
@@ -259,10 +350,11 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     if (Platform.OS === 'web') start(value, replace);
     else {
       const requestedCommand = ++command.current;
-      if (problem || !modePreparation.current) modePreparation.current = setAudioModeAsync(audioMode);
-      Promise.resolve(modePreparation.current).then(() => {
+      activateSession(requestedCommand).then(() => {
         if (alive.current && command.current === requestedCommand) start(value, replace);
-      }).catch(() => fail('Audio isn’t available yet. Try playing the episode again.'));
+      }).catch(() => {
+        if (alive.current && command.current === requestedCommand) fail('Audio isn’t available yet. Try playing the episode again.');
+      });
     }
   }
   function toggle() { if (episodeRef.current) play(episodeRef.current.day); }
@@ -305,7 +397,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
 
   return <Context.Provider value={{ episode, status, error: problem, loading, duration, position, playbackRate,
     samples, liveLevel, hasSamples, samplingSupported, play, toggle, pause, seek, setRate, dismiss }}>
-    {episode && samplingSupported && Platform.OS !== 'android' && <SampleListener player={player} listener={onSample}/>}
+    {episode && canSamplePodcast(appState, Platform.OS, samplingSupported) && <SampleListener player={player} listener={onSample}/>}
     {children}
   </Context.Provider>;
 }

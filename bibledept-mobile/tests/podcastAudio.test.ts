@@ -1,6 +1,54 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clampPodcastPosition, emptyPodcastSamples, PLAYBACK_RATES, podcastDuration, podcastSampleLevel, recordPodcastSample } from '../src/services/podcastAudio';
+import { canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, needsPodcastSessionActivation, PLAYBACK_RATES, podcastDuration, podcastSampleLevel, recordPodcastSample } from '../src/services/podcastAudio';
+
+test('lock-screen playback can reactivate a released session without resuming a deliberately paused player', () => {
+  const paused = { playing: false, timeControlStatus: 'paused', isLoaded: true, error: null };
+  assert.equal(needsPodcastSessionActivation(true, true, paused), false);
+  const waiting = { ...paused, timeControlStatus: 'waitingToPlayAtSpecifiedRate' };
+  assert.equal(needsPodcastSessionActivation(true, true, waiting), true);
+  assert.equal(needsPodcastSessionActivation(true, true, { ...paused, playing: true }), true);
+  assert.equal(needsPodcastSessionActivation(false, true, waiting), false);
+  assert.equal(needsPodcastSessionActivation(true, false, waiting), false);
+  assert.equal(needsPodcastSessionActivation(true, true, { ...waiting, isLoaded: false }), false);
+  assert.equal(needsPodcastSessionActivation(true, true, { ...waiting, error: 'Failed' }), false);
+});
+
+test('a stale queued Pause cannot deactivate a newer Play, and native session operations stay serialized', async () => {
+  const queue = createPodcastSessionQueue();
+  const calls: string[] = [];
+  let finishActivation!: () => void;
+  const activation = new Promise<void>(resolve => { finishActivation = resolve; });
+  let command = 1;
+  const first = queue(() => command === 1, async () => { calls.push('activate:start'); await activation; calls.push('activate:end'); });
+  await Promise.resolve();
+  command = 2;
+  const pause = queue(() => command === 2, async () => { calls.push('deactivate'); });
+  command = 3;
+  const play = queue(() => command === 3, async () => { calls.push('activate:new'); });
+  assert.deepEqual(calls, ['activate:start']);
+  finishActivation();
+  await Promise.all([first, pause, play]);
+  assert.deepEqual(calls, ['activate:start', 'activate:end', 'activate:new']);
+});
+
+test('a deliberate Pause releases the session after activation, and a failed activation does not poison retry', async () => {
+  const queue = createPodcastSessionQueue();
+  const calls: string[] = [];
+  await assert.rejects(queue(() => true, async () => { throw new Error('Unavailable'); }), /Unavailable/);
+  const active = queue(() => true, async () => { calls.push('activate'); });
+  const paused = queue(() => true, async () => { calls.push('deactivate'); });
+  await Promise.all([active, paused]);
+  assert.deepEqual(calls, ['activate', 'deactivate']);
+});
+
+test('PCM analysis stops when the app is inactive or locked and resumes only on a supported foreground platform', () => {
+  assert.equal(canSamplePodcast('active', 'ios', true), true);
+  for (const state of ['inactive', 'background', 'unknown', null]) assert.equal(canSamplePodcast(state, 'ios', true), false);
+  assert.equal(canSamplePodcast('active', 'android', true), false);
+  assert.equal(canSamplePodcast('active', 'web', false), false);
+  assert.equal(canSamplePodcast('active', 'ios', true), true);
+});
 
 test('PCM level measures both stereo channels without phase cancellation and rejects invalid frames', () => {
   assert.equal(podcastSampleLevel([{ frames: [.5, -.5] }, { frames: [-.5, .5] }]), .5);

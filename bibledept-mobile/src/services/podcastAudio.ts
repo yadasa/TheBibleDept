@@ -1,6 +1,28 @@
 export const PLAYBACK_RATES = [1, 1.25, 1.5, 2] as const;
 export const PODCAST_SAMPLE_BINS = 96;
 
+// Audio-session calls cross an async native boundary. Serialize them so a
+// completed Pause cannot deactivate a newer Play that is still preparing.
+export function createPodcastSessionQueue() {
+  let tail = Promise.resolve();
+  return (isCurrent: () => boolean, operation: () => Promise<void>) => {
+    const job = tail.then(async () => { if (isCurrent()) await operation(); });
+    tail = job.catch(() => {});
+    return job;
+  };
+}
+
+export function canSamplePodcast(appState: string | null, platform: string, supported: boolean): boolean {
+  return appState === 'active' && platform !== 'android' && supported;
+}
+
+export function needsPodcastSessionActivation(released: boolean, ready: boolean, status: {
+  playing: boolean; timeControlStatus: string; isLoaded: boolean; error: string | null;
+}): boolean {
+  return released && ready && status.isLoaded && !status.error &&
+    (status.playing || status.timeControlStatus === 'waitingToPlayAtSpecifiedRate');
+}
+
 export type PodcastPcmSample = {
   timestamp: number;
   channels: { frames: readonly number[] }[];
