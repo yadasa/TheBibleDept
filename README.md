@@ -8,7 +8,7 @@ BibleDept follows [The Bible Dept.](https://www.thebibledept.com/) reading plan,
 
 The active app is **[bibledept-mobile](bibledept-mobile/)**: an Expo client for iPhone, Android, and web using the Firebase JavaScript SDK. It has no giving, checkout, subscriptions, or payment SDKs.
 
-These are real captures from the running web preview and a fictional local demo account, presented in rendered iPhone mockups. They are not photographs of a signed native build. [Original captures and image details](docs/images/README.md).
+These are real captures from the running web preview with example content, presented in rendered iPhone mockups. The updated Home and player captures use the owner's authorized preview account; no account identity or private settings are shown. They are not photographs of a signed native build. [Original captures and image details](docs/images/README.md).
 
 ## Your next reading
 
@@ -17,6 +17,10 @@ These are real captures from the running web preview and a fictional local demo 
 - **An optional Day 0.** Listen to the publisher's full introduction before starting. It has no assigned reading and does not change the 365-day count.
 - **Pick up where you stopped.** Signed-in plan position and completed days sync across devices. Chapter and scroll position stay on the device, scoped to the guest or signed-in account.
 - **Finish the whole lesson.** Reading each chapter and genuinely listening completes the day and opens a congratulations message. The last two minutes of audio are optional; seeking does not earn listening credit. Manual next-day continuation remains available.
+
+![Current reading and the orange-to-white reading activity calendar in angled iPhones](docs/images/bibledept-home-activity.webp)
+
+Home prepares the current day's Scripture and reader before you tap Read Day. Chapter changes update the reading region while keeping the daily header, progress and podcast player in place.
 
 ## Scripture and the notes beside it
 
@@ -31,6 +35,8 @@ Tap a verse to reveal a note shortcut, or hold/select a range. Choose a highligh
 ## The teaching for each day
 
 All 365 readings have their corresponding official podcast episode, alongside the full introductory Day 000. Audio streams directly from the publisher's RedCircle MP3 endpoints. The episode index and compact waveform samples stay in the app; audio is not bundled or downloaded just to draw a waveform.
+
+![Actual daily podcast playback in a rendered angled iPhone, animated GIF](docs/images/bibledept-player.gif)
 
 - Genuine measured bars remain visible when paused, with foreground live response on supported platforms.
 - Orange progress, an eased recent-bar indicator, a backward trail confined to the bars, and quieter gray future bars in the full player.
@@ -47,7 +53,7 @@ Email/password accounts support registration, sign-in, recovery, profile-name ch
 
 ![Dark reading preferences and light appearance choices in realistic angled iPhones](docs/images/bibledept-account-preferences.webp)
 
-- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 26-week activity calendar that opens at the most recent reading. Consecutive squares brighten from orange toward near-white over 21 days, with a pulsing orange/gold outer glow. Chapter reading checks and account streak credits have separate purposes.
+- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 26-week activity calendar that opens at the most recent reading. Consecutive squares brighten from orange toward near-white over 21 days. Days one through three stay static; longer runs pulse with independent phases. Effects run only in view and pause during scrolling. Chapter reading checks and account streak credits have separate purposes.
 - **Notes and prayers:** owner-private records under /bibledeptUsers/{uid}; notes stay connected to Scripture, and saved prayers can be marked answered.
 - **Reading preferences:** usual translation, text size with a preview, and a confirmed reading time zone.
 - **Appearance:** dark and light themes with shared orange, grain, circular light, and frosted controls.
@@ -72,7 +78,7 @@ Firebase configuration belongs in the ignored .env.local. Documented emulator mo
 
 ## Current checks and release boundaries
 
-The October 19 review passed **101 unit tests, TypeScript, and fresh web/iOS/Android JavaScript exports**. Browser checks covered 320/390 px layouts, header wrapping, interrupted navigation, dropdown ranges, real demo-account saves, Notes sync, appearance, time-zone setup, prayers, and daily/intro audio controls. [Complete request checklist](docs/REQUEST_CHECKLIST.md) · [Optimization evidence](docs/REQUEST_AUDIT.md).
+The latest October 19 review passed **135 unit tests, TypeScript, and fresh web/iOS/Android JavaScript exports**. Checks cover visible-only calendar work, short-run animation limits, shared/cancelable Scripture requests, chapter preparation, reading-credit safeguards and existing flows. Browser review confirmed preloaded Scripture, isolated chapter switching, offscreen waveform suspension, and Home/calendar layouts. Physical iPhone frame timing remains to be measured. [Complete request checklist](docs/REQUEST_CHECKLIST.md) · [Optimization evidence](docs/REQUEST_AUDIT.md).
 
 | Area | Current state |
 | --- | --- |
