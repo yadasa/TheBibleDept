@@ -21,33 +21,34 @@ type PlanScreenProps={active?:boolean;onAccount:()=>void;requestRevision?:number
 
 export function PlanScreen({active=true,onAccount,requestRevision=0,podcastRequestRevision=0,podcastRequestDay=1}:PlanScreenProps) {
   const plan=usePlan(),scrollTop=useScreenScroll();
-  const [intro,setIntro]=useState(false),[anchorRevision,setAnchorRevision]=useState(0);
+  const [intro,setIntro]=useState(false),[introAnchor,setIntroAnchor]=useState(false),[anchorRevision,setAnchorRevision]=useState(0);
   const requests=useRef({reading:requestRevision,podcast:0,day:plan.selectedDay});
   useEffect(()=>{
     const previous=requests.current;
     requests.current={reading:requestRevision,podcast:podcastRequestRevision,day:plan.selectedDay};
     if(podcastRequestRevision>0&&previous.podcast!==podcastRequestRevision) {
       setIntro(podcastRequestDay===0);
+      setIntroAnchor(podcastRequestDay===0);
       setAnchorRevision(podcastRequestDay===0?0:podcastRequestRevision);
     } else if(previous.reading!==requestRevision||previous.day!==plan.selectedDay) {
       setIntro(false);setAnchorRevision(0);
     }
   },[requestRevision,podcastRequestRevision,podcastRequestDay,plan.selectedDay]);
-  function openIntro(){setIntro(true);setAnchorRevision(0);scrollTop();}
+  function openIntro(){setIntro(true);setIntroAnchor(false);setAnchorRevision(0);scrollTop();}
   function openDay(day:number){plan.selectDay(day);setIntro(false);setAnchorRevision(0);scrollTop();}
-  return intro?<PlanIntroduction active={active} currentDay={plan.currentDay} selectedDay={plan.selectedDay} finished={plan.finished} completedDays={plan.completedDays} onDay={openDay}/>
+  return intro?<PlanIntroduction active={active} openAtPlayer={introAnchor} currentDay={plan.currentDay} selectedDay={plan.selectedDay} finished={plan.finished} completedDays={plan.completedDays} onDay={openDay}/>
     :<DailyPlanScreen active={active} onAccount={onAccount} podcastRequestRevision={anchorRevision} onIntro={openIntro}/>;
 }
 
-function PlanIntroduction({active,currentDay,selectedDay,finished,completedDays,onDay}:{active:boolean;currentDay:number;selectedDay:number;finished:boolean;completedDays:readonly number[];onDay:(day:number)=>void}) {
+function PlanIntroduction({active,openAtPlayer,currentDay,selectedDay,finished,completedDays,onDay}:{active:boolean;openAtPlayer:boolean;currentDay:number;selectedDay:number;finished:boolean;completedDays:readonly number[];onDay:(day:number)=>void}) {
   const {s}=useThemedStyles(styles),controls=useScreenScrollControls();
   const [picker,setPicker]=useState(false),podcastRef=useRef<View>(null);
   const registerPodcast=useCallback(()=>{if(active)controls.registerAnchor('podcast',podcastRef.current);},[active,controls]);
   useEffect(()=>{
     if(!active)return controls.registerAnchor('podcast',null);
-    controls.scrollToAnchor('podcast');
+    if(openAtPlayer)controls.scrollToAnchor('podcast');
     return controls.registerAnchor('podcast',podcastRef.current);
-  },[active,controls]);
+  },[active,openAtPlayer,controls]);
   return <View>
     <View style={s.planHeader}>
       <View style={s.headingRow}><Text accessibilityRole="header" style={s.day}>Introduction</Text><GlassPressable accessibilityRole="button" accessibilityLabel="Choose a plan day" onPress={()=>setPicker(true)} style={({pressed})=>[s.choose,pressed&&s.pressed]}><Icon name="calendar" size={18}/><Text style={s.chooseText}>Days</Text></GlassPressable></View>
