@@ -1,6 +1,7 @@
-import { ComponentProps, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { ComponentProps, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { usePlan } from '../services/PlanProvider';
+import { createReadingScrollIntent, isVerticalReadingGesture } from '../services/lessonProgress';
 
 export type ScreenScrollMetrics = Readonly<{ offsetY: number; viewportHeight: number; contentHeight: number; active: boolean; restoring: boolean; userInitiated: boolean }>;
 type Controls = {
@@ -24,20 +25,21 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   const listeners = useRef(new Set<(metrics: ScreenScrollMetrics) => void>());
   const anchors = useRef(new Map<string, View>()), pendingAnchor = useRef<string | null>(null);
   const anchorFrame = useRef<number | null>(null), anchorGeneration = useRef(0);
-  const userInitiated = useRef(false);
-  if (activeRef.current !== active) { activeRef.current = active; userInitiated.current = false; if (active) restorePending.current = true; }
-  const getMetrics = useCallback((): ScreenScrollMetrics => ({ offsetY: offset.current.y, viewportHeight: viewportHeight.current, contentHeight: contentHeight.current, active: activeRef.current, restoring: restorePending.current, userInitiated: userInitiated.current }), []);
+  const [scrollIntent] = useState(createReadingScrollIntent);
+  const touchOrigin = useRef<{x:number;y:number}|null>(null);
+  if (activeRef.current !== active) { activeRef.current = active; scrollIntent.clear(); if (active) restorePending.current = true; }
+  const getMetrics = useCallback((): ScreenScrollMetrics => ({ offsetY: offset.current.y, viewportHeight: viewportHeight.current, contentHeight: contentHeight.current, active: activeRef.current, restoring: restorePending.current, userInitiated: scrollIntent.isUserInitiated() }), [scrollIntent]);
   const notify = useCallback(() => { const value = getMetrics(); listeners.current.forEach(listener => listener(value)); }, [getMetrics]);
   const scrollTo = useCallback(({ y, animated = false }: { y: number; animated?: boolean }) => {
     if (!Number.isFinite(y)) return;
     pendingAnchor.current = null;
     anchorGeneration.current++;
-    userInitiated.current = false;
+    scrollIntent.clear();
     offset.current = { x: 0, y: Math.max(0, y) };
     if (activeRef.current) { ref.current?.scrollTo({ y: offset.current.y, animated }); restorePending.current = false; }
     else restorePending.current = true;
     notify();
-  }, [notify]);
+  }, [notify,scrollIntent]);
   const top = useCallback(() => scrollTo({ y: 0 }), [scrollTo]);
   const measureContent = useCallback((target: View | null, listener: (bounds: { top: number; bottom: number }) => void) => {
     if (!target || !activeRef.current || !viewport.current) return;
@@ -77,10 +79,10 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     if (!activeRef.current || !restorePending.current) return;
     ref.current?.scrollTo({ ...offset.current, animated: false });
     restorePending.current = false;
-    userInitiated.current = false;
+    scrollIntent.clear();
     notify();
     scheduleAnchor();
-  }, [notify, scheduleAnchor]);
+  }, [notify, scheduleAnchor,scrollIntent]);
   useEffect(() => {
     if (!active) return;
     const frame = requestAnimationFrame(restore);
@@ -90,19 +92,25 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   // or the podcast anchor. A later parent effect would erase that request.
   useLayoutEffect(() => { if (resetOnPlanDayChange) top(); }, [selectedDay, resetOnPlanDayChange, top]);
   useEffect(() => () => { if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current); }, []);
-  const beginUserScroll=()=>{pendingAnchor.current=null;anchorGeneration.current++;userInitiated.current=true;};
+  const beginUserScroll=(source:'drag'|'touch'|'wheel'|'key'|'momentum')=>{pendingAnchor.current=null;anchorGeneration.current++;scrollIntent.begin(source);};
   const webGestures=Platform.OS==='web'?{
-    onWheel:beginUserScroll,
-    onKeyDown:(event:{key:string})=>{if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))beginUserScroll();},
+    onWheel:()=>beginUserScroll('wheel'),
+    onKeyDown:(event:{key:string})=>{if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))beginUserScroll('key');},
   }:{};
   return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1}}><ScrollView {...props} {...webGestures} ref={ref} scrollEventThrottle={props.scrollEventThrottle ?? 32}
     onScroll={event => {
       if (activeRef.current && !restorePending.current) { offset.current = { ...event.nativeEvent.contentOffset }; notify(); }
       props.onScroll?.(event);
     }}
-    onScrollBeginDrag={event => { beginUserScroll();props.onScrollBeginDrag?.(event); }}
-    onTouchStart={event=>{beginUserScroll();props.onTouchStart?.(event);}}
-    onPointerDown={event=>{beginUserScroll();props.onPointerDown?.(event);}}
+    onScrollBeginDrag={event => { beginUserScroll('drag');props.onScrollBeginDrag?.(event); }}
+    onScrollEndDrag={event=>{scrollIntent.end('drag');props.onScrollEndDrag?.(event);}}
+    onMomentumScrollBegin={event=>{beginUserScroll('momentum');props.onMomentumScrollBegin?.(event);}}
+    onMomentumScrollEnd={event=>{scrollIntent.end('momentum');props.onMomentumScrollEnd?.(event);}}
+    onPointerDown={event=>{scrollIntent.clear();props.onPointerDown?.(event);}}
+    onTouchStart={event=>{scrollIntent.clear();touchOrigin.current={x:event.nativeEvent.pageX,y:event.nativeEvent.pageY};props.onTouchStart?.(event);}}
+    onTouchMove={event=>{if(isVerticalReadingGesture(touchOrigin.current,{x:event.nativeEvent.pageX,y:event.nativeEvent.pageY}))beginUserScroll('touch');props.onTouchMove?.(event);}}
+    onTouchEnd={event=>{touchOrigin.current=null;scrollIntent.end('touch');props.onTouchEnd?.(event);}}
+    onTouchCancel={event=>{touchOrigin.current=null;scrollIntent.end('touch');scrollIntent.end('drag');props.onTouchCancel?.(event);}}
     onContentSizeChange={(width, height) => { contentHeight.current = height; props.onContentSizeChange?.(width, height); notify(); scheduleAnchor(); }}
     onLayout={event => { viewportHeight.current = event.nativeEvent.layout.height; props.onLayout?.(event); if (activeRef.current && restorePending.current) requestAnimationFrame(restore); else { notify(); scheduleAnchor(); } }}
   /></View></Context.Provider>;

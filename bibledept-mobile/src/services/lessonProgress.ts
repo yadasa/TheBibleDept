@@ -20,6 +20,34 @@ export function hasReadLesson(lesson: LessonProgress, day: number): boolean {
   return count > 0 && Array.from({ length: count }, (_, index) => index).every(index => lesson.readChapters.includes(index));
 }
 
+/** A tap or horizontal control drag is not a reading scroll. */
+export function isVerticalReadingGesture(start: { x: number; y: number } | null, point: { x: number; y: number }): boolean {
+  if (!start || ![start.x, start.y, point.x, point.y].every(Number.isFinite)) return false;
+  const horizontal = Math.abs(point.x - start.x), vertical = Math.abs(point.y - start.y);
+  return vertical > 4 && vertical > horizontal;
+}
+
+/** Keep input provenance through a real fling, without trusting later auto-scroll. */
+export function createReadingScrollIntent(now: () => number = Date.now) {
+  type Source = 'drag' | 'touch' | 'momentum' | 'wheel' | 'key';
+  const active = new Set<Source>();
+  let expiresAt = 0;
+  const isUserInitiated = () => active.size > 0 || now() < expiresAt;
+  return {
+    isUserInitiated,
+    clear: () => { active.clear(); expiresAt = 0; },
+    begin: (source: Source) => {
+      if (source === 'momentum' && !isUserInitiated()) return;
+      if (source !== 'wheel' && source !== 'key') active.add(source);
+      expiresAt = now() + 700;
+    },
+    end: (source: Source) => {
+      if (!active.delete(source)) return;
+      expiresAt = source === 'momentum' ? 0 : now() + 700;
+    },
+  };
+}
+
 /** Only the final text bounds qualify; loading/error placeholders never do. */
 export function hasReachedReadingEnd({ offset, viewportHeight, textTop, textBottom, loaded, active, userInitiated, obscuredBottom = 28 }: {
   offset: number; viewportHeight: number; textTop: number; textBottom: number; loaded: boolean; active: boolean; userInitiated: boolean; obscuredBottom?: number;

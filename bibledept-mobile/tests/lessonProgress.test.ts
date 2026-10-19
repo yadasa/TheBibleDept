@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLessonProgressStore, hasReachedReadingEnd, lessonProgressFor } from '../src/services/lessonProgress';
+import { createLessonProgressStore, createReadingScrollIntent, hasReachedReadingEnd, isVerticalReadingGesture, lessonProgressFor } from '../src/services/lessonProgress';
 
 function memoryStorage() {
   const values = new Map<string, string>();
@@ -54,4 +54,24 @@ test('reading end requires real loaded text in an active viewport', () => {
   assert.equal(hasReachedReadingEnd({...bounds,obscuredBottom:192}),false,'text behind the mini player is not yet read');
   for (const change of [{ userInitiated: false }, { loaded: false }, { active: false }, { textBottom: 0 }, { offset: 0 }, { viewportHeight: 0 }, { textBottom: NaN }])
     assert.equal(hasReachedReadingEnd({ ...bounds, ...change }), false);
+});
+
+test('tapping playback controls or dragging a waveform cannot become a reading scroll',()=>{
+  const start={x:100,y:300};
+  assert.equal(isVerticalReadingGesture(start,{x:100,y:300}),false,'a button tap does not count');
+  assert.equal(isVerticalReadingGesture(start,{x:101,y:304}),false,'small finger movement does not count');
+  assert.equal(isVerticalReadingGesture(start,{x:160,y:303}),false,'horizontal scrubbing does not count');
+  assert.equal(isVerticalReadingGesture(start,{x:101,y:306}),true,'a deliberate vertical gesture counts');
+  assert.equal(isVerticalReadingGesture(null,{x:100,y:310}),false);
+});
+
+test('reading intent expires after wheel input but persists through a genuine native fling',()=>{
+  let now=0;const intent=createReadingScrollIntent(()=>now);
+  intent.end('touch');assert.equal(intent.isUserInitiated(),false,'lifting after a tap cannot qualify');
+  intent.begin('wheel');assert.equal(intent.isUserInitiated(),true);
+  now=701;assert.equal(intent.isUserInitiated(),false,'later browser auto-scroll cannot inherit old wheel input');
+  intent.begin('drag');intent.end('drag');intent.begin('momentum');
+  now=10000;assert.equal(intent.isUserInitiated(),true,'long native inertia is still a real scroll');
+  intent.end('momentum');assert.equal(intent.isUserInitiated(),false);
+  intent.begin('key');intent.clear();assert.equal(intent.isUserInitiated(),false,'an app jump or control press cancels reading intent');
 });
