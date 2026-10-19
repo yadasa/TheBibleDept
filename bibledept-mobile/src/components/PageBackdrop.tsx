@@ -30,13 +30,13 @@ export const PageBackdrop = memo(function PageBackdrop() {
               so neighboring pages never expose a clipped gradient edge. */}
           {tabOrder.flatMap((tab, index) => [
             <RadialGradient key={`${tab}warm`} id={`${id}warm${index}`}
-              gradientUnits="userSpaceOnUse" cx={index * 400 + 380} cy={360} rx={420} ry={650}>
-              <Stop offset={0} stopColor="#DF8A4C" stopOpacity={dark ? .12 : .10}/>
-              <Stop offset={1} stopColor="#DF8A4C" stopOpacity={0}/>
+              gradientUnits="userSpaceOnUse" cx={index * 400 + 340} cy={650} rx={220} ry={400}>
+              <Stop offset={0} stopColor="#F05A00" stopOpacity={dark ? .10 : .08}/>
+              <Stop offset={1} stopColor="#F05A00" stopOpacity={0}/>
             </RadialGradient>,
             <RadialGradient key={`${tab}cool`} id={`${id}cool${index}`}
               gradientUnits="userSpaceOnUse" cx={index * 400} cy={800} rx={360} ry={500}>
-              <Stop offset={0} stopColor={dark ? "#C2D4DF" : "white"} stopOpacity={dark ? .08 : .35}/>
+              <Stop offset={0} stopColor="white" stopOpacity={dark ? 0 : .15}/>
               <Stop offset={1} stopColor={dark ? "#C2D4DF" : "white"} stopOpacity={0}/>
             </RadialGradient>,
           ])}
