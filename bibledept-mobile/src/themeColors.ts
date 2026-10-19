@@ -60,3 +60,14 @@ export const colors = {
 } as const;
 export type ThemeMode = keyof typeof colors;
 export type Colors = { [K in keyof typeof colors.dark]: string };
+
+/** Light surfaces need a contrast bed and chromatic bloom to keep white cores visible. */
+export const luminousPalettes={
+  dark:{calendarWell:'transparent',calendarInset:'none',empty:ORANGE_TONES.darkTint,emptyBorder:colors.dark.border,
+    track:colors.dark.border,trackInset:'none',progressGlow:'255,174,38',progressCore:'255,255,255',
+    streakGlow:'0 0 2px 1px rgba(255,224,135,1), 0 0 5px 1px rgba(255,167,32,1)'},
+  light:{calendarWell:'#D9CCBD',calendarInset:'inset 0 1px 5px rgba(96,63,32,.14), 0 1px 0 rgba(255,255,255,.9)',
+    empty:'#CDBDAA',emptyBorder:'rgba(104,75,48,.22)',track:'#C8B6A5',trackInset:'inset 0 1px 2px rgba(88,51,20,.22)',
+    progressGlow:'190,87,0',progressCore:'235,143,20',
+    streakGlow:'0 0 2px 1px rgba(190,87,0,.95), 0 0 5px 1px rgba(232,132,0,1)'},
+} as const;

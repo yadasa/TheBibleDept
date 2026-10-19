@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { cancelAnimation, Easing, interpolateColor, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { shiftDate } from '../../shared/habits';
-import { Colors, useThemedStyles, typography as t } from '../theme';
+import { Colors, useTheme, useThemedStyles, typography as t } from '../theme';
+import { luminousPalettes } from '../themeColors';
 import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingRunColor } from '../services/readingCalendar';
 import { useReducedMotion } from './LiquidBottomNav';
 import { useScreenScrollControls } from './ScreenScrollView';
@@ -11,7 +12,7 @@ const CALENDAR_GAP=8,CALENDAR_PADDING=6,GLOW_REACH=3.5;
 
 /** Twenty-six weeks, opening at the reader's most recent activity. */
 export function StreakCalendar({days,today}:{days:readonly string[];today:string}) {
-  const {c,s}=useThemedStyles(styles);
+  const {c,s}=useThemedStyles(styles),{mode}=useTheme(),palette=luminousPalettes[mode];
   const controls=useScreenScrollControls(),reduced=useReducedMotion();
   const [active,setActive]=useState(controls.getMetrics().active),[foreground,setForeground]=useState(AppState.currentState!=='background'),[width,setWidth]=useState(0);
   const scroll=useRef<ScrollView>(null);
@@ -46,18 +47,18 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
       <Text style={s.streak}><Text style={s.number}>{activity.total}</Text> total {activity.total===1?'day':'days'}</Text>
       <Text style={s.current}>{activity.current} {activity.current===1?'day':'days'} in a row</Text>
     </View>
-    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} testID="reading-contribution-calendar" style={s.chart} contentContainerStyle={s.weeks}
+    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} testID="reading-contribution-calendar" style={[s.chart,{backgroundColor:palette.calendarWell,boxShadow:palette.calendarInset,borderRadius:10}]} contentContainerStyle={s.weeks}
       onLayout={event=>setWidth(event.nativeEvent.layout.width)} onContentSizeChange={snapToRecent}>
       {weeks.map(week=><View key={week[0]} style={s.week}>
         {week.map(date=>{
           const run=activity.runs.get(date)||0,done=run>0,future=date>today;
           const fill=done?readingRunColor(c.orange,run):undefined;
           return <View key={date} accessible accessibilityLabel={`${new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'})}: ${future?'upcoming':done?'read':'no reading saved'}${done?`, ${run} ${run===1?'day':'days'} in a row`:''}`}
-            style={[s.square,{width:cellSize,height:cellSize},date===today&&s.today,done&&{backgroundColor:fill,borderWidth:0},future&&s.future]}/>;
+            style={[s.square,{width:cellSize,height:cellSize,backgroundColor:palette.empty,borderColor:palette.emptyBorder},date===today&&s.today,done&&{backgroundColor:fill,borderWidth:0},future&&s.future]}/>;
         })}
       </View>)}
       <View testID="reading-streak-glow" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} orange={c.orange} animate={active&&foreground&&!reduced}/>)}
+        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} orange={c.orange} shadow={palette.streakGlow} animate={active&&foreground&&!reduced}/>)}
       </View>
     </ScrollView>
     <View style={s.legend}><View style={[s.key,s.read]}/><Text style={s.meta}>Reading saved</Text><View style={[s.key,s.today]}/><Text style={s.meta}>Today</Text></View>
@@ -66,7 +67,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
 }
 
 type HaloPosition={date:string;column:number;row:number};
-function StreakHaloGroup({run,positions,cellSize,orange,animate}:{run:number;positions:HaloPosition[];cellSize:number;orange:string;animate:boolean}) {
+function StreakHaloGroup({run,positions,cellSize,orange,shadow,animate}:{run:number;positions:HaloPosition[];cellSize:number;orange:string;shadow:string;animate:boolean}) {
   const {cycleMs,minOpacity,maxOpacity}=readingGlowProfile(run),pulse=useSharedValue(minOpacity);
   const {rest,peak}=readingFillColors(orange,run),settledColor=readingRunColor(orange,run);
   useEffect(()=>{
@@ -84,7 +85,7 @@ function StreakHaloGroup({run,positions,cellSize,orange,animate}:{run:number;pos
     {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden'}}>
       {/* Visible soft bloom, leaving a 1 px dark separation in the 8 px gap. */}
       <View style={{position:'absolute',left:GLOW_REACH,top:GLOW_REACH,width:cellSize,height:cellSize,borderRadius:3,
-        backgroundColor:'rgba(255,188,66,0.01)',boxShadow:'0 0 2px 1px rgba(255,224,135,1), 0 0 5px 1px rgba(255,167,32,1)'}}/>
+        backgroundColor:'rgba(255,188,66,0.01)',boxShadow:shadow}}/>
     </View>)}
     </Animated.View>
     <View testID={`reading-streak-fill-${run}`} style={StyleSheet.absoluteFill}>

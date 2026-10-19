@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BRAND_ORANGE, colors, orangeAlpha, ORANGE_TONES } from "../src/themeColors";
+import { BRAND_ORANGE, colors, luminousPalettes, orangeAlpha, ORANGE_TONES } from "../src/themeColors";
 import { annotationRange, validAnnotation } from "../shared/annotations";
 function luminance(hex: string) {
   const rgb = hex
@@ -40,6 +40,12 @@ test('every theme uses the waveform orange for accent fills and one pigment for 
   assert.equal(orangeAlpha(.22),'rgba(240,90,0,0.22)');
   assert.equal(orangeAlpha(4),'rgba(240,90,0,1)');
   assert.equal(orangeAlpha(NaN),'rgba(240,90,0,0)');
+});
+
+test('light-mode luminous white has a contrasting calendar bed and progress track',()=>{
+  assert.ok(contrast('#FFFFFF',luminousPalettes.light.calendarWell)>=1.5);
+  assert.ok(contrast('#FFFFFF',luminousPalettes.light.track)>=1.8);
+  assert.ok(contrast('#FFFFFF',luminousPalettes.light.calendarWell)>contrast('#FFFFFF',colors.light.surface));
 });
 test("verse ranges are reversible and empty comment-only notes are rejected", () => {
   assert.deepEqual(annotationRange(12, 4), { verseStart: 4, verseEnd: 12 });
