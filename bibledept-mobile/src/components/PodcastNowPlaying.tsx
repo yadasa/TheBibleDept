@@ -84,13 +84,13 @@ export function PodcastNowPlaying({onOpen}:{onOpen:(day:number)=>void}) {
     <Animated.View style={[s.transition,motion]}>
     <BlurTargetView ref={blurTarget} style={s.player}>
       <View ref={details} {...gesture.panHandlers} style={s.detailsFrame} onLayout={event=>{setSize(event.nativeEvent.layout);details.current?.measureInWindow(origin=>{left.current=origin;});}}>
-        <GlassPressable accessibilityRole="button" accessibilityLabel={`Open podcast for day ${shown.episode.day}`} accessibilityHint="Drag horizontally to change playback position. Additional actions skip 15 seconds."
+        <GlassPressable accessibilityRole="button" accessibilityLabel={shown.episode.day===0?'Open the introduction':`Open podcast for day ${shown.episode.day}`} accessibilityHint="Drag horizontally to change playback position. Additional actions skip 15 seconds."
           accessibilityActions={[{name:'increment',label:'Forward 15 seconds'},{name:'decrement',label:'Back 15 seconds'}]}
           onAccessibilityAction={event=>audio.seek(audio.position+(event.nativeEvent.actionName==='increment'?15:-15))}
           onPressIn={()=>{didDrag.current=false;setTouching(true);}} onPressOut={()=>{if(!dragActive.current)setTouching(false);}}
           onPress={()=>{if(!didDrag.current)onOpen(shown.episode!.day);}} style={s.details}>
           <View pointerEvents="none" style={StyleSheet.absoluteFill}><MiniPodcastWaveform samples={getPodcastReferenceSamples(shown.episode.day)??shown.samples} width={size.width} height={size.height} progress={progress} scrubbing={scrubbing} touching={touching}/></View>
-          <View pointerEvents="none" style={s.text}><Text numberOfLines={1} style={s.title}>Day {shown.episode.day} · {shown.episode.reading}</Text><Text style={s.meta}>{shown.error?'Couldn’t play episode':shown.loading?'Loading episode…':`${audioTime(progress*shown.duration)} / ${audioTime(shown.duration)} · ${shown.playbackRate}×`}</Text></View>
+          <View pointerEvents="none" style={s.text}><Text numberOfLines={1} style={s.title}>{shown.episode.day===0?'Introduction':`Day ${shown.episode.day} · ${shown.episode.reading}`}</Text><Text style={s.meta}>{shown.error?'Couldn’t play episode':shown.loading?'Loading episode…':`${audioTime(progress*shown.duration)} / ${audioTime(shown.duration)} · ${shown.playbackRate}×`}</Text></View>
         </GlassPressable>
       </View>
       <GlassPressable tone="primary" accessibilityRole="button" accessibilityLabel={shown.status.playing?'Pause podcast':'Play podcast'} onPress={audio.toggle} style={s.button}><View style={s.glyph}><Icon name={shown.status.playing?'pause':'play'} size={20} color={c.onAction}/></View></GlassPressable>

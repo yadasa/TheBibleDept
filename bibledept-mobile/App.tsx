@@ -83,7 +83,8 @@ function AppShell() {
     [reference, setReference] = useState<string>(),
     [translation, setTranslation] = useState<Translation>("web"),
     [revision, setRevision] = useState(0),
-    [podcastRequestRevision, setPodcastRequestRevision] = useState(0);
+    [podcastRequestRevision, setPodcastRequestRevision] = useState(0),
+    [podcastRequestDay, setPodcastRequestDay] = useState(1);
   const journeyRef = useRef<PageJourney>({ from: 2, to: 2 }),
     position = useRef(2),
     page = useRef(new Animated.Value(2)).current,
@@ -302,6 +303,7 @@ function AppShell() {
                                     active={active}
                                     requestRevision={revision}
                                     podcastRequestRevision={podcastRequestRevision}
+                                    podcastRequestDay={podcastRequestDay}
                                     initialReference={reference}
                                     initialTranslation={reference ? translation : undefined}
                                     onAccount={() => setTab("Account")}
@@ -329,6 +331,7 @@ function AppShell() {
             </View>
           </BlurTargetView>
           <PodcastNowPlaying onOpen={day => {
+            setPodcastRequestDay(day);
             plan.selectDay(day);
             setReference(undefined);
             setRevision(value => value + 1);

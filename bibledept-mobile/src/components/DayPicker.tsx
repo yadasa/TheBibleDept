@@ -7,9 +7,9 @@ import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { Icon } from './Icon';
 import { ActionButton, Field, IconButton, Notice } from './ui';
 
-type Props = { visible: boolean; selectedDay: number; currentDay: number; finished: boolean; completedDays?:readonly number[]; onSelect: (day: number) => void; onClose: () => void };
+type Props = { visible: boolean; selectedDay: number; selectedIntro?:boolean; currentDay: number; finished: boolean; completedDays?:readonly number[]; onSelect: (day: number) => void; onIntro?:()=>void; onClose: () => void };
 
-export function DayPicker({ visible, selectedDay, currentDay, finished, completedDays=[], onSelect, onClose }: Props) {
+export function DayPicker({ visible, selectedDay, selectedIntro=false, currentDay, finished, completedDays=[], onSelect, onIntro, onClose }: Props) {
   const {c,s}=useThemedStyles(styles);
   const { width, fontScale } = useWindowDimensions();
   const [page, setPage] = useState(0), [draft, setDraft] = useState(''), [error, setError] = useState('');
@@ -56,12 +56,13 @@ export function DayPicker({ visible, selectedDay, currentDay, finished, complete
             <Text ref={heading} accessibilityRole="header" style={s.title}>Choose a day</Text>
             <IconButton name="close" label="Close day picker" onPress={close}/>
           </View>
-          <Text style={s.selection}>Viewing day {selectedDay} · {getReadingPlanDay(selectedDay)!.label}</Text>
+          <Text style={s.selection}>{selectedIntro?'Viewing the optional introduction':`Viewing day ${selectedDay} · ${getReadingPlanDay(selectedDay)!.label}`}</Text>
           <GlassPressable accessibilityRole="button" accessibilityLabel={'Open your current day, Day ' + currentDay + (finished ? ', plan complete' : '')} onPress={() => select(currentDay)} style={({ pressed }) => [s.currentSpot, pressed && s.pressed]}>
             <Icon name={finished ? 'checkCircle' : 'book'} size={20} color={c.action}/>
             <Text style={s.currentSpotText}>{finished ? 'Plan complete' : 'Your current day'}<Text style={s.currentSpotDay}> · Day {currentDay}</Text></Text>
             <Icon name="arrowRight" size={18} color={c.action}/>
           </GlassPressable>
+          {onIntro&&<GlassPressable accessibilityRole="button" accessibilityLabel="Open the optional introduction" accessibilityState={{selected:selectedIntro}} tone={selectedIntro?'selected':'neutral'} onPress={()=>{Keyboard.dismiss();onIntro();onClose();}} style={({pressed})=>[s.introSpot,selectedIntro&&s.selected,pressed&&s.pressed]}><Icon name="headphones" size={20}/><View style={s.introText}><Text style={s.currentSpotText}>Introduction</Text><Text style={s.introHint}>Optional · before day 1</Text></View><Icon name="chevronRight" size={18}/></GlassPressable>}
 
           <View style={s.paging}>
             <GlassPressable accessibilityRole="button" accessibilityLabel="Previous 30 days" accessibilityState={{ disabled: page === 0 }} disabled={page === 0} onPress={() => setPage(value => value - 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, page === 0 && s.disabled]}><Icon name="chevronLeft" size={20}/></GlassPressable>
@@ -102,6 +103,7 @@ const styles=(c:Colors)=>StyleSheet.create({
   selection: { ...t.meta, color: c.muted, marginTop: 4 },
   currentSpot: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, padding: 12, borderRadius: radius, backgroundColor: c.tint, marginTop: 16 },
   currentSpotText: { ...t.meta, color: c.ink, flex: 1, flexWrap: 'wrap' }, currentSpotDay: { fontWeight: '700' },
+  introSpot:{flexDirection:'row',alignItems:'center',gap:10,minHeight:64,padding:12,borderRadius:radius,marginTop:10,borderWidth:1,borderColor:c.controlBorder},introText:{flex:1},introHint:{...t.meta,color:c.muted,marginTop:3},
   paging: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16, marginBottom: 12 },
   arrow: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.controlBorder, borderRadius: radius, backgroundColor: c.surface },
   range: { ...t.label, color: c.ink, flexShrink: 1, textAlign: 'center' },

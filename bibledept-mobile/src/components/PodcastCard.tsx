@@ -39,7 +39,7 @@ export function PodcastCard({day}:{day:number}) {
   return <View style={s.card}>
     <PodcastCardFrost/>
     <View style={s.content}>
-    <View style={s.heading}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>Daily teaching</Text></View>
+    <View style={s.heading}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>{day===0?'Introduction':'Daily teaching'}</Text></View>
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
     {!!episode.rangeNote&&<Text style={s.note}>{episode.rangeNote}</Text>}
@@ -58,7 +58,7 @@ export function PodcastCard({day}:{day:number}) {
       <PlaybackSpeedControl day={day} rate={audio.playbackRate} onRate={audio.setRate}/>
     </View>
     {!!problem&&<Notice text={String(problem)} error/>}
-    {!current&&audio.episode&&<Text style={s.note}>Day {audio.episode.day} is {audio.status.playing?'playing':'paused'}. Play this episode to switch.</Text>}
+    {!current&&audio.episode&&<Text style={s.note}>{audio.episode.day===0?'The introduction':`Day ${audio.episode.day}`} is {audio.status.playing?'playing':'paused'}. Play this episode to switch.</Text>}
     {!!linkError&&<Notice text={linkError} error/>}
     <Pressable accessibilityRole="link" onPress={()=>void open(episode.episodeUrl)} style={({pressed})=>[s.episodeLink,pressed&&s.pressed]}><Text style={s.link}>Open episode page</Text><Icon name="external" size={16} color={c.action}/></Pressable>
     <View style={s.follow}><Text style={s.followLabel}>Follow the podcast</Text><View style={s.platforms}><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Apple Podcasts" onPress={()=>void open(PODCAST_LINKS.apple)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Apple Podcasts</Text><Icon name="external" size={14}/></Pressable><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Spotify" onPress={()=>void open(PODCAST_LINKS.spotify)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Spotify</Text><Icon name="external" size={14}/></Pressable></View></View>
