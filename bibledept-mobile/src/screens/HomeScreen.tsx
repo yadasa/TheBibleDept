@@ -5,6 +5,7 @@ import { validDate } from "../../shared/habits";
 import { ActionButton, Notice } from "../components/ui";
 import { Icon, IconName } from "../components/Icon";
 import { StreakCalendar } from '../components/StreakCalendar';
+import { PlanProgressBar } from '../components/PlanProgressBar';
 import { useReadings } from '../services/ReadingProvider';
 import { useAuth } from "../services/AuthProvider";
 import { useHabit } from "../services/HabitProvider";
@@ -77,15 +78,7 @@ export function HomeScreen({
           onPress={onRead}
         />
         <Text style={s.device}>Pick up where you left off.</Text>
-        <View style={s.track}>
-          <View
-            style={{
-              height: 4,
-              backgroundColor: c.action,
-              width: `${(complete / 365) * 100}%`,
-            }}
-          />
-        </View>
+        <PlanProgressBar percent={(complete/365)*100}/>
         <View style={s.progressLabels}>
           <Text style={s.small}>{complete} days completed</Text>
           <Text style={s.small}>{percent}%</Text>
@@ -260,7 +253,6 @@ const styles = (c: Colors) =>
       marginTop: 4,
       marginBottom: 0,
     },
-    track: { height: 4, backgroundColor: c.border, marginTop:10 },
     small: { ...t.meta, fontSize: 12, color: c.muted },
     device: { ...t.meta, fontSize: 11, lineHeight:14, color: c.muted, marginTop:4 },
     section: { ...t.section, fontSize: 20, lineHeight: 27, color: c.ink },
