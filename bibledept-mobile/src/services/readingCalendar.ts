@@ -14,7 +14,13 @@ export function readingCalendar(days: readonly string[], today: string) {
   return { total: dates.length, current, runs };
 }
 
-/** Seven consecutive days reach the visual cap; long streaks stay legible. */
+/** A three-week run reaches near-white; longer runs keep the same capped glow. */
 export function readingRunIntensity(run: number) {
-  return Math.min(1, Math.max(0, (run - 1) / 6));
+  return Math.pow(Math.min(1, Math.max(0, (run - 1) / 20)), .85);
+}
+
+export function readingRunColor(orange: string, run: number) {
+  const lift = readingRunIntensity(run) * .94;
+  return orange.replace(/#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i, (_, r, g, b) =>
+    `rgb(${[r,g,b].map(hex => Math.round(parseInt(hex,16) + (255 - parseInt(hex,16)) * lift)).join(',')})`);
 }

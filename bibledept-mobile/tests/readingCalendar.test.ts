@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readingCalendar, readingRunIntensity } from '../src/services/readingCalendar';
+import { readingCalendar, readingRunColor, readingRunIntensity } from '../src/services/readingCalendar';
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');
@@ -15,9 +15,13 @@ test('current streak survives today before reading but expires after a missed da
   assert.equal(readingCalendar([], '2026-10-19').total, 0);
 });
 
-test('consecutive-day brightness rises gradually and caps after seven days', () => {
+test('consecutive-day brightness rises gradually and caps at 21 days', () => {
   assert.equal(readingRunIntensity(1), 0);
   assert.ok(readingRunIntensity(3) < readingRunIntensity(6));
-  assert.equal(readingRunIntensity(7), 1);
+  assert.ok(readingRunIntensity(7) < readingRunIntensity(14));
+  assert.ok(readingRunIntensity(20) < 1);
+  assert.equal(readingRunIntensity(21), 1);
   assert.equal(readingRunIntensity(365), 1);
+  assert.equal(readingRunColor('#F05A00', 1), 'rgb(240,90,0)');
+  assert.equal(readingRunColor('#F05A00', 21), 'rgb(254,245,240)');
 });

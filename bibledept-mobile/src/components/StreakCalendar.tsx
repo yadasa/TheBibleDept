@@ -1,13 +1,31 @@
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, StyleSheet, Text, View } from 'react-native';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { shiftDate } from '../../shared/habits';
 import { Colors, useThemedStyles, typography as t } from '../theme';
-import { readingCalendar, readingRunIntensity } from '../services/readingCalendar';
+import { readingCalendar, readingRunColor, readingRunIntensity } from '../services/readingCalendar';
+import { useReducedMotion } from './LiquidBottomNav';
+import { useScreenScrollControls } from './ScreenScrollView';
 
 /** All 52 weekly columns fit the available mobile width without scrolling. */
 export function StreakCalendar({days,today}:{days:readonly string[];today:string}) {
   const {c,s}=useThemedStyles(styles);
+  const controls=useScreenScrollControls(),reduced=useReducedMotion(),pulse=useSharedValue(.55);
+  const [active,setActive]=useState(controls.getMetrics().active),[foreground,setForeground]=useState(AppState.currentState!=='background'),[width,setWidth]=useState(0);
   const activity=useMemo(()=>readingCalendar(days,today),[days,today]);
+  const hasRun=[...activity.runs.values()].some(run=>run>1);
+  useEffect(()=>{
+    let previous=controls.getMetrics().active;setActive(previous);
+    return controls.subscribe(metrics=>{if(metrics.active!==previous){previous=metrics.active;setActive(previous);}});
+  },[controls]);
+  useEffect(()=>{const listener=AppState.addEventListener('change',state=>setForeground(state==='active'));return()=>listener.remove();},[]);
+  useEffect(()=>{
+    cancelAnimation(pulse);pulse.value=.55;
+    if(active&&foreground&&!reduced&&hasRun)pulse.value=withRepeat(withTiming(1,{duration:1900,easing:Easing.inOut(Easing.sin)}),-1,true);
+    return()=>cancelAnimation(pulse);
+  },[active,foreground,reduced,hasRun,pulse]);
+  const glowStyle=useAnimatedStyle(()=>({opacity:pulse.value}));
+  const cellSize=Math.max(0,(width-51)/52);
   const weeks=useMemo(()=>{
     const weekday=new Date(`${today}T12:00:00Z`).getUTCDay();
     const first=shiftDate(today,-(51*7+weekday));
@@ -19,15 +37,21 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
       <Text style={s.streak}><Text style={s.number}>{activity.total}</Text> total {activity.total===1?'day':'days'}</Text>
       <Text style={s.current}>{activity.current} {activity.current===1?'day':'days'} in a row</Text>
     </View>
-    <View testID="reading-contribution-calendar" style={s.chart}>
+    <View testID="reading-contribution-calendar" style={s.chart} onLayout={event=>setWidth(event.nativeEvent.layout.width)}>
+      <Animated.View testID="reading-streak-glow" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={[StyleSheet.absoluteFill,glowStyle]}>
+        {width>0&&weeks.flatMap((week,column)=>week.map((date,row)=>{
+          const run=activity.runs.get(date)||0;if(run<2)return null;
+          const intensity=readingRunIntensity(run);
+          return <View key={date} style={{position:'absolute',left:column*(cellSize+1),top:row*(cellSize+1),width:cellSize,height:cellSize,borderRadius:1,
+            backgroundColor:'rgba(255,188,66,0.01)',boxShadow:`0 0 2px rgba(240,90,0,${.45+intensity*.4}), 0 0 3px rgba(255,188,66,${.3+intensity*.4})`}}/>;
+        }))}
+      </Animated.View>
       {weeks.map(week=><View key={week[0]} style={s.week}>
         {week.map(date=>{
           const run=activity.runs.get(date)||0,done=run>0,future=date>today;
-          const intensity=readingRunIntensity(run);
-          // Keep orange recognizable: lift at most 22% toward white, with a tight gold halo.
-          const fill=done?c.orange.replace(/#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})/i,(_,r,g,b)=>`rgb(${[r,g,b].map(hex=>Math.round(parseInt(hex,16)+(255-parseInt(hex,16))*intensity*.22)).join(',')})`):undefined;
+          const fill=done?readingRunColor(c.orange,run):undefined;
           return <View key={date} accessible accessibilityLabel={`${new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'})}: ${future?'upcoming':done?'read':'no reading saved'}${done?`, ${run} ${run===1?'day':'days'} in a row`:''}`}
-            style={[s.square,done&&{backgroundColor:fill,borderColor:fill},run>1&&{boxShadow:`0 0 ${2+intensity}px rgba(255, 188, 66, ${.1+intensity*.12})`},date===today&&s.today,future&&s.future]}/>;
+            style={[s.square,done&&{backgroundColor:fill,borderColor:c.orange},date===today&&s.today,future&&s.future]}/>;
         })}
       </View>)}
     </View>
