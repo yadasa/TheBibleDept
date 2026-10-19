@@ -19,7 +19,6 @@ import { BlurView } from "expo-blur";
 import Svg, {
   Defs,
   LinearGradient,
-  RadialGradient,
   Rect,
   Stop,
 } from "react-native-svg";
@@ -103,33 +102,27 @@ export function GlassBackdrop({
         aria-hidden
       >
         <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-            <Stop
-              offset="0"
-              stopColor="white"
-              stopOpacity={tone === "primary" ? 0.12 : dark ? 0.22 : 0.48}
-            />
-            <Stop offset={0.3} stopColor="white" stopOpacity={0.055} />
-            <Stop offset={0.6} stopColor="white" stopOpacity={0.015} />
-            <Stop offset={1} stopColor="white" stopOpacity={0.09} />
-          </LinearGradient>
-          <RadialGradient
-            id={`${id}reflection`}
-            cx="5%"
-            cy="0%"
-            rx="95%"
-            ry="85%"
+          <LinearGradient
+            id={id}
+            gradientUnits="objectBoundingBox"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
           >
             <Stop
-              offset="0"
+              offset={0}
               stopColor="white"
-              stopOpacity={tone === "primary" ? 0.05 : dark ? 0.15 : 0.3}
+              stopOpacity={tone === "primary" ? 0.08 : dark ? 0.1 : 0.18}
             />
-            <Stop offset="1" stopColor="white" stopOpacity="0" />
-          </RadialGradient>
+            <Stop
+              offset={1}
+              stopColor="white"
+              stopOpacity={tone === "primary" ? 0.015 : dark ? 0.025 : 0.035}
+            />
+          </LinearGradient>
         </Defs>
         <Rect width="100%" height="100%" fill={`url(#${id})`} />
-        <Rect width="100%" height="100%" fill={`url(#${id}reflection)`} />
       </Svg>
     </View>
   );
