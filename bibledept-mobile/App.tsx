@@ -17,7 +17,7 @@ import { GrainBackground } from "./src/components/GrainBackground";
 import { GlassProvider } from "./src/components/Glass";
 import { PageMask } from "./src/components/PageMask";
 import { PageBackdrop } from "./src/components/PageBackdrop";
-import { MotionBlur } from "./src/components/MotionBlur";
+import { MotionBlur, MotionBlurHandle } from "./src/components/MotionBlur";
 import { PodcastProvider, usePodcast } from "./src/state/PodcastProvider";
 import { PodcastNowPlaying } from "./src/components/PodcastNowPlaying";
 import {
@@ -90,6 +90,7 @@ function AppShell() {
     slide = useRef(new Animated.Value(1)).current,
     blurTarget = useRef<View | null>(null),
     grainTarget = useRef<View | null>(null),
+    motionBlur = useRef<MotionBlurHandle>(null),
     [panelWidth, setPanelWidth] = useState(400);
   function openPassage(ref: string, version: Translation) {
     setReference(ref);
@@ -133,7 +134,7 @@ function AppShell() {
     };
   }, []);
   const beginTransition = useCallback(
-    (next: Tab, immediate: boolean) => {
+    async (next: Tab, immediate: boolean) => {
       const to = tabOrder.indexOf(next),
         from = immediate ? to : position.current;
       Keyboard.dismiss();
@@ -144,11 +145,15 @@ function AppShell() {
       journeyRef.current = { from, to };
       position.current = from;
       page.setValue(from);
+      await motionBlur.current?.prepare(from, immediate);
     },
     [page],
   );
   const settle = useCallback((next: Tab) => {
-    if (next === displayed.current) position.current = tabOrder.indexOf(next);
+    if (next === displayed.current) {
+      position.current = tabOrder.indexOf(next);
+      motionBlur.current?.finish();
+    }
   }, []);
   useEffect(() => {
     const listener = slide.addListener(({ value }) => {
@@ -202,7 +207,7 @@ function AppShell() {
               onLayout={(e) => setPanelWidth(e.nativeEvent.layout.width)}
               style={{ flex: 1, overflow: "hidden" }}
             >
-              <MotionBlur progress={slide}>
+              <MotionBlur ref={motionBlur} position={page} pageWidth={panelWidth}>
                 <Animated.View
                   testID="page-background-track"
                   style={{
