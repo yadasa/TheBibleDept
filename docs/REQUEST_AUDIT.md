@@ -17,11 +17,12 @@ as proof that a native feature worked on an iPhone.
 | Website/style-guide branding, natural copy and AM/PM settings | Existing copy and 12-hour controls are preserved. Both semantic themes remain supported. |
 | Keep the latest app visible in the preview | The active app runs on port 8081. The preview is refreshed against this checkout. |
 | Restore the Church bottom navigation | Full frosted shell restored from the local Church component/playground, with the orange selected pill and existing stretch motion. Paint layers are isolated to avoid ghosted labels. |
+| Invert nav icon fragments where the moving pill overlaps | An accessibility-hidden duplicate icon row sits inside the pill's existing rounded clip at an inverse offset. Its icon positions remain aligned with the normal row during travel and press feedback. There is no settlement timer for color changes, and only five destinations are exposed to accessibility. |
 | Correct horizontal layout and interrupted navigation | Explicit page widths, vertical-only scroll restoration, non-scrollable web clipping and exact final track positions are implemented. Browser checks passed at 390 and 704 px. |
 | Remove the hard glass opacity seam | Invalid native SVG values and clipped gradient edges were repaired. Native blur no longer sits under a masked ancestor. The latest physical iPhone result still needs confirmation. |
 | Five orange circles, larger, higher and shifted right | Each page owns a separate measured SVG viewport, local gradient definition and circular radius. They travel on the page track. The background extends beneath navigation and safe areas. |
 | Real orange podcast waveforms, including visible paused bars | Every episode has 96 genuine build-time RMS values; active playback supplies live PCM. Reference data totals 66,394 bytes. No audio is bundled or uploaded. |
-| Progress gradient and 1.25× / 1.5× / 2× speeds | Native media clock controls progress and pitch-corrected speeds. The bright progress accent fades backward over about 1.5 bar pitches. |
+| Progress gradient and 1.25× / 1.5× / 2× speeds | Native media clock controls progress and pitch-corrected speeds. The later trail revision extends the accent to 4.5 bar pitches and paints it only through the bars. The broad rectangular overlay was removed. |
 | Persistent player across pages | Global provider and mini controls remain active while pages change. Browser playback/navigation checks pass. |
 | Waveform behind mini-player text | Static, bottom-aligned silhouette; maximum bar height is 33% at rest and 67% while dragging. Only played color advances. Blur/sharpness and expansion ease on the UI thread. |
 | Drag the waveform and return directly to its full player | Drag seeks on release without changing pages. Tapping the mini-player opens the correct day and measured podcast section, retained through late layout changes. |
@@ -30,6 +31,9 @@ as proof that a native feature worked on an iPhone.
 | Congratulate the completed day | One day-specific congratulations modal appears after durable completion. Calendar and Home counts include automatic and out-of-order completions. |
 | Ease every waveform touch interaction | Press brightness, seek preview, release, mini-player expansion and blurred/sharp crossfade use eased UI-thread transitions. |
 | Neighboring-bar influence, 67% uninfluenced cap and thicker white indicator | Completed after optimization in its own pushed commit. Actual live amplitude eases across three neighbors on either side, reaching zero influence at four pitches. The maximum rises from 67% toward 100% at the current bar. Both indicators are 2.5 px; the mini silhouette retains its requested static behavior. |
+| Visible amplitude differences without a flat-looking plot | The full waveform now uses a fixed linear scale from the episode's reference peak. Day 1's paused plot spans about 29–51 px of a 76 px area instead of 14–18 px. Later loud samples cannot change unrelated bars' scale. |
+| Anchor height follows the recent bars | Both white indicators average the four preceding displayed bars, with an eased 180 ms height change. The full anchor remains centered; the mini anchor remains bottom-aligned. Preview measurement matched 35.0075 px for both the anchor and its four-bar average. |
+| One orange throughout the active app | `#F05A00`, the full waveform's existing orange, is the shared pigment for both themes, actions, glass, highlights, circles and both players. Brightness/transparency variants derive from that pigment. Small text retains readable theme ink; logos and distinct gold/sage highlights retain their source colors. |
 | True subtle lateral page motion blur | The earlier snapshot/exposure implementation was removed after regressions. Clean continuous page transitions are present; a native directional blur is not currently implemented. |
 | Continue audio while locked/backgrounded | **Unresolved and explicitly deferred by the user.** Actual Expo Go tests stop with sampling enabled and disabled. Force-quitting iOS also stops playback. No further audio-session/build changes were made after the deferral. |
 
@@ -75,10 +79,29 @@ native transition performance. Listening coverage deliberately does not award
 unobserved status gaps longer than 2.5 seconds, because a remote seek during a
 suspended JS interval cannot be distinguished from listening.
 
-After the separate falloff change, all **69 unit tests**, TypeScript, and fresh
+At the first falloff checkpoint, all **69 unit tests**, TypeScript, and fresh
 web/iOS exports passed. Browser playback showed changing live bar geometry,
 visible measured bars on pause, a 2.5 px cursor and a 1.5-pitch backward accent.
 The document remained 390 px wide at the phone-size viewport. The final matched
-iOS bytecode export is 4,194,936 bytes: 13,340 bytes (0.32%) above the earlier
+iOS bytecode export was 4,194,936 bytes: 13,340 bytes (0.32%) above the earlier
 baseline, including the added eased neighboring response. This is JavaScript
 bytecode size, not the size of an installed iPhone app.
+
+Final follow-up verification passed **77 unit tests**, TypeScript, and web, iOS
+and Android exports after the clipped trail, averaged anchors, spatial nav mask
+and shared orange palette. The mask's normal and inverted icon rows aligned in
+the browser during travel, with a 21 px rounded clip and exactly five accessible
+tab targets. Actual paused anchor height equaled its four preceding displayed
+bars' 35.0075 px mean. The longer trail was 22.5 px at a 5 px bar pitch, and its
+gradient belonged to bar fills with no broad overlay rectangle.
+The final 390 px playback observation retained all 127 waveform rectangles while
+15 heights changed, confirming that live response did not recreate the plot.
+Playback continued through Home and back to the measured podcast anchor. The
+final preview had no captured warnings/errors and no document overflow at either
+390 px or the restored 704 px preview width.
+
+The final matched iOS bytecode is 4,199,820 bytes, 18,224 bytes (0.44%) above the
+original export baseline. The new spatial mask intentionally retains a second
+visual icon row. These additions preserve the earlier rendering and loading
+optimizations; no signed-device performance result is implied. Each completed
+fix was committed and pushed separately.

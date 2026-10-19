@@ -66,7 +66,7 @@ These features are implemented in the active client and its new `bibledept-mobil
 
 The original [streak plan](docs/READING_STREAKS_PLAN.md) and [gentle reminder plan](docs/READING_REMINDERS_PLAN.md) remain as design rationale, with links to the delivered implementation and its queue simplifications. Reading stays free and reminders remain optional. A completed plan day changes the saved device position; **I've finished this chapter** records the cloud reading day.
 
-The checked-in Firebase default is still `demo-bibledept`. No production project was selected or deployed in this batch, and no real SMS or push was sent. Live release needs the intended Firebase project, merged rules/indexes, native Firebase/APNs/FCM credentials, Expo project configuration, and physical-device testing. See the [release review](docs/APP_RELEASE_REVIEW.md) for verification and remaining release work.
+The checked-in Firebase default is `demo-bibledept`; a local ignored environment file selects the development target. Live SMS and push delivery have not been validated. Release setup includes reviewed rules/indexes, native Firebase/APNs/FCM credentials, Expo project configuration and physical-device testing. See the [release review](docs/APP_RELEASE_REVIEW.md) for verification and remaining release work.
 
 ## Retained source for future migration
 

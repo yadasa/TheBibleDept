@@ -57,7 +57,7 @@ Local-demo screenshots: [dark Home with floating navigation and transparent logo
 
 ## Historical navigation repair — October 18, 2026
 
-The motion-blur measurements above remain as the earlier review baseline. The current implementation removes velocity-based exposure and native screen capture. Pages and grain now move directly on the continuous track, while synchronous transition setup and stable animated coordinates prevent rapid taps from restoring obsolete endpoints. The liquid pill remains, and labels stay readable while it moves. The transparent nav background and warm frosted materials are unchanged. Native transition performance still requires device review; snapshot capture is no longer part of that check.
+The motion-blur measurements above remain as the earlier review baseline. That repair removed velocity-based exposure and native screen capture, while synchronous transition setup and stable animated coordinates prevented rapid taps from restoring obsolete endpoints. The liquid pill remained. The transparent nav background was unchanged at that checkpoint; the later restored frosted shell and current spatial icon mask are recorded in [REQUEST_AUDIT.md](REQUEST_AUDIT.md). Native transition performance still requires device review; snapshot capture is no longer part of that check.
 
 ## Remaining live-release requirements
 
