@@ -76,6 +76,7 @@ export function HomeScreen({
           disabled={!plan.ready}
           onPress={onRead}
         />
+        <Text style={s.device}>Pick up where you left off.</Text>
         <View style={s.progressLabels}>
           <Text style={s.small}>{complete} days completed</Text>
           <Text style={s.small}>{percent}%</Text>
@@ -100,9 +101,6 @@ export function HomeScreen({
           />
         </>
       )}
-      <Text style={s.device}>
-        Pick up where you left off.
-      </Text>
       <StreakCalendar days={readDates} today={habit.today}/>
       {!!habit.error && <Notice text={habit.error} error />}
       {!!plan.syncError && <Notice text={plan.syncError}/>}
@@ -259,12 +257,12 @@ const styles = (c: Colors) =>
       flexDirection: "row",
       justifyContent: "space-between",
       gap: 12,
-      marginTop: 22,
+      marginTop: 4,
       marginBottom: 10,
     },
     track: { height: 4, backgroundColor: c.border },
     small: { ...t.meta, fontSize: 12, color: c.muted },
-    device: { ...t.meta, fontSize: 11, color: c.muted, marginTop: 10 },
+    device: { ...t.meta, fontSize: 11, lineHeight:14, color: c.muted, marginTop:4 },
     section: { ...t.section, fontSize: 20, lineHeight: 27, color: c.ink },
     sectionRow: { marginTop: 32, marginBottom: 16, gap: 8 },
     quickRow: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
