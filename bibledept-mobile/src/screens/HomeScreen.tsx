@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { shiftDate } from "../../shared/habits";
 import { ActionButton, Notice } from "../components/ui";
 import { Icon, IconName } from "../components/Icon";
+import { StreakArtwork } from '../components/StreakArtwork';
 import { useAuth } from "../services/AuthProvider";
 import { useHabit } from "../services/HabitProvider";
 import { useNotes } from "../services/NotesProvider";
@@ -102,7 +103,7 @@ export function HomeScreen({
         <View style={s.rhythm}>
           <View style={s.topline}>
             <Text style={s.section}>Reading streak</Text>
-            <Icon name="flame" color={c.action} />
+            <StreakArtwork days={habit.current}/>
           </View>
           <View style={s.stats}>
             <View>
@@ -178,7 +179,7 @@ export function HomeScreen({
         <View style={s.setup}>
           <View style={s.topline}>
             <Text style={s.section}>Track your reading</Text>
-            <Icon name="flame" color={c.action} />
+            <StreakArtwork days={0}/>
           </View>
           <Notice
             text={
