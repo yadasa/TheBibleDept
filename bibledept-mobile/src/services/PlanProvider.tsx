@@ -6,9 +6,11 @@ import { getReadingPlanDay } from './readingPlan';
 import { createLessonProgressStore, hasReadLesson, lessonProgressFor, LessonsProgress } from './lessonProgress';
 import { usePodcastListening } from '../state/PodcastProvider';
 import { LessonCompleteModal } from '../components/LessonCompleteModal';
+import { useAccountPlanSync } from './useAccountPlanSync';
+import type { AccountPlanProgress } from './planSync';
 
 type PlanContext = PlanProgress & {
-  selectedDay:number;ready:boolean;busy:boolean;error:string;
+  selectedDay:number;ready:boolean;busy:boolean;error:string;syncError:string;
   selectDay:(day:number)=>void;returnToCurrent:()=>void;advance:()=>Promise<void>;retry:()=>void;
   lessons:LessonsProgress;completedDays:number[];lessonError:string;
   rememberPosition:(day:number,chapter:number,offset:number)=>void;
@@ -34,6 +36,7 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
   const [acknowledging,setAcknowledging]=useState(false);
   const alive=useRef(true),completing=useRef(new Set<number>());
   const readingPositions=useRef<Partial<Record<number,{chapter:number;offset:number}>>>({}),lessonsRef=useRef(lessons);
+  const progressRef=useRef(progress);progressRef.current=progress;
   lessonsRef.current=lessons;
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   useEffect(()=>{
@@ -69,10 +72,16 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
         .finally(()=>completing.current.delete(day));
     }
   },[ready,audio.listeningReady,audio.listeningOwner,audio.listenedDays,owner,lessons,lessonStore]);
-  const completedDays=useMemo(()=>Array.from(new Set([
+  const localCompletedDays=useMemo(()=>Array.from(new Set([
     ...Array.from({length:progress.finished?365:progress.currentDay-1},(_,index)=>index+1),
     ...Object.entries(lessons).filter(([,lesson])=>lesson?.completed).map(([day])=>Number(day)),
   ])).sort((a,b)=>a-b),[progress,lessons]);
+  const applyRemote=useCallback(async(value:AccountPlanProgress)=>{
+    const before=progressRef.current,merged=await store.merge(value);
+    if(!alive.current)return;setProgress(merged);setSelectedDay(selected=>selected===before.currentDay?merged.currentDay:selected);
+  },[store]);
+  const account=useAccountPlanSync(owner==='guest'||owner==='opening'?undefined:owner,ready&&!error,progress,localCompletedDays,applyRemote);
+  const completedDays=useMemo(()=>Array.from(new Set([...localCompletedDays,...account.completedDays])).sort((a,b)=>a-b),[localCompletedDays,account.completedDays]);
   const completionDay=Object.entries(lessons).filter(([,lesson])=>lesson?.completed&&!lesson.acknowledged).map(([day])=>Number(day)).sort((a,b)=>a-b)[0];
   function acknowledge() {
     if(!completionDay||acknowledging)return;
@@ -88,7 +97,7 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
     catch {setError('We couldn’t save your next day. Please try again.');}
     finally {setBusy(false);}
   }
-  return <Context.Provider value={{...progress,selectedDay,ready,busy,error,lessons,completedDays,lessonError,rememberPosition,getReadingPosition,markChapterRead,
+  return <Context.Provider value={{...progress,selectedDay,ready,busy,error,syncError:account.syncError,lessons,completedDays,lessonError,rememberPosition,getReadingPosition,markChapterRead,
     selectDay:day=>{if(getReadingPlanDay(day))setSelectedDay(day);},returnToCurrent:()=>setSelectedDay(progress.currentDay),
     advance,retry:()=>setAttempt(value=>value+1)}}>{children}<LessonCompleteModal day={completionDay} busy={acknowledging} error={lessonError} onClose={acknowledge}/></Context.Provider>;
 }

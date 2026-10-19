@@ -40,3 +40,17 @@ test('invalid saved positions safely start at day one',async()=>{
     assert.equal((await store.load()).currentDay,1);
   }
 });
+
+test('account progress merges durably and a stale tap cannot advance a newer remote day',async()=>{
+  const storage=memoryStorage(),store=createPlanProgressStore(storage,'reader');await store.load();
+  assert.equal((await store.merge({currentDay:34,finished:false})).currentDay,34);
+  assert.equal((await store.advance(1)).currentDay,34);
+  assert.equal((await store.merge({currentDay:3,finished:false})).currentDay,34);
+  assert.equal((await createPlanProgressStore(storage,'reader').load()).currentDay,34);
+});
+test('failed account-cache writes preserve the old local day until retry',async()=>{
+  const storage=memoryStorage();let fail=true;
+  const store=createPlanProgressStore({...storage,setItem:async(key,value)=>{if(fail)throw Error('Unavailable');await storage.setItem(key,value);}},'reader');await store.load();
+  await assert.rejects(store.merge({currentDay:34,finished:false}));assert.equal(storage.values.size,0);
+  fail=false;assert.equal((await store.merge({currentDay:34,finished:false})).currentDay,34);
+});

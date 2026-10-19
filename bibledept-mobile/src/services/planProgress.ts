@@ -40,5 +40,12 @@ export function createPlanProgressStore(storage:Storage,key:string) {
       progress=next;
       return next;
     }),
+    merge:(incoming:PlanProgress)=>enqueue(async()=>{
+      if(!loaded)throw new Error('Local progress has not loaded.');
+      if(!Number.isInteger(incoming.currentDay)||incoming.currentDay<1||incoming.currentDay>365||typeof incoming.finished!=='boolean'||(incoming.finished&&incoming.currentDay!==365))throw new Error('Invalid account plan progress.');
+      const next:PlanProgress=Object.freeze({currentDay:Math.max(progress.currentDay,incoming.currentDay),finished:progress.finished||incoming.finished});
+      if(next.currentDay===progress.currentDay&&next.finished===progress.finished)return progress;
+      await storage.setItem(key,JSON.stringify([next.currentDay,next.finished?1:0]));progress=next;return next;
+    }),
   };
 }

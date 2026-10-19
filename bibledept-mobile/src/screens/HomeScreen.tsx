@@ -105,6 +105,7 @@ export function HomeScreen({
       </Text>
       <StreakCalendar days={readDates} today={habit.today} current={habit.ready?habit.current:currentStreak(summarizeDays(readDates),habit.today)}/>
       {!!habit.error && <Notice text={habit.error} error />}
+      {!!plan.syncError && <Notice text={plan.syncError}/>}
       <View style={s.sectionRow}>
         <Text accessibilityRole="header" style={s.section}>
           Notes & prayers

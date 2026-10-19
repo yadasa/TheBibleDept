@@ -179,6 +179,7 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
         :<ActionButton title={plan.currentDay===365?'Complete the plan':done?`Continue to day ${plan.currentDay+1}`:`Mark day ${plan.currentDay} complete & continue`} icon="check" onPress={()=>void plan.advance()} loading={plan.busy} disabled={!!plan.error}/>}
       {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Reload saved progress" onPress={plan.retry} secondary/></View>}
       <Text style={s.local}>Your place is saved.</Text>
+      {!!plan.syncError&&<Notice text={plan.syncError}/>}
       {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
     </View>
     <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={day.day}/>}</View>
