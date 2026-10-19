@@ -60,10 +60,17 @@ The first phone lock test stopped audio. The global player now retains its audio
 session while buffering, removes its redundant pre-replace pause, and serializes
 explicit activation/release. Backgrounding disables PCM visualization work without
 pausing the transport; foreground return restores sampling. Lock-screen controls
-register after playback begins. The repeat iPhone lock test remains outstanding.
+register after playback begins. The repeat iPhone lock test still stopped audio;
+the issue remains open. A fresh Expo Go run with PCM sampling disabled is the
+next controlled comparison. See the diagnostic instructions in PODCASTS.md.
 
 Numeric SVG gradient stops replace leading-decimal strings that the native SVG
 parser rejected and logged repeatedly. This repairs the material's stop positions
-and removes that warning source. The final repair passes TypeScript, 43 unit tests,
-and iOS JavaScript export. Browser checks cover rapid navigation reversals, exact
+and removes that warning source. The current repair passes TypeScript and 44 unit
+tests; the preceding navigation/audio revision passed iOS JavaScript export.
+Browser checks cover rapid navigation reversals, exact
 pill/page alignment, continued audio across pages, and no snapshot layers.
+
+The subsequent glass repair replaces stacked reflections with one continuous
+sheen, preserving actual backdrop blur. iPhone confirmation of the reported
+vertical opacity seam remains pending.

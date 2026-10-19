@@ -130,8 +130,27 @@ These changes follow the installed SDK's [session implementation](https://github
 [Expo Go's SDK 57 host](https://github.com/expo/expo/blob/sdk-57/apps/expo-go/ios/Exponent/Supporting/Info.plist)
 already declares audio background mode; no blanket Expo Go restriction is assumed.
 The repaired build passes TypeScript, unit tests, browser playback checks, and iOS
-export. A repeat physical lock-screen test is still required before calling the
-reported device problem resolved.
+export. The repeat physical lock-screen test also stopped playback, so the device
+problem remains unresolved.
+
+For a controlled Expo Go comparison, start a fresh Metro process in PowerShell:
+
+```powershell
+$env:EXPO_PUBLIC_PODCAST_DISABLE_SAMPLING = '1'
+npx expo start --go --lan --port 8081
+```
+
+Fully reload the project on the phone before playing. In development this flag
+prevents the PCM tap from ever being installed; the same stream, transport,
+session, and lock-screen setup remain active. The waveform stays flat during this
+test. Lifecycle diagnostics include UTC wall time, the native playback position,
+and `samplingDisabled: true`, without account data or media URLs. The comparison
+result is still pending. Remove the process variable and restart Metro to restore
+sampling; production builds ignore the flag.
+
+The shared frosted controls now use one continuous low-contrast sheen over the
+real backdrop blur. The reported vertical opacity seam still needs confirmation
+on the iPhone.
 
 ## Refresh and verify
 
@@ -154,8 +173,8 @@ python scripts/update-podcast-map.py --feed-file path/to/feed.xml --check
 The metadata is intentionally local and stable. A normal app launch does not download
 or parse the multi-megabyte RSS feed, and no extra cloud service is needed.
 
-Current audio/UI verification on 2026-10-18: TypeScript, all 43 unit tests, and the
-iOS JavaScript export passed. The audio tests cover real PCM levels and stereo
+Current audio/UI verification on 2026-10-18: TypeScript and all 44 unit tests pass.
+The preceding navigation/audio repair passed iOS JavaScript export. The audio tests cover real PCM levels and stereo
 phase handling, timestamp-based bins and unheard gaps, invalid clocks, endpoint
 binning, finite duration/seek guards, and speed choices. Native configuration
 introspection confirmed the iOS audio background mode without a microphone
