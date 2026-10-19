@@ -231,5 +231,5 @@ const styles = (c: Colors) =>
     verse: { color: c.ink, marginBottom: 16, textDecorationLine:"none" },
     verseAction:{alignItems:"flex-end",marginTop:-8,marginBottom:12},
     verseActionButton:{width:44,minHeight:44,borderRadius:22,alignItems:"center",justifyContent:"center"},
-    number: { fontSize: 13, fontWeight: "600", color: c.actionText },
+    number: { fontSize: 13, fontWeight: "600", color: c.orange },
   });
