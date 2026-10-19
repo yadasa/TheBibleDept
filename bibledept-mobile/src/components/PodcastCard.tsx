@@ -1,88 +1,46 @@
-import { GlassPressable } from "./Glass";
-import { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
-import { control, radius, useThemedStyles, Colors, typography as t } from '../theme';
+import { usePodcast, PLAYBACK_RATES } from '../state/PodcastProvider';
+import { radius, useThemedStyles, Colors, typography as t } from '../theme';
+import { GlassPressable } from './Glass';
 import { Icon } from './Icon';
 import { ActionButton, Notice } from './ui';
-
-type Episode=NonNullable<ReturnType<typeof getDayPodcast>>;
+import { PodcastWaveform } from './PodcastWaveform';
 
 export function PodcastCard({day}:{day:number}) {
-  const {c,s}=useThemedStyles(styles);
-  const episode=getDayPodcast(day);
-  // Changing days releases the old player, so another day's episode cannot keep playing.
-  return episode?<EpisodePlayer key={day} episode={episode}/>:null;
-}
-
-function EpisodePlayer({episode}:{episode:Episode}) {
-  const {c,s}=useThemedStyles(styles);
-  const player=useAudioPlayer(null,{updateInterval:500,downloadFirst:false,preferredForwardBufferDuration:15});
-  const status=useAudioPlayerStatus(player);
-  const [started,setStarted]=useState(false),[error,setError]=useState(''),[width,setWidth]=useState(0);
-  const seekRef=useRef<View>(null);
-  const problem=error||status.error;
-  const duration=Number.isFinite(status.duration)&&status.duration>0?status.duration:episode.durationSeconds;
-  const position=Number.isFinite(status.currentTime)?Math.max(0,status.currentTime):0;
-  const loading=started&&!status.isLoaded&&!problem;
-  useEffect(()=>{
-    setAudioModeAsync({playsInSilentMode:true,shouldPlayInBackground:false,interruptionMode:'doNotMix'})
-      .catch(()=>setError('Audio could not be prepared. Retry or open the episode below.'));
-  },[]);
-  useEffect(()=>{
-    if(!loading)return;
-    const timer=setTimeout(()=>{player.pause();setError('The episode took too long to load. Check your connection, then retry.');},20000);
-    return()=>clearTimeout(timer);
-  },[loading,player]);
-  function report(){setError('The episode could not play. Check your connection, retry, or open the episode below.');}
-  function toggle() {
-    setError('');
-    try {
-      if(status.playing){player.pause();return;}
-      if(!started||problem){player.replace({uri:episode.audioUrl});setStarted(true);}
-      if(status.didJustFinish||position>=duration)player.seekTo(0).then(()=>player.play()).catch(report);
-      else player.play();
-    } catch {report();}
-  }
-  function seek(seconds:number) {
-    if(!status.isLoaded||problem||!Number.isFinite(seconds))return;
-    player.seekTo(Math.max(0,Math.min(duration,seconds))).catch(report);
-  }
+  const {c,s}=useThemedStyles(styles),audio=usePodcast();
+  const episode=getDayPodcast(day),[linkError,setLinkError]=useState('');
+  if(!episode)return null;
+  const current=audio.episode?.day===day;
+  const problem=current?audio.error||audio.status.error:'';
+  const position=current?audio.position:0,duration=current?audio.duration:episode.durationSeconds;
+  const loaded=current&&audio.status.isLoaded&&!problem;
+  const playing=current&&audio.status.playing;
   async function open(url:string) {
-    try {await Linking.openURL(url);}catch{setError('This link could not open. Please try again.');}
+    setLinkError('');
+    try {await Linking.openURL(url);}catch{setLinkError('This link couldn’t open. Try again.');}
   }
-  // Native assistive actions use onAccessibilityAction below. RN Web forwards
-  // capture events, so the slider also supports a physical keyboard.
-  const webSeekKeys=Platform.OS==='web'?{onKeyDownCapture:(event:{key:string;preventDefault:()=>void})=>{
-    const target=event.key==='ArrowRight'||event.key==='ArrowUp'?position+15
-      :event.key==='ArrowLeft'||event.key==='ArrowDown'?position-15
-      :event.key==='Home'?0:event.key==='End'?duration:undefined;
-    if(target!==undefined){event.preventDefault();seek(target);}
-  }}:{};
   return <View style={s.card}>
     <View style={s.heading}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>Daily teaching</Text></View>
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
     {!!episode.rangeNote&&<Text style={s.note}>{episode.rangeNote}</Text>}
-    <Pressable {...webSeekKeys} ref={seekRef} accessibilityRole="adjustable" accessibilityLabel="Episode playback position" aria-valuemin={0} aria-valuemax={Math.round(duration)} aria-valuenow={Math.round(Math.min(position,duration))} aria-valuetext={`${audioTime(position)} of ${audioTime(duration)}`} aria-disabled={!status.isLoaded||!!problem} accessibilityValue={{min:0,max:Math.round(duration),now:Math.round(Math.min(position,duration)),text:`${audioTime(position)} of ${audioTime(duration)}`}} accessibilityActions={[{name:'increment',label:'Forward 15 seconds'},{name:'decrement',label:'Back 15 seconds'}]} onAccessibilityAction={event=>seek(position+(event.nativeEvent.actionName==='increment'?15:-15))} onLayout={event=>setWidth(event.nativeEvent.layout.width)} onPress={event=>{
-      const {locationX,pageX}=event.nativeEvent;
-      if(Number.isFinite(locationX)&&width>0)seek(duration*locationX/width);
-      else if(Number.isFinite(pageX))seekRef.current?.measureInWindow((x,_y,measuredWidth)=>{if(measuredWidth>0)seek(duration*(pageX-x)/measuredWidth);});
-    }} style={({pressed})=>[s.seek,pressed&&s.pressed]}>
-      <View style={s.track}><View style={[s.progress,{width:`${Math.min(100,100*position/duration)}%`}]}/></View>
-    </Pressable>
+    <PodcastWaveform samples={current?audio.samples:Array(96).fill(0)} liveLevel={current?audio.liveLevel:0} position={position} duration={duration} playing={playing} canSeek={!!loaded} onSeek={audio.seek}/>
     <View style={s.times}><Text style={s.time}>{audioTime(position)}</Text><Text style={s.time}>{audioTime(duration)}</Text></View>
+    <Text style={s.waveCaption}>{current&&!audio.samplingSupported?'Audio visualization isn’t available on this device.':current&&audio.hasSamples?'Drag the waveform to skip through the episode.':'The waveform fills in as you listen.'}</Text>
     <View style={s.controls}>
-      <GlassPressable accessibilityRole="button" accessibilityLabel="Rewind podcast 15 seconds" accessibilityState={{disabled:!status.isLoaded||!!problem}} disabled={!status.isLoaded||!!problem} onPress={()=>seek(position-15)} style={({pressed})=>[s.skip,pressed&&s.pressed,(!status.isLoaded||!!problem)&&s.disabled]}><View style={s.reverse}><Icon name="refresh" size={22}/></View><Text style={s.skipText}>15s</Text></GlassPressable>
-      <View style={s.play}><ActionButton title={problem?'Retry episode':status.playing?'Pause episode':'Play episode'} icon={problem?'refresh':status.playing?'pause':'play'} onPress={toggle} loading={loading}/></View>
-      <GlassPressable accessibilityRole="button" accessibilityLabel="Forward podcast 15 seconds" accessibilityState={{disabled:!status.isLoaded||!!problem}} disabled={!status.isLoaded||!!problem} onPress={()=>seek(position+15)} style={({pressed})=>[s.skip,pressed&&s.pressed,(!status.isLoaded||!!problem)&&s.disabled]}><Icon name="refresh" size={22}/><Text style={s.skipText}>15s</Text></GlassPressable>
+      <GlassPressable accessibilityRole="button" accessibilityLabel="Rewind podcast 15 seconds" accessibilityState={{disabled:!loaded}} disabled={!loaded} onPress={()=>audio.seek(position-15)} style={({pressed})=>[s.skip,pressed&&s.pressed,!loaded&&s.disabled]}><View style={s.reverse}><Icon name="refresh" size={22}/></View><Text style={s.skipText}>15s</Text></GlassPressable>
+      <View style={s.play}><ActionButton title={problem?'Retry episode':playing?'Pause episode':'Play episode'} icon={problem?'refresh':playing?'pause':'play'} onPress={()=>audio.play(day)} loading={current&&audio.loading}/></View>
+      <GlassPressable accessibilityRole="button" accessibilityLabel="Forward podcast 15 seconds" accessibilityState={{disabled:!loaded}} disabled={!loaded} onPress={()=>audio.seek(position+15)} style={({pressed})=>[s.skip,pressed&&s.pressed,!loaded&&s.disabled]}><Icon name="refresh" size={22}/><Text style={s.skipText}>15s</Text></GlassPressable>
     </View>
-    {loading&&<Notice text="Opening the episode…"/>}
-    {!!problem&&<Notice text={error||'The audio stream could not load. Retry or open the episode below.'} error/>}
+    <View accessibilityRole="radiogroup" accessibilityLabel="Playback speed" style={s.speeds}>{PLAYBACK_RATES.map(rate=><GlassPressable key={rate} tone={audio.playbackRate===rate?'selected':'neutral'} accessibilityRole="radio" accessibilityLabel={`${rate} times speed`} aria-checked={audio.playbackRate===rate} accessibilityState={{checked:audio.playbackRate===rate}} onPress={()=>audio.setRate(rate)} style={s.speed}><Text style={[s.speedText,audio.playbackRate===rate&&s.selectedSpeed]}>{rate}×</Text></GlassPressable>)}</View>
+    {!!problem&&<Notice text={String(problem)} error/>}
+    {!current&&audio.episode&&<Text style={s.note}>Day {audio.episode.day} is {audio.status.playing?'playing':'paused'}. Play this episode to switch.</Text>}
+    {!!linkError&&<Notice text={linkError} error/>}
     <Pressable accessibilityRole="link" onPress={()=>void open(episode.episodeUrl)} style={({pressed})=>[s.episodeLink,pressed&&s.pressed]}><Text style={s.link}>Open episode page</Text><Icon name="external" size={16} color={c.action}/></Pressable>
     <View style={s.follow}><Text style={s.followLabel}>Follow the podcast</Text><View style={s.platforms}><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Apple Podcasts" onPress={()=>void open(PODCAST_LINKS.apple)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Apple Podcasts</Text><Icon name="external" size={14}/></Pressable><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Spotify" onPress={()=>void open(PODCAST_LINKS.spotify)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Spotify</Text><Icon name="external" size={14}/></Pressable></View></View>
-    <Text style={s.credit}>Official publisher stream · Internet required</Text>
+    <Text style={s.credit}>Streaming from the official RedCircle podcast feed.</Text>
   </View>;
 }
 
@@ -93,9 +51,8 @@ const styles=(c:Colors)=>StyleSheet.create({
   title:{...t.section,color:c.ink},
   host:{...t.meta,color:c.muted,marginTop:8},
   note:{...t.meta,color:c.muted,backgroundColor:c.tint,padding:12,borderRadius:radius,marginTop:16},
-  seek:{minHeight:control.iconSize,justifyContent:'center',marginTop:12},
-  track:{height:5,backgroundColor:c.border,borderRadius:radius,overflow:'hidden'},
-  progress:{height:5,backgroundColor:c.action},
+  waveCaption:{...t.meta,color:c.muted,marginTop:6},
+  speeds:{flexDirection:'row',gap:8,marginTop:16},speed:{flex:1,minHeight:44,alignItems:'center',justifyContent:'center',borderRadius:8},speedText:{...t.label,color:c.ink,fontVariant:['tabular-nums']},selectedSpeed:{color:c.action,textDecorationLine:'underline'},
   times:{flexDirection:'row',justifyContent:'space-between'},
   time:{...t.meta,fontVariant:['tabular-nums'],color:c.muted},
   controls:{flexDirection:'row',alignItems:'center',gap:8,marginTop:8},

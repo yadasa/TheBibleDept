@@ -4,7 +4,7 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 export default ({config}:ConfigContext):ExpoConfig => {
   const nativePhoneAuth=process.env.BIBLEDEPT_NATIVE_PHONE==='1';
   const plugins=[...(config.plugins||[])];
-  plugins.push('expo-asset','expo-image',['expo-notifications',{defaultChannel:'reading-reminders'}],['expo-audio',{microphonePermission:false,recordAudioAndroid:false,enableBackgroundRecording:false,enableBackgroundPlayback:false}]);
+  plugins.push('expo-asset','expo-image',['expo-notifications',{defaultChannel:'reading-reminders'}],['expo-audio',{microphonePermission:false,recordAudioAndroid:false,enableBackgroundRecording:false,enableBackgroundPlayback:true}]);
   if(nativePhoneAuth){
     const iosFile=process.env.BIBLEDEPT_FIREBASE_IOS_CONFIG;
     const androidFile=process.env.BIBLEDEPT_FIREBASE_ANDROID_CONFIG;

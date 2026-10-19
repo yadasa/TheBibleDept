@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
@@ -18,6 +18,8 @@ import { GlassProvider } from "./src/components/Glass";
 import { PageMask } from "./src/components/PageMask";
 import { PageBackdrop } from "./src/components/PageBackdrop";
 import { MotionBlur } from "./src/components/MotionBlur";
+import { PodcastProvider, usePodcast } from "./src/state/PodcastProvider";
+import { PodcastNowPlaying } from "./src/components/PodcastNowPlaying";
 import {
   pagePosition,
   pagesCrossed,
@@ -51,21 +53,23 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <HabitProvider>
-            <NotificationProvider>
-              <NotesProvider>
-                <ReadingProvider>
-                  <ReadingTextProvider>
-                    <PlanProvider>
-                      <AppShell />
-                    </PlanProvider>
-                  </ReadingTextProvider>
-                </ReadingProvider>
-              </NotesProvider>
-            </NotificationProvider>
-          </HabitProvider>
-        </ThemeProvider>
+        <PodcastProvider>
+          <ThemeProvider>
+            <HabitProvider>
+              <NotificationProvider>
+                <NotesProvider>
+                  <ReadingProvider>
+                    <ReadingTextProvider>
+                      <PlanProvider>
+                        <AppShell />
+                      </PlanProvider>
+                    </ReadingTextProvider>
+                  </ReadingProvider>
+                </NotesProvider>
+              </NotificationProvider>
+            </HabitProvider>
+          </ThemeProvider>
+        </PodcastProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
@@ -287,16 +291,7 @@ function AppShell() {
                               keyboardShouldPersistTaps="handled"
                               keyboardDismissMode="on-drag"
                             >
-                              <View
-                                style={{
-                                  width: "100%",
-                                  maxWidth: 720,
-                                  alignSelf: "center",
-                                  paddingHorizontal: 20,
-                                  paddingTop: 24,
-                                  paddingBottom: 168,
-                                }}
-                              >
+                              <PodcastPageContent>
                                 {!!headings[item] && (
                                   <Text
                                     accessibilityRole="header"
@@ -336,7 +331,7 @@ function AppShell() {
                                 ) : (
                                   <AccountScreen />
                                 )}
-                              </View>
+                              </PodcastPageContent>
                             </ScreenScrollView>
                           </View>
                         );
@@ -346,6 +341,12 @@ function AppShell() {
               </MotionBlur>
             </View>
           </BlurTargetView>
+          <PodcastNowPlaying onOpen={day => {
+            plan.selectDay(day);
+            setReference(undefined);
+            setRevision(value => value + 1);
+            setTab("Bible");
+          }} />
           <LiquidBottomNav
             active={tab}
             onNavigate={setTab}
@@ -358,4 +359,17 @@ function AppShell() {
       </SafeAreaView>
     </GlassProvider>
   );
+}
+
+/** Keep high-frequency player updates outside the retained page components. */
+function PodcastPageContent({ children }: PropsWithChildren) {
+  const { episode } = usePodcast();
+  return <View style={{
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: episode ? 240 : 168,
+  }}>{children}</View>;
 }

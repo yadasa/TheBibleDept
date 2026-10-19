@@ -1,0 +1,44 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { clampPodcastPosition, emptyPodcastSamples, PLAYBACK_RATES, podcastDuration, podcastSampleLevel, recordPodcastSample } from '../src/services/podcastAudio';
+
+test('PCM level measures both stereo channels without phase cancellation and rejects invalid frames', () => {
+  assert.equal(podcastSampleLevel([{ frames: [.5, -.5] }, { frames: [-.5, .5] }]), .5);
+  assert.equal(podcastSampleLevel([{ frames: [NaN, Infinity, -Infinity] }]), null);
+  assert.equal(podcastSampleLevel([{ frames: [0, 0] }]), 0);
+  assert.equal(podcastSampleLevel([{ frames: [2, -3, NaN] }]), 1);
+});
+
+test('only the actual media timestamp gains a waveform peak; skipped and future sections stay unknown', () => {
+  const empty = emptyPodcastSamples();
+  const first = recordPodcastSample(empty, { timestamp: 10, channels: [{ frames: [.4, -.4] }] }, 96)!;
+  assert.equal(first.samples.length, 96);
+  assert.equal(first.samples[10], .4);
+  assert.equal(first.liveLevel, .4);
+  assert.equal(empty[10], 0);
+  const quieter = recordPodcastSample(first.samples, { timestamp: 10.5, channels: [{ frames: [.1] }] }, 96)!;
+  assert.equal(quieter.samples[10], .4);
+  assert.equal(quieter.liveLevel, .1);
+  const seeked = recordPodcastSample(quieter.samples, { timestamp: 60, channels: [{ frames: [.6] }] }, 96)!;
+  assert.equal(seeked.samples[60], .6);
+  assert.equal(seeked.samples[30], 0);
+  assert.equal(seeked.samples[95], 0);
+});
+
+test('sampling rejects invalid clocks and duration and maps an exact endpoint to the last bin', () => {
+  const samples = emptyPodcastSamples();
+  for (const timestamp of [-1, NaN, Infinity, 101]) {
+    assert.equal(recordPodcastSample(samples, { timestamp, channels: [{ frames: [.5] }] }, 100), null);
+  }
+  assert.equal(recordPodcastSample(samples, { timestamp: 0, channels: [{ frames: [.5] }] }, 0), null);
+  assert.equal(recordPodcastSample(samples, { timestamp: 100, channels: [{ frames: [.5] }] }, 100)?.samples[95], .5);
+});
+
+test('duration and seek guards use finite values and speeds stay within the supported choices', () => {
+  assert.equal(podcastDuration(NaN, 120), 120);
+  assert.equal(podcastDuration(Infinity, -1), 0);
+  assert.equal(clampPodcastPosition(-20, 120), 0);
+  assert.equal(clampPodcastPosition(900, 120), 120);
+  assert.equal(clampPodcastPosition(NaN, 120), 0);
+  assert.deepEqual(PLAYBACK_RATES, [1, 1.25, 1.5, 2]);
+});
