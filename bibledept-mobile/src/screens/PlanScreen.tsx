@@ -16,31 +16,32 @@ import { ReadingCompletion } from '../components/ReadingCompletion';
 import { hasReachedReadingEnd, lessonProgressFor } from '../services/lessonProgress';
 import { usePodcastListening } from '../state/PodcastProvider';
 import { messageForUser } from '../services/userMessage';
+import { showPlanIntroduction } from '../services/planEntry';
 
-type PlanScreenProps={active?:boolean;onAccount:()=>void;requestRevision?:number;podcastRequestRevision?:number;podcastRequestDay?:number};
+type PlanScreenProps={active?:boolean;onAccount:()=>void;requestRevision?:number;planRequestDay?:number;podcastRequestRevision?:number;podcastRequestDay?:number};
 
-export function PlanScreen({active=true,onAccount,requestRevision=0,podcastRequestRevision=0,podcastRequestDay=1}:PlanScreenProps) {
+export function PlanScreen({active=true,onAccount,requestRevision=0,planRequestDay,podcastRequestRevision=0,podcastRequestDay=1}:PlanScreenProps) {
   const plan=usePlan(),scrollTop=useScreenScroll();
-  const [intro,setIntro]=useState(false),[introAnchor,setIntroAnchor]=useState(false),[anchorRevision,setAnchorRevision]=useState(0);
-  const requests=useRef({reading:requestRevision,podcast:0,day:plan.selectedDay});
+  const [intro,setIntro]=useState(()=>plan.ready&&showPlanIntroduction(planRequestDay??plan.selectedDay,plan.completedDays)),[introAnchor,setIntroAnchor]=useState(false),[anchorRevision,setAnchorRevision]=useState(0);
+  const requests=useRef({reading:requestRevision,podcast:0,day:plan.selectedDay,ready:plan.ready});
   useEffect(()=>{
     const previous=requests.current;
-    requests.current={reading:requestRevision,podcast:podcastRequestRevision,day:plan.selectedDay};
+    requests.current={reading:requestRevision,podcast:podcastRequestRevision,day:plan.selectedDay,ready:plan.ready};
     if(podcastRequestRevision>0&&previous.podcast!==podcastRequestRevision) {
       setIntro(podcastRequestDay===0);
       setIntroAnchor(podcastRequestDay===0);
       setAnchorRevision(podcastRequestDay===0?0:podcastRequestRevision);
-    } else if(previous.reading!==requestRevision||previous.day!==plan.selectedDay) {
-      setIntro(false);setAnchorRevision(0);
+    } else if(previous.reading!==requestRevision||previous.day!==plan.selectedDay||(!previous.ready&&plan.ready)) {
+      setIntro(showPlanIntroduction(previous.reading!==requestRevision?(planRequestDay??plan.selectedDay):plan.selectedDay,plan.completedDays));setIntroAnchor(false);setAnchorRevision(0);
     }
-  },[requestRevision,podcastRequestRevision,podcastRequestDay,plan.selectedDay]);
+  },[requestRevision,planRequestDay,podcastRequestRevision,podcastRequestDay,plan.selectedDay,plan.ready,plan.completedDays]);
   function openIntro(){setIntro(true);setIntroAnchor(false);setAnchorRevision(0);scrollTop();}
-  function openDay(day:number){plan.selectDay(day);setIntro(false);setAnchorRevision(0);scrollTop();}
-  return intro?<PlanIntroduction active={active} openAtPlayer={introAnchor} currentDay={plan.currentDay} selectedDay={plan.selectedDay} finished={plan.finished} completedDays={plan.completedDays} onDay={openDay}/>
-    :<DailyPlanScreen active={active} onAccount={onAccount} podcastRequestRevision={anchorRevision} onIntro={openIntro}/>;
+  function openDay(day:number,continuing=false){requests.current.day=day;plan.selectDay(day);setIntro(showPlanIntroduction(day,plan.completedDays,continuing));setIntroAnchor(false);setAnchorRevision(0);scrollTop();}
+  return intro?<PlanIntroduction active={active} openAtPlayer={introAnchor} currentDay={plan.currentDay} selectedDay={plan.selectedDay} finished={plan.finished} completedDays={plan.completedDays} onDay={openDay} onContinue={()=>openDay(plan.currentDay,true)}/>
+    :<DailyPlanScreen active={active} onAccount={onAccount} podcastRequestRevision={anchorRevision} onIntro={openIntro} onDay={openDay}/>;
 }
 
-function PlanIntroduction({active,openAtPlayer,currentDay,selectedDay,finished,completedDays,onDay}:{active:boolean;openAtPlayer:boolean;currentDay:number;selectedDay:number;finished:boolean;completedDays:readonly number[];onDay:(day:number)=>void}) {
+function PlanIntroduction({active,openAtPlayer,currentDay,selectedDay,finished,completedDays,onDay,onContinue}:{active:boolean;openAtPlayer:boolean;currentDay:number;selectedDay:number;finished:boolean;completedDays:readonly number[];onDay:(day:number)=>void;onContinue:()=>void}) {
   const {s}=useThemedStyles(styles),controls=useScreenScrollControls();
   const [picker,setPicker]=useState(false),podcastRef=useRef<View>(null);
   const registerPodcast=useCallback(()=>{if(active)controls.registerAnchor('podcast',podcastRef.current);},[active,controls]);
@@ -57,12 +58,12 @@ function PlanIntroduction({active,openAtPlayer,currentDay,selectedDay,finished,c
       <Text style={s.local}>This introduction is optional. Your reading plan still starts on day 1.</Text>
     </View>
     <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={0}/>}</View>
-    <View style={s.introContinue}><ActionButton title={`Open day ${currentDay}`} icon="arrowRight" onPress={()=>onDay(currentDay)}/></View>
+    <View style={s.introContinue}><ActionButton title={`Continue to day ${currentDay}`} icon="arrowRight" onPress={onContinue}/></View>
     <DayPicker visible={picker} selectedDay={selectedDay} selectedIntro currentDay={currentDay} finished={finished} completedDays={completedDays} onSelect={onDay} onIntro={()=>setPicker(false)} onClose={()=>setPicker(false)}/>
   </View>;
 }
 
-function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro}:{active?:boolean;onAccount:()=>void;podcastRequestRevision?:number;onIntro:()=>void}) {
+function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro,onDay}:{active?:boolean;onAccount:()=>void;podcastRequestRevision?:number;onIntro:()=>void;onDay:(day:number)=>void}) {
   const {c,s}=useThemedStyles(styles);
   const scrollTop=useScreenScroll();
   const plan=usePlan(),day=getReadingPlanDay(plan.selectedDay)!;
@@ -181,7 +182,7 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
       {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
     </View>
     <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={day.day}/>}</View>
-    <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={plan.selectDay} onIntro={onIntro} onClose={()=>setPicker(false)}/>
+    <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={onDay} onIntro={onIntro} onClose={()=>setPicker(false)}/>
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getReadingPlanDay } from '../services/readingPlan';
+import { calendarPageDays } from '../services/planEntry';
 import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { Icon } from './Icon';
 import { ActionButton, Field, IconButton, Notice } from './ui';
@@ -24,8 +25,8 @@ export function DayPicker({ visible, selectedDay, selectedIntro=false, currentDa
     return () => { active = false; subscription.remove(); };
   }, []);
   useEffect(() => {
-    if (visible) { setPage(Math.floor((selectedDay - 1) / 30)); setDraft(''); setError(''); }
-  }, [visible, selectedDay]);
+    if (visible) { setPage(selectedIntro?0:Math.floor((selectedDay - 1) / 30)); setDraft(''); setError(''); }
+  }, [visible, selectedDay, selectedIntro]);
 
   // Follow available width and native text scale, rather than squeezing seven
   // calendar columns into an unscheduled reading plan.
@@ -62,16 +63,16 @@ export function DayPicker({ visible, selectedDay, selectedIntro=false, currentDa
             <Text style={s.currentSpotText}>{finished ? 'Plan complete' : 'Your current day'}<Text style={s.currentSpotDay}> · Day {currentDay}</Text></Text>
             <Icon name="arrowRight" size={18} color={c.action}/>
           </GlassPressable>
-          {onIntro&&<GlassPressable accessibilityRole="button" accessibilityLabel="Open the optional introduction" accessibilityState={{selected:selectedIntro}} tone={selectedIntro?'selected':'neutral'} onPress={()=>{Keyboard.dismiss();onIntro();onClose();}} style={({pressed})=>[s.introSpot,selectedIntro&&s.selected,pressed&&s.pressed]}><Icon name="headphones" size={20}/><View style={s.introText}><Text style={s.currentSpotText}>Introduction</Text><Text style={s.introHint}>Optional · before day 1</Text></View><Icon name="chevronRight" size={18}/></GlassPressable>}
 
           <View style={s.paging}>
             <GlassPressable accessibilityRole="button" accessibilityLabel="Previous 30 days" accessibilityState={{ disabled: page === 0 }} disabled={page === 0} onPress={() => setPage(value => value - 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, page === 0 && s.disabled]}><Icon name="chevronLeft" size={20}/></GlassPressable>
-            <Text accessibilityLiveRegion="polite" style={s.range}>Days {first}–{last}</Text>
+            <Text accessibilityLiveRegion="polite" style={s.range}>{page===0?'Intro · ':'Days '}{first}–{last}</Text>
             <GlassPressable accessibilityRole="button" accessibilityLabel="Next 30 days" accessibilityState={{ disabled: last === 365 }} disabled={last === 365} onPress={() => setPage(value => value + 1)} style={({ pressed }) => [s.arrow, pressed && s.pressed, last === 365 && s.disabled]}><Icon name="chevronRight" size={20}/></GlassPressable>
           </View>
           <View onLayout={event => setGridWidth(event.nativeEvent.layout.width)} style={s.grid}>
-            {Array.from({ length: last - first + 1 }, (_, index) => first + index).map(day => {
-              const current = day === currentDay, selected = day === selectedDay, done = day < currentDay || finished || completedDays.includes(day);
+            {calendarPageDays(page).map(day => {
+              if(day===0)return <GlassPressable key={0} accessibilityRole="button" accessibilityLabel="Day 0, Intro" accessibilityState={{selected:selectedIntro}} onPress={()=>{Keyboard.dismiss();if(onIntro)onIntro();else onSelect(0);onClose();}} tone={selectedIntro?'selected':'neutral'} style={({pressed})=>[s.day,{width:cellWidth},selectedIntro&&s.selected,pressed&&s.pressed]}><Text style={s.dayText}>Intro</Text></GlassPressable>;
+              const current = day === currentDay, selected = !selectedIntro&&day === selectedDay, done = day < currentDay || finished || completedDays.includes(day);
               return <GlassPressable key={day} accessibilityRole="button" accessibilityLabel={'Day ' + day + ', ' + getReadingPlanDay(day)!.label + (current ? ', your current day' : '') + (done ? ', completed' : '')} accessibilityState={{ selected }} onPress={() => select(day)} tone={current ? "primary" : selected ? "selected" : "neutral"} style={({ pressed }) => [s.day, { width: cellWidth }, done && s.done, current && s.current, selected && s.selected, pressed && s.pressed]}>
                 <View style={s.dayNumber}><Text style={[s.dayText, current && s.currentText]}>{day}</Text></View>
                 {done && <View style={s.completionMarker}><Icon name="check" size={14} color={current ? c.onAction : c.success}/></View>}

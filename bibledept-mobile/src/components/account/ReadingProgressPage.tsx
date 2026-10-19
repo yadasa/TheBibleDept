@@ -31,7 +31,7 @@ export function ReadingProgressPage({onBack,onOpenPlan,onReadPassage,onReadingSe
       {history.readings.length>visibleCount&&<ActionButton title="Show more readings" secondary onPress={()=>setVisibleCount(count=>count+20)}/>}
       {!!history.error&&<Notice text={history.error} error/>}
     </View>
-    <DayPicker visible={picker} selectedDay={plan.selectedDay} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onClose={()=>setPicker(false)} onSelect={selected=>{if(onOpenPlan)onOpenPlan(selected);else plan.selectDay(selected);}}/>
+    <DayPicker visible={picker} selectedDay={plan.selectedDay} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onClose={()=>setPicker(false)} onIntro={onOpenPlan?()=>onOpenPlan(0):undefined} onSelect={selected=>{if(onOpenPlan)onOpenPlan(selected);else plan.selectDay(selected);}}/>
   </AccountPage>;
 }
 const styles=(c:Colors)=>StyleSheet.create({label:{...t.label,color:c.muted,letterSpacing:1},day:{...t.title,color:c.ink,marginTop:10},reference:{...t.section,color:c.ink,marginTop:6},metrics:{flexDirection:'row',flexWrap:'wrap',gap:12},section:{marginTop:30,paddingTop:24,borderTopWidth:1,borderColor:c.border},heading:{...t.section,color:c.ink,marginBottom:12},body:{...t.meta,color:c.muted},loading:{flexDirection:'row',alignItems:'center',gap:12,paddingVertical:20},historyNote:{...t.meta,color:c.muted,marginBottom:16}});

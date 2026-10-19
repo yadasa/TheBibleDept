@@ -9,7 +9,7 @@ import { useThemedStyles, Colors } from '../theme';
 import type { Translation } from '../services/bible';
 
 type Mode='plan'|'search';
-export function BibleHub({initialReference,initialTranslation,onAccount,active=true,requestRevision=0,podcastRequestRevision=0,podcastRequestDay=1}:{initialReference?:string;initialTranslation?:Translation;onAccount:()=>void;active?:boolean;requestRevision?:number;podcastRequestRevision?:number;podcastRequestDay?:number}) {
+export function BibleHub({initialReference,initialTranslation,onAccount,active=true,requestRevision=0,planRequestDay,podcastRequestRevision=0,podcastRequestDay=1}:{initialReference?:string;initialTranslation?:Translation;onAccount:()=>void;active?:boolean;requestRevision?:number;planRequestDay?:number;podcastRequestRevision?:number;podcastRequestDay?:number}) {
   const {c,s}=useThemedStyles(styles);
   const id=useId().replace(/[^a-zA-Z0-9]/g,'');
   const [mode,setMode]=useState<Mode>(initialReference?'search':'plan');
@@ -48,7 +48,7 @@ export function BibleHub({initialReference,initialTranslation,onAccount,active=t
         aria-labelledby={`bible-${id}-tab-${value}`} aria-hidden={!active||!showing}
         {...(Platform.OS==='web'?{inert:!active||!showing}:{})}
         style={!showing&&s.hidden} accessibilityElementsHidden={!active||!showing} importantForAccessibility={active&&showing?'auto':'no-hide-descendants'}>
-        {mounted&&(value==='plan'?<PlanScreen active={active&&showing} onAccount={onAccount} podcastRequestRevision={podcastRequestRevision} podcastRequestDay={podcastRequestDay} requestRevision={requestRevision}/>:<BibleScreen initialReference={searchRequest.reference} initialTranslation={searchRequest.translation} requestRevision={searchRequest.revision} onAccount={onAccount}/>)}
+        {mounted&&(value==='plan'?<PlanScreen active={active&&showing} onAccount={onAccount} podcastRequestRevision={podcastRequestRevision} podcastRequestDay={podcastRequestDay} requestRevision={requestRevision} planRequestDay={planRequestDay}/>:<BibleScreen initialReference={searchRequest.reference} initialTranslation={searchRequest.translation} requestRevision={searchRequest.revision} onAccount={onAccount}/>)}
       </View>;
     })}
   </View>;

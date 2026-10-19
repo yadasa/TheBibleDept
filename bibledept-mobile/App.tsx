@@ -99,6 +99,7 @@ function AppShell() {
     [reference, setReference] = useState<string>(),
     [translation, setTranslation] = useState<Translation>("web"),
     [revision, setRevision] = useState(0),
+    [planRequestDay, setPlanRequestDay] = useState<number>(),
     [podcastRequestRevision, setPodcastRequestRevision] = useState(0),
     [podcastRequestDay, setPodcastRequestDay] = useState(1);
   const journeyRef = useRef<PageJourney>({ from: 2, to: 2 }),
@@ -137,6 +138,7 @@ function AppShell() {
   }, [navigate]);
   const openPlan = useCallback((day: number) => {
     latestPlan.current.selectDay(day);
+    setPlanRequestDay(day);
     setReference(undefined);
     setRevision((value) => value + 1);
     navigate("Bible");
@@ -148,6 +150,7 @@ function AppShell() {
   }, [openPlan]);
   const read = useCallback(() => {
     latestPlan.current.returnToCurrent();
+    setPlanRequestDay(latestPlan.current.currentDay);
     setReference(undefined);
     setRevision((v) => v + 1);
     navigate("Bible");
@@ -383,6 +386,7 @@ function AppShell() {
                                   <BiblePage
                                     active={active}
                                     requestRevision={revision}
+                                    planRequestDay={planRequestDay}
                                     podcastRequestRevision={podcastRequestRevision}
                                     podcastRequestDay={podcastRequestDay}
                                     initialReference={reference}
