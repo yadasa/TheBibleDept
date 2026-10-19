@@ -56,6 +56,25 @@ test('reading end requires real loaded text in an active viewport', () => {
     assert.equal(hasReachedReadingEnd({ ...bounds, ...change }), false);
 });
 
+test('a podcast jump followed by a user wheel below Scripture cannot mark the chapter read',()=>{
+  const intent=createReadingScrollIntent(()=>0);
+  const bounds={offset:1300,viewportHeight:600,textTop:100,textBottom:1200,loaded:true,active:true,obscuredBottom:192};
+  intent.clear();
+  assert.equal(hasReachedReadingEnd({...bounds,userInitiated:intent.isUserInitiated()}),false,'the programmatic player jump cannot qualify');
+  intent.begin('wheel');
+  assert.equal(hasReachedReadingEnd({...bounds,offset:1400,userInitiated:intent.isUserInitiated()}),false,'a genuine scroll entirely in the podcast area still cannot qualify');
+  assert.equal(hasReachedReadingEnd({...bounds,offset:1200,userInitiated:true}),false,'the last text boundary at the viewport top is already out of view');
+  assert.equal(hasReachedReadingEnd({...bounds,offset:1100,userInitiated:true}),true,'scrolling back until the Scripture end is visible can qualify');
+});
+
+test('fast scrolls and short chapters qualify only while the actual reading end is visible',()=>{
+  const bounds={offset:1000,viewportHeight:600,textTop:100,textBottom:1200,loaded:true,active:true,userInitiated:true,obscuredBottom:192};
+  assert.equal(hasReachedReadingEnd(bounds),true,'a fast scroll may land with the end of a long chapter visible');
+  assert.equal(hasReachedReadingEnd({...bounds,offset:0,textBottom:280}),true,'a short loaded chapter fits inside the readable viewport');
+  assert.equal(hasReachedReadingEnd({...bounds,userInitiated:false}),false,'restoring an otherwise qualifying position is still insufficient');
+  assert.equal(hasReachedReadingEnd({...bounds,offset:1100,viewportHeight:200}),false,'text hidden by the playback overlay is not visible');
+});
+
 test('tapping playback controls or dragging a waveform cannot become a reading scroll',()=>{
   const start={x:100,y:300};
   assert.equal(isVerticalReadingGesture(start,{x:100,y:300}),false,'a button tap does not count');

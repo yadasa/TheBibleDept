@@ -48,12 +48,13 @@ export function createReadingScrollIntent(now: () => number = Date.now) {
   };
 }
 
-/** Only the final text bounds qualify; loading/error placeholders never do. */
+/** The Scripture end must be visible; gestures wholly below it never qualify. */
 export function hasReachedReadingEnd({ offset, viewportHeight, textTop, textBottom, loaded, active, userInitiated, obscuredBottom = 28 }: {
   offset: number; viewportHeight: number; textTop: number; textBottom: number; loaded: boolean; active: boolean; userInitiated: boolean; obscuredBottom?: number;
 }): boolean {
   return userInitiated && active && loaded && [offset, viewportHeight, textTop, textBottom].every(Number.isFinite)
-    && viewportHeight > obscuredBottom && textBottom > textTop && offset + viewportHeight - obscuredBottom >= textBottom;
+    && viewportHeight > obscuredBottom && textBottom > textTop && offset < textBottom
+    && offset + viewportHeight - obscuredBottom >= textBottom;
 }
 
 function decode(raw: string | null): LessonsProgress {
