@@ -51,9 +51,7 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
         }}/>
         {!!linkMessage&&<Notice text={linkMessage}/>}
       </View>
-      <Text style={s.credit}>Public-domain Scripture.</Text>
     </View>}
-    <Notice text="You’ll need an internet connection to load a passage."/>
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({intro:{...t.body,color:c.muted,marginBottom:20},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},actions:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},credit:{...t.meta,color:c.muted,marginTop:12}});

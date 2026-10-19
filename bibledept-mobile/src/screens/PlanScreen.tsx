@@ -133,7 +133,6 @@ export function PlanScreen({active=true,onAccount,podcastRequestRevision=0}:{act
       <Text style={s.local}>Your place is saved.</Text>
       {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
     </View>
-    <Text style={s.credit}>Public-domain Scripture. Connect to the internet to read.</Text>
     <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={day.day}/>}</View>
     <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={plan.selectDay} onClose={()=>setPicker(false)}/>
   </View>;
