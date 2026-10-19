@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { PropsWithChildren, useCallback, useEffect, useRef, useState } from "react";
+import { PropsWithChildren, RefObject, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurTargetView } from "expo-blur";
 import { ThemeProvider, useTheme, typography as t } from "./src/theme";
 import { BrandLogo } from "./src/components/BrandLogo";
@@ -74,6 +74,7 @@ export default function App() {
   );
 }
 function AppShell() {
+  const insets = useSafeAreaInsets();
   const { mode, colors: c } = useTheme(),
     plan = usePlan(),
     notifications = useNotifications();
@@ -89,7 +90,9 @@ function AppShell() {
     slide = useRef(new Animated.Value(1)).current,
     blurTarget = useRef<View | null>(null),
     grainTarget = useRef<View | null>(null),
-    [panelWidth, setPanelWidth] = useState(400);
+    [panelWidth, setPanelWidth] = useState(400),
+    [screenHeight, setScreenHeight] = useState(800),
+    [contentTop, setContentTop] = useState(84);
   function openPassage(ref: string, version: Translation) {
     setReference(ref);
     setTranslation(version);
@@ -170,7 +173,9 @@ function AppShell() {
   };
   return (
     <GlassProvider target={grainTarget}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
+      <View style={{ flex: 1, backgroundColor: c.background }} onLayout={event => setScreenHeight(event.nativeEvent.layout.height)}>
+      <AppBackdrop page={page} panelWidth={panelWidth} target={grainTarget}/>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }}>
         <StatusBar style={mode === "dark" ? "light" : "dark"} />
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -200,40 +205,10 @@ function AppShell() {
             </View>
             <View
               testID="page-viewport"
-              onLayout={(e) => setPanelWidth(e.nativeEvent.layout.width)}
+              onLayout={(e) => {setPanelWidth(e.nativeEvent.layout.width);setContentTop(e.nativeEvent.layout.y + insets.top);}}
               style={{ flex: 1, overflow: "hidden" }}
             >
               <>
-                <Animated.View
-                  testID="page-background-track"
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: panelWidth * tabOrder.length,
-                    transform: [
-                      {
-                        translateX: page.interpolate({
-                          inputRange: [0, tabOrder.length - 1],
-                          outputRange: [0, -(tabOrder.length - 1) * panelWidth],
-                        }),
-                      },
-                    ],
-                  }}
-                >
-                  <BlurTargetView
-                    ref={grainTarget}
-                    pointerEvents="none"
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      backgroundColor: c.background,
-                    }}
-                  >
-                    <PageBackdrop />
-                  </BlurTargetView>
-                </Animated.View>
                 <PageMask>
                   <Animated.View
                     testID="page-track"
@@ -259,7 +234,7 @@ function AppShell() {
                     {/* CSS masks form a backdrop root. A matching inner backdrop
                       lets glass blur real pixels, while the outer one remains
                       visible wherever the content mask reaches zero alpha. */}
-                    <PageBackdrop />
+                    {Platform.OS === "web" && <View pointerEvents="none" style={{position:"absolute",left:0,right:0,top:-contentTop,height:screenHeight}}><PageBackdrop /></View>}
                     {tabOrder
                       .filter((item) => visited.includes(item))
                       .map((item) => {
@@ -358,8 +333,20 @@ function AppShell() {
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
+      </View>
     </GlassProvider>
   );
+}
+
+/** One full-height background also reaches beneath the nav and home indicator. */
+function AppBackdrop({page,panelWidth,target}:{page:Animated.Value;panelWidth:number;target:RefObject<View|null>}) {
+  const {colors:c}=useTheme();
+  return <View pointerEvents="none" style={{position:"absolute",inset:0,overflow:"hidden"}}>
+    <Animated.View testID="page-background-track" style={{position:"absolute",left:0,top:0,bottom:0,width:panelWidth*tabOrder.length,
+      transform:[{translateX:page.interpolate({inputRange:[0,tabOrder.length-1],outputRange:[0,-(tabOrder.length-1)*panelWidth]})}]}}>
+      <BlurTargetView ref={target} pointerEvents="none" style={{position:"absolute",inset:0,backgroundColor:c.background}}><PageBackdrop/></BlurTargetView>
+    </Animated.View>
+  </View>;
 }
 
 /** Keep high-frequency player updates outside the retained page components. */
