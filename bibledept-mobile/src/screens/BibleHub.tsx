@@ -4,11 +4,12 @@ import { BibleScreen } from './BibleScreen';
 import { PlanScreen } from './PlanScreen';
 import { Icon } from '../components/Icon';
 import { useScreenScroll } from '../components/ScreenScrollView';
-import { theme as c } from '../theme';
+import { useThemedStyles, Colors } from '../theme';
 import type { Translation } from '../services/bible';
 
 type Mode='plan'|'search';
 export function BibleHub({initialReference,initialTranslation,onAccount,active=true,requestRevision=0}:{initialReference?:string;initialTranslation:Translation;onAccount:()=>void;active?:boolean;requestRevision?:number}) {
+  const {c,s}=useThemedStyles(styles);
   const [mode,setMode]=useState<Mode>(initialReference?'search':'plan');
   const [visited,setVisited]=useState<Mode[]>([initialReference?'search':'plan']);
   const [searchRequest,setSearchRequest]=useState({reference:initialReference||'Luke 1',translation:initialTranslation,revision:requestRevision});
@@ -32,4 +33,4 @@ export function BibleHub({initialReference,initialTranslation,onAccount,active=t
     })}
   </View>;
 }
-const s=StyleSheet.create({hidden:{display:'none'},modes:{flexDirection:'row',borderBottomWidth:1,borderColor:c.border,marginBottom:24},mode:{flex:1,minHeight:48,paddingHorizontal:8,paddingVertical:12,flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent'},active:{borderBottomColor:c.orange},text:{fontSize:15,lineHeight:22,fontWeight:'500',color:c.muted,flexShrink:1},activeText:{color:c.ink,fontWeight:'700'},pressed:{opacity:.65}});
+const styles=(c:Colors)=>StyleSheet.create({hidden:{display:'none'},modes:{flexDirection:'row',borderBottomWidth:1,borderColor:c.border,marginBottom:24},mode:{flex:1,minHeight:48,paddingHorizontal:8,paddingVertical:12,flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent'},active:{borderBottomColor:c.orange},text:{fontSize:15,lineHeight:22,fontWeight:'500',color:c.muted,flexShrink:1},activeText:{color:c.ink,fontWeight:'700'},pressed:{opacity:.65}});

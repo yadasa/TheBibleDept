@@ -5,10 +5,12 @@ import { Icon, IconName } from '../components/Icon';
 import { ActionButton, Field, Notice } from '../components/ui';
 import { authError, useAuth } from '../services/AuthProvider';
 import { getFirebase, usingEmulators } from '../services/firebase';
-import { radius, spacing, theme as c, typography } from '../theme';
+import { radius, spacing, useThemedStyles, Colors, typography } from '../theme';
 import { PhoneSignIn } from './PhoneSignIn';
+import { SettingsScreen } from './SettingsScreen';
 
 export function AccountScreen() {
+  const {c,s}=useThemedStyles(styles);
   const { user, ready, error: setupError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +20,7 @@ export function AccountScreen() {
   const [message, setMessage] = useState('');
   const [phone, setPhone] = useState(false);
   const [modeFocused, setModeFocused] = useState(false);
+  const [settings,setSettings]=useState(false);
 
   async function submit() {
     if (busy) return;
@@ -65,6 +68,7 @@ export function AccountScreen() {
 
   if (!ready) return <View style={s.loading}><ActivityIndicator color={c.action} /><Text style={s.loadingText}>Opening your account…</Text></View>;
   if (setupError) return <Notice text={setupError} error />;
+  if(user&&settings)return <SettingsScreen onBack={()=>setSettings(false)}/>;
 
   return <View>
     {usingEmulators && <View style={s.mode}><Text style={s.modeTitle}>Local test account</Text><Text style={s.modeText}>This uses the Firebase emulators. No account data is sent to the live project.</Text></View>}
@@ -78,6 +82,7 @@ export function AccountScreen() {
         <AccountDetail icon="book" title="Reading history" text="Saved readings and reading streaks sync with your account." />
         <AccountDetail icon="calendar" title="Your plan day" text="Your place in the 365-day plan stays on this device." />
       </View>
+      <ActionButton title="Settings" icon="settings" secondary onPress={()=>setSettings(true)}/>
       {!!error && <Notice text={error} error />}
       <ActionButton title="Sign out" onPress={leave} loading={busy} variant="secondary" icon="logout" />
     </View> : phone ? <PhoneSignIn onEmail={() => { setPhone(false); setError(''); setMessage(''); }} /> : <View>
@@ -102,10 +107,11 @@ export function AccountScreen() {
 }
 
 function AccountDetail({ icon, title, text }: { icon: IconName; title: string; text: string }) {
+  const {c,s}=useThemedStyles(styles);
   return <View style={s.detail}><View style={s.detailIcon}><Icon name={icon} size={20} color={c.action} /></View><View style={s.detailText}><Text style={s.detailTitle}>{title}</Text><Text style={s.detailBody}>{text}</Text></View></View>;
 }
 
-const s = StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   loading: { flexDirection: 'row', gap: spacing[12], alignItems: 'center', paddingVertical: spacing[24] },
   loadingText: { ...typography.body, color: c.muted },
   mode: { padding: spacing[16], backgroundColor: c.tint, borderRadius: radius, marginBottom: spacing[24], gap: spacing[4] },

@@ -6,11 +6,12 @@ import { ActionButton, Field, Notice } from '../components/ui';
 import { useAuth } from '../services/AuthProvider';
 import { USER_COLLECTION } from '../services/dataPaths';
 import { getFirebase } from '../services/firebase';
-import { radius, spacing, theme as c, typography } from '../theme';
+import { radius, spacing, useThemedStyles, Colors, typography } from '../theme';
 
 type Prayer = { id: string; text: string; answered: boolean };
 
 export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
+  const {c,s}=useThemedStyles(styles);
   const { user } = useAuth();
   const [owner, setOwner] = useState<string>();
   const [prayers, setPrayers] = useState<Prayer[]>([]);
@@ -117,7 +118,7 @@ export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
   </View>;
 }
 
-const s = StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   screen: { gap: spacing[8] },
   guest: { paddingVertical: spacing[16] },
   iconTile: { width: 56, height: 56, backgroundColor: c.tint, borderRadius: radius, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[24] },

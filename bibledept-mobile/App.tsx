@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { theme as c, typography as t } from './src/theme';
+import { ThemeProvider, useTheme, useThemedStyles, Colors, typography as t } from './src/theme';
 import { Icon, IconName } from './src/components/Icon';
 import { ReadingTextProvider } from './src/components/ReaderControls';
 import { ScreenScrollView } from './src/components/ScreenScrollView';
@@ -38,12 +38,14 @@ export default function App() {
     const subscription=Linking.addEventListener('url',event=>open(event.url));
     return()=>{active=false;subscription.remove();};
   },[]);
-  return <SafeAreaProvider><AuthProvider><ReadingProvider><ReadingTextProvider><PlanProvider>
+  return <SafeAreaProvider><AuthProvider><ThemeProvider><ReadingProvider><ReadingTextProvider><PlanProvider>
     <AppShell tab={tab} onNavigate={setTab} reference={reference} translation={translation} requestRevision={requestRevision} onRead={()=>{setReference(undefined);setRequestRevision(value=>value+1);setTab('Bible');}}/>
-  </PlanProvider></ReadingTextProvider></ReadingProvider></AuthProvider></SafeAreaProvider>;
+  </PlanProvider></ReadingTextProvider></ReadingProvider></ThemeProvider></AuthProvider></SafeAreaProvider>;
 }
 
 function AppShell({tab,onNavigate,reference,translation,requestRevision,onRead}:{tab:Tab;onNavigate:(value:Tab)=>void;reference?:string;translation:Translation;requestRevision:number;onRead:()=>void}) {
+  const {c,s}=useThemedStyles(styles);
+  const {mode}=useTheme();
   // PlanProvider remounts this shell when the authenticated owner changes, so
   // retained drafts and view state never carry into another person's session.
   const [visited,setVisited]=useState<Tab[]>([tab]);
@@ -52,7 +54,7 @@ function AppShell({tab,onNavigate,reference,translation,requestRevision,onRead}:
     setVisited(value=>value.includes(tab)?value:[...value,tab]);
   },[tab]);
   return <SafeAreaView style={s.safe}>
-    <StatusBar style="dark" />
+    <StatusBar style={mode==='dark'?'light':'dark'} />
     <KeyboardAvoidingView style={s.app} behavior={Platform.OS==='ios'?'padding':undefined}>
       <View style={s.header}><View style={s.headerInner}><Text style={s.brand}>The Bible Dept.</Text><View style={s.brandRule}/></View></View>
       {tabs.filter(item=>visited.includes(item)||item===tab).map(item=>{
@@ -79,7 +81,7 @@ function AppShell({tab,onNavigate,reference,translation,requestRevision,onRead}:
     </KeyboardAvoidingView>
   </SafeAreaView>;
 }
-const s = StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   safe:{flex:1,backgroundColor:c.background},app:{flex:1},panel:{flex:1},hidden:{display:'none'},
   header:{borderBottomWidth:1,borderBottomColor:c.border},headerInner:{width:'100%',maxWidth:680,alignSelf:'center',paddingHorizontal:20,minHeight:56,flexDirection:'row',alignItems:'center',gap:16},
   brand:{color:c.ink,fontSize:17,fontWeight:'800',letterSpacing:-.5},brandRule:{width:28,height:3,backgroundColor:c.orange,marginLeft:'auto'},

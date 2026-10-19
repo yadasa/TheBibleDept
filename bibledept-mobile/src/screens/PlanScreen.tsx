@@ -9,10 +9,11 @@ import { useScreenScroll } from '../components/ScreenScrollView';
 import { usePlan } from '../services/PlanProvider';
 import { fetchPassage, Passage, Translation } from '../services/bible';
 import { getPlanChapters, getReadingPlanDay } from '../services/readingPlan';
-import { theme as c, typography as t } from '../theme';
+import { useThemedStyles, Colors, typography as t } from '../theme';
 import { PodcastCard } from '../components/PodcastCard';
 
 export function PlanScreen({active=true}:{active?:boolean}) {
+  const {c,s}=useThemedStyles(styles);
   const scrollTop=useScreenScroll();
   const plan=usePlan(),day=getReadingPlanDay(plan.selectedDay)!;
   const [picker,setPicker]=useState(false),[translation,setTranslation]=useState<Translation>('web');
@@ -65,7 +66,7 @@ export function PlanScreen({active=true}:{active?:boolean}) {
     <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} onSelect={plan.selectDay} onClose={()=>setPicker(false)}/>
   </View>;
 }
-const s=StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   planHeader:{paddingTop:4},headingRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'},day:{fontSize:28,lineHeight:36,fontWeight:'800',letterSpacing:-.7,color:c.ink},total:{fontSize:16,fontWeight:'400',color:c.muted,letterSpacing:0},label:{fontSize:18,lineHeight:27,fontWeight:'500',color:c.ink,marginTop:8},choose:{minHeight:44,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:8,borderRadius:4,borderWidth:1,borderColor:c.controlBorder,backgroundColor:c.surface},chooseText:{...t.label,color:c.ink},statusRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:12},status:{...t.meta,color:c.muted,flex:1},
   caption:{...t.meta,color:c.muted,marginBottom:10},chapters:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:24},chip:{minHeight:44,paddingHorizontal:14,paddingVertical:11,borderRadius:4,borderWidth:1,borderColor:c.controlBorder,backgroundColor:c.surface,justifyContent:'center'},activeChip:{backgroundColor:c.ink,borderColor:c.ink},chipText:{...t.label,color:c.ink},activeText:{color:c.surface,fontWeight:'700'},selectionMark:{height:2,backgroundColor:c.orange,marginTop:4},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},chapterNavigation:{marginBottom:24},completion:{borderTopWidth:1,borderColor:c.border,paddingTop:24,marginTop:16},completionTitle:{...t.section,color:c.ink},meta:{...t.body,color:c.muted,marginTop:8,marginBottom:12},local:{...t.meta,color:c.muted,marginTop:12},creditLink:{minHeight:44,justifyContent:'center',paddingVertical:12},credit:{...t.meta,color:c.muted,textDecorationLine:'underline'},pressed:{opacity:.65},
 });

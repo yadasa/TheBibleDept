@@ -1,6 +1,6 @@
 import Svg, { Path } from 'react-native-svg';
 import { Platform } from 'react-native';
-import { theme } from '../theme';
+import { useTheme } from '../theme';
 
 // A single 24-unit stroke system. Decorative icons inherit the control's label.
 const paths = {
@@ -27,9 +27,13 @@ const paths = {
   play: 'm8 4 12 8-12 8Z',
   pause: 'M8 4v16M16 4v16',
   external: 'M14 3h7v7m0-7L10 14M10 3H3v18h18v-7',
+  settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1Z',
+  flame: 'M13 2c1 5-4 6-3 10 2-1 3-3 3-3 4 3 6 5 6 8a7 7 0 0 1-14 0c0-4 3-7 8-15Z',
+  bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM9 21h6',
 } as const;
 export type IconName = keyof typeof paths;
-export function Icon({ name, size = 22, color = theme.ink }: { name: IconName; size?: number; color?: string }) {
+export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {
+  const {colors}=useTheme();
   const nativeAccessibility=Platform.OS==='web'?{}:{accessible:false};
-  return <Svg {...nativeAccessibility} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>;
+  return <Svg {...nativeAccessibility} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||colors.ink} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>;
 }

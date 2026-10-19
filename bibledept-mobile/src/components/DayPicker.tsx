@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getReadingPlanDay } from '../services/readingPlan';
-import { radius, theme as c, typography as t } from '../theme';
+import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { Icon } from './Icon';
 import { ActionButton, Field, IconButton, Notice } from './ui';
 
 type Props = { visible: boolean; selectedDay: number; currentDay: number; finished: boolean; onSelect: (day: number) => void; onClose: () => void };
 
 export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect, onClose }: Props) {
+  const {c,s}=useThemedStyles(styles);
   const { width, fontScale } = useWindowDimensions();
   const [page, setPage] = useState(0), [draft, setDraft] = useState(''), [error, setError] = useState('');
   const [reduceMotion, setReduceMotion] = useState(true);
@@ -90,7 +91,7 @@ export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(10,10,9,0.5)' },
   sheet: { backgroundColor: c.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '94%', width: '100%', maxWidth: 560, alignSelf: 'center' },
   handle: { width: 36, height: 4, backgroundColor: c.controlBorder, opacity: .5, borderRadius: 2, alignSelf: 'center', marginTop: 10 },

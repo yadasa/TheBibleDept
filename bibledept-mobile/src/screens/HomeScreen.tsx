@@ -3,11 +3,12 @@ import { ActionButton, Notice } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../services/AuthProvider';
 import { useReadings } from '../services/ReadingProvider';
-import { theme as c, typography as t } from '../theme';
+import { useThemedStyles, Colors, typography as t } from '../theme';
 import { usePlan } from '../services/PlanProvider';
 import { getPlanChapters, getReadingPlanDay } from '../services/readingPlan';
 
 export function HomeScreen({onRead,onAccount,onPrayer}:{onRead:()=>void;onAccount:()=>void;onPrayer:()=>void}) {
+  const {c,s}=useThemedStyles(styles);
   const {user}=useAuth(),{readings,streak,error}=useReadings();
   const plan=usePlan(),current=getReadingPlanDay(plan.currentDay)!;
   const complete=plan.finished?365:plan.currentDay-1;
@@ -32,7 +33,7 @@ export function HomeScreen({onRead,onAccount,onPrayer}:{onRead:()=>void;onAccoun
     {!!error&&<Notice text={error} error/>}
   </View>;
 }
-const s=StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   welcome:{...t.body,color:c.muted,marginTop:-12,marginBottom:24},
   reading:{backgroundColor:c.surface,borderWidth:1,borderColor:c.border,borderTopWidth:3,borderTopColor:c.orange,borderRadius:4,padding:20},
   row:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},eyebrow:{...t.label,color:c.muted},

@@ -2,19 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
-import { control, radius, theme as c, typography as t } from '../theme';
+import { control, radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { Icon } from './Icon';
 import { ActionButton, Notice } from './ui';
 
 type Episode=NonNullable<ReturnType<typeof getDayPodcast>>;
 
 export function PodcastCard({day}:{day:number}) {
+  const {c,s}=useThemedStyles(styles);
   const episode=getDayPodcast(day);
   // Changing days releases the old player, so another day's episode cannot keep playing.
   return episode?<EpisodePlayer key={day} episode={episode}/>:null;
 }
 
 function EpisodePlayer({episode}:{episode:Episode}) {
+  const {c,s}=useThemedStyles(styles);
   const player=useAudioPlayer(null,{updateInterval:500,downloadFirst:false,preferredForwardBufferDuration:15});
   const status=useAudioPlayerStatus(player);
   const [started,setStarted]=useState(false),[error,setError]=useState(''),[width,setWidth]=useState(0);
@@ -83,7 +85,7 @@ function EpisodePlayer({episode}:{episode:Episode}) {
   </View>;
 }
 
-const s=StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   card:{backgroundColor:c.surface,borderWidth:1,borderColor:c.border,borderRadius:radius,padding:20,marginTop:32},
   heading:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},
   kicker:{...t.label,color:c.action},

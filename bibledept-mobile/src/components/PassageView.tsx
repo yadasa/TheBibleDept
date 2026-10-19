@@ -1,9 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { Passage } from '../services/bible';
-import { theme as c, typography as t } from '../theme';
+import { useThemedStyles, Colors, typography as t } from '../theme';
 import { useReadingText } from './ReaderControls';
 
 export function PassageView({passage}:{passage:Passage}) {
+  const {c,s}=useThemedStyles(styles);
   const {fontSize}=useReadingText();
   const multipleChapters=passage.verses.some(verse=>verse.chapter!==passage.verses[0].chapter);
   return <View style={s.paper}>
@@ -14,4 +15,4 @@ export function PassageView({passage}:{passage:Passage}) {
     </View>)}
   </View>;
 }
-const s=StyleSheet.create({paper:{paddingTop:8},reference:{fontSize:28,lineHeight:34,fontWeight:'700',letterSpacing:-.7,color:c.ink},translation:{...t.meta,color:c.muted,marginTop:6,marginBottom:28},chapter:{...t.label,color:c.action,marginTop:16,marginBottom:16},verse:{color:c.ink,marginBottom:16},number:{fontSize:13,fontWeight:'600',color:c.action}});
+const styles=(c:Colors)=>StyleSheet.create({paper:{paddingTop:8},reference:{fontSize:28,lineHeight:34,fontWeight:'700',letterSpacing:-.7,color:c.ink},translation:{...t.meta,color:c.muted,marginTop:6,marginBottom:28},chapter:{...t.label,color:c.action,marginTop:16,marginBottom:16},verse:{color:c.ink,marginBottom:16},number:{fontSize:13,fontWeight:'600',color:c.action}});

@@ -1,12 +1,14 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { getFirebase } from './firebase';
 
+export function clearPhoneVerifier(){}
+
 export async function requestNativePhoneCode(phoneNumber:string):Promise<string> {
   if(Constants.executionEnvironment===ExecutionEnvironment.StoreClient) {
-    throw new Error('Live SMS verification needs the iPhone development build. Expo Go supports email and local emulator phone tests.');
+    throw new Error('Live SMS verification needs a signed development build. Expo Go supports email and local emulator phone tests.');
   }
   if(Constants.expoConfig?.extra?.nativePhoneAuth!==true) {
-    throw new Error('Native phone verification is not enabled in this build. Follow the iPhone setup guide.');
+    throw new Error('Native phone verification is not enabled in this build. Use email or the web app.');
   }
   // These native modules must never be initialized in Expo Go.
   const nativeApp = require('@react-native-firebase/app') as typeof import('@react-native-firebase/app');

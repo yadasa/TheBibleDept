@@ -1,4 +1,4 @@
-import { PhoneAuthCredential, signInWithCredential } from 'firebase/auth';
+import { PhoneAuthProvider, signInWithCredential } from 'firebase/auth';
 import { emulatorHost, getFirebase, usingEmulators } from './firebase';
 import { requestNativePhoneCode } from './nativePhone';
 
@@ -22,7 +22,6 @@ export async function requestPhoneCode(phoneNumber:string):Promise<PhoneChalleng
 }
 export async function confirmPhoneCode(verificationId:string,code:string){
   if(!/^\d{6}$/.test(code))throw new Error('Enter the 6-digit verification code.');
-  const credential=PhoneAuthCredential.fromJSON({providerId:'phone',verificationId,verificationCode:code});
-  if(!credential)throw new Error('The phone verification session is invalid. Request a new code.');
+  const credential=PhoneAuthProvider.credential(verificationId,code);
   return signInWithCredential(getFirebase().auth,credential);
 }

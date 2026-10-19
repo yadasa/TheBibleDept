@@ -5,7 +5,7 @@ import { ReaderControls } from '../components/ReaderControls';
 import { PassageView } from '../components/PassageView';
 import { useScreenScroll } from '../components/ScreenScrollView';
 import { fetchPassage, Passage, Translation } from '../services/bible';
-import { theme as c, typography as t } from '../theme';
+import { useThemedStyles, Colors, typography as t } from '../theme';
 import { useAuth } from '../services/AuthProvider';
 import { useReadings } from '../services/ReadingProvider';
 import { readingDay } from '../services/readingDays';
@@ -15,6 +15,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
 
 export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', requestRevision = 0, onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; requestRevision?: number; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
+  const {c,s}=useThemedStyles(styles);
   const {user}=useAuth(),{readings,complete}=useReadings(),scrollTop=useScreenScroll();
   const [saving,setSaving]=useState(false),[saveError,setSaveError]=useState('');
   const [draft,setDraft]=useState(initialReference),[reference,setReference]=useState(initialReference);
@@ -60,4 +61,4 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
     <Notice text="Connect to the internet to load a passage. Reading is always free."/>
   </View>;
 }
-const s=StyleSheet.create({intro:{...t.body,color:c.muted,marginBottom:20},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},actions:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},creditLink:{minHeight:44,justifyContent:'center',paddingVertical:12},credit:{...t.meta,color:c.muted,textDecorationLine:'underline'}});
+const styles=(c:Colors)=>StyleSheet.create({intro:{...t.body,color:c.muted,marginBottom:20},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},actions:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},creditLink:{minHeight:44,justifyContent:'center',paddingVertical:12},credit:{...t.meta,color:c.muted,textDecorationLine:'underline'}});

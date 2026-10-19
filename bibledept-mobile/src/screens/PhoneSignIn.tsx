@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Icon } from '../components/Icon';
@@ -6,16 +6,25 @@ import { ActionButton, Field, Notice } from '../components/ui';
 import { authError } from '../services/AuthProvider';
 import { usingEmulators } from '../services/firebase';
 import { confirmPhoneCode, PhoneChallenge, requestPhoneCode } from '../services/phone';
-import { radius, spacing, theme as c, typography } from '../theme';
+import { clearPhoneVerifier } from '../services/nativePhone';
+import { radius, spacing, useThemedStyles, Colors, typography } from '../theme';
 
 export function PhoneSignIn({ onEmail }: { onEmail: () => void }) {
+  const {c,s}=useThemedStyles(styles);
   const nativeReady = Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient && Constants.expoConfig?.extra?.nativePhoneAuth === true;
-  const available = usingEmulators || nativeReady;
+  const available = usingEmulators || nativeReady || Platform.OS==='web';
   const [number, setNumber] = useState(usingEmulators ? '+16505550123' : '');
   const [code, setCode] = useState('');
   const [challenge, setChallenge] = useState<PhoneChallenge>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [retryAt,setRetryAt]=useState(0),[now,setNow]=useState(Date.now());
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>{clearInterval(timer);clearPhoneVerifier();};},[]);
+  const cooldown=Math.max(0,Math.ceil((retryAt-now)/1000));
+  async function send(){
+    const result=await requestPhoneCode(number.replace(/[\s()-]/g,''));
+    setChallenge(result);setCode('');setRetryAt(Date.now()+60000);setNow(Date.now());
+  }
 
   async function submit() {
     if (busy) return;
@@ -25,7 +34,7 @@ export function PhoneSignIn({ onEmail }: { onEmail: () => void }) {
     setBusy(true);
     try {
       if (challenge) await confirmPhoneCode(challenge.verificationId, code);
-      else setChallenge(await requestPhoneCode(number.replace(/[\s()-]/g, '')));
+      else await send();
     } catch (e) { setError(authError(e)); }
     finally { setBusy(false); }
   }
@@ -34,20 +43,23 @@ export function PhoneSignIn({ onEmail }: { onEmail: () => void }) {
     <View style={s.status}><Icon name="phone" size={16} color={c.muted} /><Text style={s.statusText}>{challenge ? 'Verify your number' : 'Sign in by phone'}</Text></View>
     <Text style={s.heading}>{challenge ? 'Check your messages.' : 'Your number. Your account.'}</Text>
     <Text style={s.intro}>{challenge ? usingEmulators ? 'Enter the local test code below. No text message was sent.' : 'Enter the 6-digit code sent to ' + number + '.' : 'Use your phone number with its country code to sign in or create an account.'}</Text>
-    {!challenge && (usingEmulators || !nativeReady) && <View style={s.info}><Icon name="phone" size={18} color={c.action} /><Text style={s.infoText}>{usingEmulators ? 'Local test only. Use a fictional number from +16505550100 to +16505550199. No SMS is sent.' : 'SMS verification needs the iPhone development build. Use email to sign in to this preview.'}</Text></View>}
+    {!challenge && (usingEmulators || !available) && <View style={s.info}><Icon name="phone" size={18} color={c.action} /><Text style={s.infoText}>{usingEmulators ? 'Local test only. Use a fictional number from +16505550100 to +16505550199. No SMS is sent.' : 'SMS needs a signed development build. Use email to sign in to Expo Go.'}</Text></View>}
     <View style={s.form}>
       <Field label="Phone number" value={number} onChangeText={setNumber} keyboardType="phone-pad" textContentType="telephoneNumber" editable={!challenge && !busy} autoComplete="tel" placeholder="+1 650 555 0123" />
       {challenge && <Field label="Verification code" value={code} onChangeText={setCode} keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="sms-otp" maxLength={6} onSubmitEditing={submit} editable={!busy} placeholder="6-digit code" />}
       {challenge?.testCode && <Notice text={'Local emulator code: ' + challenge.testCode + '. This is a test code, not a text message.'} />}
       {!!error && <Notice text={error} error />}
+      {Platform.OS==='web'&&<View nativeID="phone-recaptcha"/>}
+      {!usingEmulators&&<Notice text="By continuing, you agree to receive a verification text. Message rates may apply. Google processes your number for authentication and abuse prevention. Phone sign-in creates a separate account from email unless you link them."/>}
       <ActionButton title={challenge ? 'Verify and sign in' : usingEmulators ? 'Get local test code' : 'Send verification code'} onPress={submit} disabled={!available} loading={busy} icon={challenge ? 'check' : 'arrowRight'} />
+      {challenge&&<ActionButton title={cooldown?`Resend code in ${cooldown}s`:'Resend code'} secondary disabled={busy||cooldown>0} onPress={()=>{setBusy(true);setError('');send().catch(e=>setError(authError(e))).finally(()=>setBusy(false));}}/>}
       {challenge && <ActionButton title="Use a different number" variant="ghost" disabled={busy} onPress={() => { setChallenge(undefined); setCode(''); setError(''); }} />}
     </View>
     <View style={s.email}><ActionButton title="Use email instead" variant={available?'secondary':'primary'} icon="mail" onPress={onEmail} disabled={busy} /></View>
   </View>;
 }
 
-const s = StyleSheet.create({
+const styles=(c:Colors)=>StyleSheet.create({
   status: { flexDirection: 'row', alignItems: 'center', gap: spacing[8], marginBottom: spacing[12] },
   statusText: { ...typography.meta, color: c.muted },
   heading: { ...typography.section, color: c.ink },
