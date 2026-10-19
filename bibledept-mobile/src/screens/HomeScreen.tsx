@@ -1,7 +1,7 @@
 import { GlassPressable as Pressable, GlassSurface } from "../components/Glass";
 import { StyleSheet, Text, View } from "react-native";
 import { useMemo } from 'react';
-import { currentStreak, summarizeDays, validDate } from "../../shared/habits";
+import { validDate } from "../../shared/habits";
 import { ActionButton, Notice } from "../components/ui";
 import { Icon, IconName } from "../components/Icon";
 import { StreakCalendar } from '../components/StreakCalendar';
@@ -103,7 +103,7 @@ export function HomeScreen({
       <Text style={s.device}>
         Pick up where you left off.
       </Text>
-      <StreakCalendar days={readDates} today={habit.today} current={habit.ready?habit.current:currentStreak(summarizeDays(readDates),habit.today)}/>
+      <StreakCalendar days={readDates} today={habit.today}/>
       {!!habit.error && <Notice text={habit.error} error />}
       {!!plan.syncError && <Notice text={plan.syncError}/>}
       <View style={s.sectionRow}>
