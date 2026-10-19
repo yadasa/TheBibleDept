@@ -25,14 +25,14 @@ export const PageBackdrop = memo(function PageBackdrop() {
         aria-hidden
       >
         <Defs>
-          {/* Native SVG keeps paint servers in their owning root. Each page
-              uses explicit coordinates in this one shared viewport, rather
-              than looking up an outer gradient from a nested Svg root. */}
+          {/* Native SVG keeps paint servers in their owning root. Light
+              sources share this viewport and paint across the whole track,
+              so neighboring pages never expose a clipped gradient edge. */}
           {tabOrder.flatMap((tab, index) => [
             <RadialGradient key={`${tab}warm`} id={`${id}warm${index}`}
               gradientUnits="userSpaceOnUse" cx={index * 400 + 380} cy={360} rx={420} ry={650}>
-              <Stop offset={0} stopColor="#F05A00" stopOpacity={dark ? .24 : .15}/>
-              <Stop offset={1} stopColor="#F05A00" stopOpacity={0}/>
+              <Stop offset={0} stopColor="#DF8A4C" stopOpacity={dark ? .12 : .10}/>
+              <Stop offset={1} stopColor="#DF8A4C" stopOpacity={0}/>
             </RadialGradient>,
             <RadialGradient key={`${tab}cool`} id={`${id}cool${index}`}
               gradientUnits="userSpaceOnUse" cx={index * 400} cy={800} rx={360} ry={500}>
@@ -43,8 +43,8 @@ export const PageBackdrop = memo(function PageBackdrop() {
         </Defs>
         {tabOrder.map((tab, index) => (
           <G key={tab}>
-            <Rect x={index * 400} y={0} width={400} height={1000} fill={`url(#${id}warm${index})`} />
-            <Rect x={index * 400} y={0} width={400} height={1000} fill={`url(#${id}cool${index})`} />
+            <Rect x={0} y={0} width={400 * tabOrder.length} height={1000} fill={`url(#${id}warm${index})`} />
+            <Rect x={0} y={0} width={400 * tabOrder.length} height={1000} fill={`url(#${id}cool${index})`} />
           </G>
         ))}
       </Svg>
