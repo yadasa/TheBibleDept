@@ -27,19 +27,23 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   const anchorFrame = useRef<number | null>(null), anchorGeneration = useRef(0);
   const [scrollIntent] = useState(createReadingScrollIntent);
   const touchOrigin = useRef<{x:number;y:number}|null>(null);
-  if (activeRef.current !== active) { activeRef.current = active; scrollIntent.clear(); if (active) restorePending.current = true; }
+  if (activeRef.current !== active) {
+    activeRef.current = active;scrollIntent.clear();
+    if (active) restorePending.current = true;
+    else {pendingAnchor.current=null;anchorGeneration.current++;}
+  }
   const getMetrics = useCallback((): ScreenScrollMetrics => ({ offsetY: offset.current.y, viewportHeight: viewportHeight.current, contentHeight: contentHeight.current, active: activeRef.current, restoring: restorePending.current, userInitiated: scrollIntent.isUserInitiated() }), [scrollIntent]);
   const notify = useCallback(() => { const value = getMetrics(); listeners.current.forEach(listener => listener(value)); }, [getMetrics]);
-  const scrollTo = useCallback(({ y, animated = false }: { y: number; animated?: boolean }) => {
+  const positionScroll = useCallback(({ y, animated = false }: { y: number; animated?: boolean }, preserveAnchor = false) => {
     if (!Number.isFinite(y)) return;
-    pendingAnchor.current = null;
-    anchorGeneration.current++;
+    if(!preserveAnchor){pendingAnchor.current = null;anchorGeneration.current++;}
     scrollIntent.clear();
     offset.current = { x: 0, y: Math.max(0, y) };
     if (activeRef.current) { ref.current?.scrollTo({ x: 0, y: offset.current.y, animated }); restorePending.current = false; }
     else restorePending.current = true;
     notify();
   }, [notify,scrollIntent]);
+  const scrollTo=useCallback((options:{y:number;animated?:boolean})=>positionScroll(options),[positionScroll]);
   const top = useCallback(() => scrollTo({ y: 0 }), [scrollTo]);
   const measureContent = useCallback((target: View | null, listener: (bounds: { top: number; bottom: number }) => void) => {
     if (!target || !activeRef.current || !viewport.current) return;
@@ -58,9 +62,11 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     const generation = anchorGeneration.current;
     measureContent(target, bounds => {
       if (pendingAnchor.current !== name || generation !== anchorGeneration.current) return;
-      scrollTo({ y: Math.max(0, bounds.top - 12), animated: false });
+      // Keep the requested destination through later text/card layout changes.
+      // A real user scroll, explicit top/day change, or leaving the page cancels it.
+      positionScroll({ y: Math.max(0, bounds.top - 12), animated: false },true);
     });
-  }, [measureContent, scrollTo]);
+  }, [measureContent, positionScroll]);
   const scheduleAnchor = useCallback(() => {
     if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current);
     anchorFrame.current = requestAnimationFrame(() => { anchorFrame.current = null; resolveAnchor(); });
@@ -92,7 +98,10 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   // or the podcast anchor. A later parent effect would erase that request.
   useLayoutEffect(() => { if (resetOnPlanDayChange) top(); }, [selectedDay, resetOnPlanDayChange, top]);
   useEffect(() => () => { if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current); }, []);
-  const beginUserScroll=(source:'drag'|'touch'|'wheel'|'key'|'momentum')=>{pendingAnchor.current=null;anchorGeneration.current++;scrollIntent.begin(source);};
+  const beginUserScroll=(source:'drag'|'touch'|'wheel'|'key'|'momentum')=>{
+    scrollIntent.begin(source);
+    if(scrollIntent.isUserInitiated()){pendingAnchor.current=null;anchorGeneration.current++;}
+  };
   const webGestures=Platform.OS==='web'?{
     onWheel:()=>beginUserScroll('wheel'),
     onKeyDown:(event:{key:string})=>{if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))beginUserScroll('key');},
