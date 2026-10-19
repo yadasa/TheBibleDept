@@ -41,21 +41,25 @@ export function GlassBackdrop({
   tone = "neutral",
   color,
   target,
+  material = "control",
 }: {
   tone?: Tone;
   color?: string;
   target?: Target;
+  material?: "control" | "navigation";
 }) {
   const { mode } = useTheme(),
     backdrop = useContext(GlassContext);
   const id = `glass${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const dark = mode === "dark";
+  const navigation = material === "navigation";
+  const primary = tone === "primary" && !color;
   const tint =
     color ||
-    (tone === "primary"
-      ? dark
-        ? "rgba(255,145,77,.80)"
-        : "rgba(118,37,0,.96)"
+    (primary
+      ? "transparent"
+      : navigation
+        ? dark ? "rgba(38,33,29,.48)" : "rgba(255,245,245,.48)"
       : tone === "selected"
         ? dark
           ? "rgba(255,145,77,.22)"
@@ -67,7 +71,7 @@ export function GlassBackdrop({
     <View
       pointerEvents="none"
       accessible={false}
-      style={StyleSheet.absoluteFill}
+      style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
     >
       {Platform.OS === "web" ? (
         <View
@@ -75,8 +79,8 @@ export function GlassBackdrop({
           style={[
             StyleSheet.absoluteFill,
             {
-              backdropFilter: "blur(22px) saturate(170%)",
-              WebkitBackdropFilter: "blur(22px) saturate(170%)",
+              backdropFilter: navigation ? "blur(24px) saturate(145%)" : "blur(18px) saturate(128%)",
+              WebkitBackdropFilter: navigation ? "blur(24px) saturate(145%)" : "blur(18px) saturate(128%)",
             } as ViewStyle,
           ]}
         />
@@ -98,31 +102,42 @@ export function GlassBackdrop({
       <Svg
         width="100%"
         height="100%"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
         style={StyleSheet.absoluteFill}
         aria-hidden
       >
         <Defs>
+          {primary && <LinearGradient
+            id={`${id}pigment`}
+            gradientUnits="userSpaceOnUse"
+            x1={0} y1={0} x2={100} y2={100}
+          >
+            <Stop offset={0} stopColor={dark ? "#FFAA70" : "#B74300"} stopOpacity={dark ? .94 : .99}/>
+            <Stop offset={1} stopColor={dark ? "#E96B1F" : "#8D2F00"} stopOpacity={dark ? .94 : .99}/>
+          </LinearGradient>}
           <LinearGradient
             id={id}
-            gradientUnits="objectBoundingBox"
-            x1="0%"
-            y1="0%"
-            x2="100%"
-            y2="100%"
+            gradientUnits="userSpaceOnUse"
+            x1={0}
+            y1={0}
+            x2={100}
+            y2={100}
           >
             <Stop
               offset={0}
               stopColor="white"
-              stopOpacity={tone === "primary" ? 0.08 : dark ? 0.1 : 0.18}
+              stopOpacity={primary ? 0.08 : navigation ? dark ? 0.18 : 0.28 : dark ? 0.1 : 0.18}
             />
             <Stop
               offset={1}
               stopColor="white"
-              stopOpacity={tone === "primary" ? 0.015 : dark ? 0.025 : 0.035}
+              stopOpacity={primary ? 0.015 : navigation ? 0.06 : dark ? 0.025 : 0.035}
             />
           </LinearGradient>
         </Defs>
-        <Rect width="100%" height="100%" fill={`url(#${id})`} />
+        {primary && <Rect width={100} height={100} fill={`url(#${id}pigment)`} />}
+        <Rect width={100} height={100} fill={`url(#${id})`} />
       </Svg>
     </View>
   );

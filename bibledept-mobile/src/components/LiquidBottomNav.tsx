@@ -142,7 +142,7 @@ export function LiquidBottomNav({
       }}
     >
       <View
-        testID="transparent-navigation"
+        testID="frosted-navigation"
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
         style={{
           width: "100%",
@@ -151,14 +151,17 @@ export function LiquidBottomNav({
           borderRadius: 29,
           overflow: "hidden",
           backgroundColor: "transparent",
+          boxShadow: "0 14px 40px rgba(0,0,0,.18)",
         }}
       >
+        <GlassBackdrop material="navigation" target={blurTarget} />
         {width > 0 && (
           <Animated.View
             testID="navigation-indicator"
             pointerEvents="none"
             style={{
               position: "absolute",
+              zIndex: 1,
               top: 7,
               bottom: 7,
               borderRadius: 21,
@@ -173,7 +176,7 @@ export function LiquidBottomNav({
         )}
         <View
           accessibilityRole="tablist"
-          style={{ flexDirection: "row", gap: 4, padding: 7 }}
+          style={{ position: "relative", zIndex: 2, flexDirection: "row", gap: 4, padding: 7 }}
         >
           {tabOrder.map((item) => (
             <Pressable
