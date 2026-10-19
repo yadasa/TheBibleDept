@@ -1,17 +1,24 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveforms';
 import { podcastAmplitudePeak } from '../services/podcastWaveform';
 import { usePodcast } from '../state/PodcastProvider';
 import { radius, useThemedStyles, Colors, typography as t } from '../theme';
-import { GlassPressable } from './Glass';
+import { GlassPressable, GlassSurface } from './Glass';
 import { Icon } from './Icon';
 import { Notice } from './ui';
 import { PodcastWaveform } from './PodcastWaveform';
 import { PlaybackSpeedControl } from './PlaybackSpeedControl';
 
 const unknownSamples = Array(96).fill(0) as number[];
+const frostStyles=StyleSheet.create({
+  frame:{position:'absolute',left:0,right:0,top:0,bottom:0,borderRadius:radius,overflow:'hidden'},
+  surface:{position:'absolute',left:0,right:0,top:0,bottom:0,borderRadius:radius},
+});
+const PodcastCardFrost=memo(function PodcastCardFrost() {
+  return <View pointerEvents="none" accessible={false} style={frostStyles.frame}><GlassSurface style={frostStyles.surface}/></View>;
+});
 
 export function PodcastCard({day}:{day:number}) {
   const {c,s}=useThemedStyles(styles),audio=usePodcast();
@@ -30,6 +37,8 @@ export function PodcastCard({day}:{day:number}) {
     try {await Linking.openURL(url);}catch{setLinkError('This link couldn’t open. Try again.');}
   }
   return <View style={s.card}>
+    <PodcastCardFrost/>
+    <View style={s.content}>
     <View style={s.heading}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>Daily teaching</Text></View>
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
@@ -53,6 +62,7 @@ export function PodcastCard({day}:{day:number}) {
     {!!linkError&&<Notice text={linkError} error/>}
     <Pressable accessibilityRole="link" onPress={()=>void open(episode.episodeUrl)} style={({pressed})=>[s.episodeLink,pressed&&s.pressed]}><Text style={s.link}>Open episode page</Text><Icon name="external" size={16} color={c.action}/></Pressable>
     <View style={s.follow}><Text style={s.followLabel}>Follow the podcast</Text><View style={s.platforms}><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Apple Podcasts" onPress={()=>void open(PODCAST_LINKS.apple)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Apple Podcasts</Text><Icon name="external" size={14}/></Pressable><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Spotify" onPress={()=>void open(PODCAST_LINKS.spotify)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Spotify</Text><Icon name="external" size={14}/></Pressable></View></View>
+    </View>
   </View>;
 }
 
@@ -65,7 +75,7 @@ function SkipButton({forward,disabled,onPress}:{forward:boolean;disabled:boolean
 }
 
 const styles=(c:Colors)=>StyleSheet.create({
-  card:{backgroundColor:c.surface,borderWidth:0,borderRadius:radius,padding:20,marginTop:32},
+  card:{position:'relative',borderWidth:0,borderRadius:radius,marginTop:32,overflow:'visible'},content:{padding:20},
   heading:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},
   kicker:{...t.label,color:c.actionText},
   title:{...t.section,color:c.ink},
@@ -82,10 +92,10 @@ const styles=(c:Colors)=>StyleSheet.create({
   disabled:{opacity:.4},
   pressed:{opacity:.65},
   episodeLink:{minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,marginTop:12},
-  link:{...t.label,color:c.actionText,textDecorationLine:'underline'},
+  link:{...t.label,color:c.actionText},
   follow:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},
   followLabel:{...t.label,color:c.ink},
   platforms:{flexDirection:'row',gap:20,flexWrap:'wrap',marginTop:4},
   platform:{minHeight:44,flexDirection:'row',gap:6,alignItems:'center'},
-  platformText:{...t.meta,fontWeight:'600',color:c.ink,textDecorationLine:'underline'},
+  platformText:{...t.meta,fontWeight:'600',color:c.ink},
 });
