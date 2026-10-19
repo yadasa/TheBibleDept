@@ -14,7 +14,6 @@ import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-
 import { BlurTargetView } from "expo-blur";
 import { ThemeProvider, useTheme, typography as t } from "./src/theme";
 import { BrandLogo } from "./src/components/BrandLogo";
-import { GrainBackground } from "./src/components/GrainBackground";
 import { GlassProvider } from "./src/components/Glass";
 import { PageMask } from "./src/components/PageMask";
 import { PageBackdrop } from "./src/components/PageBackdrop";
@@ -189,7 +188,6 @@ function AppShell() {
         >
           <BlurTargetView ref={blurTarget} style={{ flex: 1 }}>
             <View>
-              <GrainBackground />
               <View
                 style={{
                   width: "100%",
