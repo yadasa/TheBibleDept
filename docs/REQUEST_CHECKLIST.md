@@ -113,6 +113,18 @@ requested plan exists, but its proposed behavior is not activated.
 
 ## What is still open
 
+### October 19 product-video revisions
+
+| Request | Status | Result / evidence |
+| --- | --- | --- |
+| Fill the currently signed-in account with video examples | Complete | Added 12 notes, 10 prayers (7 active / 3 answered) and 14 reading-history entries after the owner requested the existing account. Existing documents, profile and authoritative streak statistics were preserved. Private content and the exact cleanup manifest remain local, outside Git. |
+| Fix highlights and reading-history loading errors | Complete | Repaired the missing live owner-only namespace branches, tested the merged church rules and verified both errors disappeared in the active preview. [Deployment record](FIRESTORE_RULES_DEPLOYMENT.md). |
+| Put the supplied podcast cover in the Daily teaching card's top-right corner | Complete | Bundled a 192 px JPEG from the supplied artwork; rounded corners, no runtime CDN dependency. |
+| Enlarge the cover icon by 33% | Complete | Raised its display size from 44 px to 58⅔ px, retaining its square proportions. |
+| Replace the mobile hard scroll edge above navigation with a fade | Complete in source; physical appearance Verify | A 140 px native alpha transition composites the matching grain/glow backdrop. Only that backdrop is masked; live glass and interactive content retain their native layers. Expo Go SDK 57 includes the mask module. TypeScript, 103 unit tests and an iOS export passed; a physical iPhone appearance check is still required. |
+
+## Earlier remaining items
+
 - **NIV as the default:** licensed access is missing; the user confirmed there is no API access yet.
 - **Native lateral page motion blur:** the live-screen integration is unfinished. Available graphics filters do not by themselves provide a verified replacement for the interactive page track. [Technical findings](REQUEST_AUDIT.md#honest-remaining-boundaries).
 - **Device/release verification:** current iPhone appearance, touch, accessibility and latency; signed phone auth, live delivery, public app-link association and intended-project deployment need the checks above. Browser/export results do not replace them.
