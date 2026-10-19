@@ -41,8 +41,8 @@ export function PhoneSignIn({ onEmail }: { onEmail: () => void }) {
 
   return <View>
     <View style={s.status}><Icon name="phone" size={16} color={c.muted} /><Text style={s.statusText}>{challenge ? 'Verify your number' : 'Sign in by phone'}</Text></View>
-    <Text style={s.heading}>{challenge ? 'Check your messages.' : 'Your number. Your account.'}</Text>
-    <Text style={s.intro}>{challenge ? usingEmulators ? 'Enter the local test code below. No text message was sent.' : 'Enter the 6-digit code sent to ' + number + '.' : 'Use your phone number with its country code to sign in or create an account.'}</Text>
+    <Text style={s.heading}>{challenge ? 'Enter your verification code' : 'Sign in with your phone'}</Text>
+    <Text style={s.intro}>{challenge ? usingEmulators ? 'Enter the local test code below. No text message was sent.' : 'Enter the 6-digit code sent to ' + number + '.' : 'Enter your phone number, including the country code, to sign in or create an account.'}</Text>
     {!challenge && (usingEmulators || !available) && <View style={s.info}><Icon name="phone" size={18} color={c.action} /><Text style={s.infoText}>{usingEmulators ? 'Local test only. Use a fictional number from +16505550100 to +16505550199. No SMS is sent.' : 'SMS needs a signed development build. Use email to sign in to Expo Go.'}</Text></View>}
     <View style={s.form}>
       <Field label="Phone number" value={number} onChangeText={setNumber} keyboardType="phone-pad" textContentType="telephoneNumber" editable={!challenge && !busy} autoComplete="tel" placeholder="+1 650 555 0123" />

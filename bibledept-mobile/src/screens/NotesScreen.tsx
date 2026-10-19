@@ -27,9 +27,9 @@ export function NotesScreen({
       <View>
         <Icon name="notes" size={32} color={c.action} />
         <Text style={{ ...t.section, color: c.ink, marginTop: 20 }}>
-          Hold on to what stands out.
+          Save a note as you read
         </Text>
-        <Notice text="Highlight Scripture and add your reflections. Your private notes stay together here." />
+        <Notice text="Sign in to highlight verses, write notes, and find them here later." />
         <ActionButton title="Sign in to save notes" onPress={onAccount} />
       </View>
     );
@@ -40,24 +40,24 @@ export function NotesScreen({
   );
   return (
     <View>
-      <Notice text="Your highlights. Your questions. The words you want to return to. Synced privately to your account." />
+      <Notice text="Your highlights and notes are saved to your account. Only you can see them." />
       <Field
-        label="Search loaded notes"
+        label="Search these notes"
         value={search}
         onChangeText={setSearch}
-        placeholder="A passage or a thought"
+        placeholder="Book, passage, or note"
       />
       {notes.loading && <ActivityIndicator color={c.action} />}
       {!notes.loading && !notes.notes.length && (
         <View style={{ paddingVertical: 24 }}>
           <Text style={{ ...t.section, color: c.ink }}>
-            A thought worth keeping.
+            No notes yet
           </Text>
-          <Notice text="In the Bible reader, choose Highlight or comment, select your first and last verse, then save. It will appear here automatically." />
+          <Notice text="Open a chapter and choose Highlight or add a note. Select a verse or range, then save. You’ll find it here." />
         </View>
       )}
       {!visible.length && !!search && (
-        <Notice text="No matching notes in the loaded results. Load more notes or try another word." />
+        <Notice text="No matches in these notes. Try another word, or load more notes below if available." />
       )}
       {visible.map((note) => (
         <View

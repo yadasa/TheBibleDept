@@ -107,7 +107,7 @@ function HabitSession({
       .catch(() => {
         if (active)
           setError(
-            "Your pending reading could not be opened. Restart the app to retry.",
+            "The reading waiting to sync couldn’t be loaded. Restart the app to try again.",
           );
       });
     return () => {
@@ -120,7 +120,7 @@ function HabitSession({
       base = [USER_COLLECTION, owner] as const;
     const failed = () => {
       setLoading(false);
-      setError("Reading progress could not load. Check your connection.");
+      setError("We couldn’t load your reading history. Check your connection.");
     };
     const unsubscribers = [
       onSnapshot(
@@ -171,7 +171,7 @@ function HabitSession({
       if (mounted.current)
         setError(
           (e as Error).message ||
-            "Could not save. Check your connection and retry.",
+            "We couldn’t save your reading. Check your connection and try again.",
         );
       throw e;
     } finally {
@@ -202,18 +202,18 @@ function HabitSession({
     await run(async () => {
       if (!owner || !ready || !zone || !queueReady)
         throw new Error(
-          "Confirm your reading time zone in Account → Settings before saving a streak.",
+          "Choose your reading time zone in Account → Settings before tracking reading days.",
         );
       const chapterId = chapterFromReference(passage.reference);
       if (!chapterId)
         throw new Error(
-          "Finish one whole chapter to count a reading day. Verse selections can be saved in Notes.",
+          "Read a whole chapter to count a reading day. You can save selected verses in Notes.",
         );
       const existing = pendingRef.current;
       if (existing) {
         if (existing.chapterId !== chapterId)
           throw new Error(
-            "Retry or dismiss your pending reading before saving another chapter.",
+            "Retry or discard the reading waiting to sync before saving another chapter.",
           );
         await send(existing);
         return;

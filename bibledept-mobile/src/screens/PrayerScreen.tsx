@@ -47,7 +47,7 @@ export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
         setLoading(false);
       },
       () => {
-        setLoadError('Your journal could not be loaded. Check your connection and try again.');
+        setLoadError('We couldn’t load your prayers. Check your connection and try again.');
         setLoading(false);
       },
     );
@@ -63,9 +63,9 @@ export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
     setError('');
     try {
       await addDoc(collection(getFirebase().db, USER_COLLECTION, uid, 'prayers'), { text: value, answered: false, createdAt: serverTimestamp() });
-      if (activeUid.current === uid) { setText(''); setMessage('Your prayer has been saved.'); }
+      if (activeUid.current === uid) { setText(''); setMessage('Prayer saved.'); }
     } catch {
-      if (activeUid.current === uid) setError('Your prayer could not be saved. Your words are still here. Check your connection and retry.');
+      if (activeUid.current === uid) setError('We couldn’t save your prayer. Your text is still here. Check your connection and try again.');
     } finally {
       if (activeUid.current === uid) setSaving(false);
     }
@@ -79,9 +79,9 @@ export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
     setMessage('');
     try {
       await updateDoc(doc(getFirebase().db, USER_COLLECTION, uid, 'prayers', prayer.id), { answered: !prayer.answered });
-      if (activeUid.current === uid) setMessage(prayer.answered ? 'Your prayer is marked as praying again.' : 'Your prayer is marked as answered.');
+      if (activeUid.current === uid) setMessage(prayer.answered ? 'Prayer moved back to Praying.' : 'Prayer marked as answered.');
     } catch {
-      if (activeUid.current === uid) setError('The prayer could not be updated. Please try again.');
+      if (activeUid.current === uid) setError('We couldn’t update this prayer. Try again.');
     } finally {
       if (activeUid.current === uid) setUpdating(undefined);
     }
@@ -89,27 +89,27 @@ export function PrayerScreen({ onAccount }: { onAccount: () => void }) {
 
   if (!user) return <View style={s.guest}>
     <View style={s.iconTile}><Icon name="heart" size={28} color={c.action} /></View>
-    <Text style={s.heading}>Make space for prayer.</Text>
-    <Text style={s.intro}>A thought, a need, a thank you. Keep them together in a private journal you can return to.</Text>
-    <View style={s.guestAction}><ActionButton title="Sign in to begin" onPress={onAccount} icon="arrowRight" /></View>
+    <Text style={s.heading}>Keep a prayer journal</Text>
+    <Text style={s.intro}>Write down your prayers and come back to them later. You can mark a prayer as answered when you’re ready.</Text>
+    <View style={s.guestAction}><ActionButton title="Sign in to save prayers" onPress={onAccount} icon="arrowRight" /></View>
     <View style={s.privacy}><Icon name="lock" size={16} color={c.muted} /><Text style={s.privacyText}>Saved prayers are private to your account.</Text></View>
   </View>;
 
   const visible = owner === user.uid ? prayers : [];
   return <View style={s.screen}>
-    <View style={s.privacy}><Icon name="lock" size={16} color={c.muted} /><Text style={s.privacyText}>A private space, saved to your account.</Text></View>
+    <View style={s.privacy}><Icon name="lock" size={16} color={c.muted} /><Text style={s.privacyText}>Your prayers are saved to your account. Only you can see them.</Text></View>
     <View style={s.composer}>
-      <Text style={s.heading}>What’s on your heart?</Text>
-      <Text style={s.composerHint}>Write it down. Take a moment to pray.</Text>
-      <Field label="Your prayer" value={text} onChangeText={value => { setText(value); setMessage(''); setError(''); }} multiline maxLength={3000} placeholder="God, today I am praying about…" style={s.writing} editable={!saving} />
+      <Text style={s.heading}>Write a prayer</Text>
+      <Text style={s.composerHint}>You can come back to this prayer after you save it.</Text>
+      <Field label="Your prayer" value={text} onChangeText={value => { setText(value); setMessage(''); setError(''); }} multiline maxLength={3000} placeholder="Write your prayer here…" style={s.writing} editable={!saving} />
       <Text style={s.count}>{text.length.toLocaleString()} / 3,000 characters</Text>
       <ActionButton title="Save prayer" onPress={save} loading={saving} icon="plus" />
     </View>
     {!!error && <Notice text={error} error />}
     {!!message && <Notice text={message} success />}
     <View style={s.sectionHeader}><Text style={s.section}>Your prayers</Text>{!loading && !loadError && <Text style={s.total}>{visible.length}{visible.length === 100 ? '+' : ''}</Text>}</View>
-    {loading ? <View style={s.loading}><ActivityIndicator color={c.action} /><Text style={s.loadingText}>Opening your journal…</Text></View> : loadError ? <View><Notice text={loadError} error /><ActionButton title="Reload journal" onPress={() => setRevision(value => value + 1)} variant="secondary" icon="refresh" /></View> : !visible.length ? <View style={s.empty}>
-      <Icon name="heart" size={22} color={c.muted} /><Text style={s.emptyTitle}>Begin with what’s here.</Text><Text style={s.emptyText}>Your saved prayers will appear here. There’s no right way to start.</Text>
+    {loading ? <View style={s.loading}><ActivityIndicator color={c.action} /><Text style={s.loadingText}>Loading your prayers…</Text></View> : loadError ? <View><Notice text={loadError} error /><ActionButton title="Try again" onPress={() => setRevision(value => value + 1)} variant="secondary" icon="refresh" /></View> : !visible.length ? <View style={s.empty}>
+      <Icon name="heart" size={22} color={c.muted} /><Text style={s.emptyTitle}>No saved prayers yet</Text><Text style={s.emptyText}>Save your first prayer using the space above.</Text>
     </View> : visible.map(prayer => <View key={prayer.id} style={s.prayerRow}>
       <View style={s.status}><Icon name={prayer.answered ? 'checkCircle' : 'heart'} size={16} color={prayer.answered ? c.success : c.action} /><Text style={[s.statusText, prayer.answered && s.answered]}>{prayer.answered ? 'Answered' : 'Praying'}</Text></View>
       <Text selectable style={s.prayer}>{prayer.text}</Text>

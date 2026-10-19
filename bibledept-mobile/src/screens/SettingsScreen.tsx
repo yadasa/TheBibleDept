@@ -30,7 +30,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       </Text>
       <Text style={s.label}>Appearance</Text>
       <Text style={s.body}>
-        Choose a comfortable reading space. Dark is the default.
+        Choose light or dark mode.
       </Text>
       <View style={s.choices}>
         {(["dark", "light"] as const).map((value) => (
@@ -55,14 +55,14 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
       </Text>
       {!!error && <Notice text={error} error />}
       <View style={{ marginTop: 32 }}>
-        <Text style={s.label}>Your reading rhythm</Text>
+        <Text style={s.label}>Reading streaks</Text>
         {habit.ready ? (
           <Notice
-            text={`Your reading day follows ${habit.zone}. One complete chapter counts each day. Your plan position stays on this device.`}
+            text={`Reading days are counted in ${habit.zone}. Mark a whole chapter as read to count the day. Your place in the plan is saved separately on this device.`}
           />
         ) : (
           <>
-            <Notice text="Confirm the time zone for your reading day. It stays fixed when you travel. Existing reading dates will be imported as previously self-reported history." />
+            <Notice text="Choose the time zone used to count your reading days. It will stay the same when you travel. Existing reading dates will be kept as you recorded them." />
             <Field
               label="Reading time zone"
               value={zone}

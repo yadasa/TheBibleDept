@@ -19,17 +19,17 @@ export function authError(error:unknown) {
     'auth/invalid-email':'Enter a valid email address.',
     'auth/invalid-credential':'The email or password is incorrect.',
     'auth/email-already-in-use':'An account already exists for that email. Try signing in.',
-    'auth/weak-password':'Use a stronger password with at least 8 characters.',
-    'auth/network-request-failed':'Cannot reach Firebase. Check your connection and make sure the local emulators are running.',
-    'auth/too-many-requests':'Too many attempts. Please wait a moment and retry.',
+    'auth/weak-password':'Use a password with at least 8 characters.',
+    'auth/network-request-failed':'We couldn’t connect. Check your internet connection and try again.',
+    'auth/too-many-requests':'There have been too many attempts. Wait a moment and try again.',
     'auth/invalid-phone-number':'Include the country code and check your phone number.',
     'auth/invalid-verification-code':'That code is incorrect. Check your message and try again.',
     'auth/code-expired':'Your code has expired. Request a new code.',
     'auth/session-expired':'Your code has expired. Request a new code.',
     'auth/captcha-check-failed':'Verification could not finish. Request a new code and complete the security check.',
-    'auth/operation-not-allowed':'Phone sign-in has not been enabled for this Firebase project. Use email for now.',
+    'auth/operation-not-allowed':'This sign-in method isn’t available. Try another method.',
     'auth/unauthorized-domain':'This web address is not authorized for phone sign-in. Use the published app or email.',
     'auth/quota-exceeded':'SMS is temporarily unavailable. Try later or use email.',
   };
-  return messages[code||''] || (error instanceof Error?error.message:'Something went wrong. Please retry.');
+  return messages[code||''] || (error instanceof Error?error.message:'We couldn’t sign you in. Try again.');
 }

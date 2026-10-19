@@ -85,7 +85,7 @@ export function DayPicker({ visible, selectedDay, currentDay, finished, onSelect
             <View style={s.jumpAction}><ActionButton title="Open day" onPress={jump}/></View>
           </View>
           {!!error && <Notice text={error} error/>}
-          <Text style={s.storage}>Browse freely. Your saved spot stays on this device until you continue from your current day.</Text>
+          <Text style={s.storage}>Opening another day won’t change your place in the plan.</Text>
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>

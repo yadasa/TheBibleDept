@@ -86,7 +86,7 @@ export function AnnotationEditor({
               accessibilityRole="header"
               style={{ ...t.section, color: c.ink }}
             >
-              {annotation.id ? "Edit your note" : "Keep this close"}
+              {annotation.id ? "Edit note" : "Highlight and note"}
             </Text>
             <Notice
               text={`${annotation.reference}:${annotation.verseStart}${annotation.verseEnd === annotation.verseStart ? "" : `–${annotation.verseEnd}`} · ${annotation.translation.toUpperCase()}`}
@@ -147,15 +147,15 @@ export function AnnotationEditor({
               ))}
             </View>
             <Field
-              label="Your comment"
+              label="Note (optional)"
               value={comment}
               onChangeText={setComment}
               multiline
               maxLength={3000}
               editable={!busy}
-              placeholder="What stands out to you?"
+              placeholder="Add a note about these verses…"
             />
-            <Notice text="Highlights and comments save together and appear automatically in Notes. Only you can see them. Connect to the internet to finish syncing." />
+            <Notice text="Save your highlight and note together to find them in Notes. Only you can see them. Connect to the internet to finish syncing." />
             {!!error && <Notice text={error} error />}
             <ActionButton
               title="Save to Notes"
@@ -173,8 +173,8 @@ export function AnnotationEditor({
               <ActionButton
                 title={
                   confirmDelete
-                    ? "Confirm delete highlight and comment"
-                    : "Delete highlight and comment"
+                    ? "Confirm delete highlight and note"
+                    : "Delete highlight and note"
                 }
                 variant="ghost"
                 disabled={busy}
@@ -188,7 +188,7 @@ export function AnnotationEditor({
                     removeAnnotation(user.uid, annotation.id)
                       .then(onClose)
                       .catch(() => {
-                        setError("Could not delete. Try again.");
+                        setError("We couldn’t delete this note. Try again.");
                         setBusy(false);
                       });
                   }

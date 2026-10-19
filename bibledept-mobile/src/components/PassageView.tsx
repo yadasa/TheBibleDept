@@ -78,7 +78,7 @@ export function PassageView({ passage }: { passage: Passage }) {
         <View style={{ marginBottom: 20 }}>
           <ActionButton
             title={
-              selecting ? "Cancel verse selection" : "Highlight or comment"
+              selecting ? "Cancel verse selection" : "Highlight or add a note"
             }
             secondary
             onPress={() => {
@@ -88,14 +88,14 @@ export function PassageView({ passage }: { passage: Passage }) {
           />
           {selecting && (
             <>
-              <Notice text="Tap the first and last verse of a section in one chapter. Tap just one verse to select it." />
+              <Notice text="Tap a verse to select it. For a longer passage, tap the first and last verse within the same chapter." />
               {selection && (
                 <>
                   <Notice
                     text={`Selected ${selection.reference}:${Math.min(selection.first, selection.last)}–${Math.max(selection.first, selection.last)}`}
                   />
                   <ActionButton
-                    title="Annotate selected verses"
+                    title="Add highlight or note"
                     onPress={annotate}
                   />
                 </>
@@ -104,7 +104,7 @@ export function PassageView({ passage }: { passage: Passage }) {
           )}
         </View>
       ) : (
-        <Notice text="Sign in under Account to highlight verses and keep private notes." />
+        <Notice text="Sign in from Account to highlight verses and save notes." />
       )}
       {!!notes.error && <Notice text={notes.error} error />}
       {passage.verses.map((verse, index) => (
@@ -180,7 +180,7 @@ export function PassageView({ passage }: { passage: Passage }) {
                     }}
                   >
                     <Text style={{ ...t.meta, color: c.action }}>
-                      {note.comment || "Highlighted · Add a comment"}
+                      {note.comment || "Highlighted · Add a note"}
                       {note.pending ? " · Syncing…" : ""}
                     </Text>
                   </GlassPressable>
@@ -191,7 +191,7 @@ export function PassageView({ passage }: { passage: Passage }) {
         </View>
       ))}
       {selecting && selection && (
-        <ActionButton title="Annotate selected verses" onPress={annotate} />
+        <ActionButton title="Add highlight or note" onPress={annotate} />
       )}
       {!!editing && user && (
         <AnnotationEditor

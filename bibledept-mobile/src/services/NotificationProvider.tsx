@@ -93,7 +93,7 @@ function Session({ owner, children }: { owner?: string; children: ReactNode }) {
         "notifications",
       ),
       (snapshot) => setPrefs({ ...defaultPreferences, ...snapshot.data() }),
-      () => setError("Reminder preferences could not load."),
+      () => setError("We couldn’t load your reminder settings. Check your connection."),
     );
     let mounted = true;
     AsyncStorage.getItem(bindingKey)

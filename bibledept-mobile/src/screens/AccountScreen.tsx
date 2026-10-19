@@ -44,11 +44,11 @@ export function AccountScreen() {
     if (busy) return;
     setError('');
     setMessage('');
-    if (!email.trim()) { setError('Enter your email address above, then request a reset.'); return; }
+    if (!email.trim()) { setError('Enter your email address above, then choose Forgot password.'); return; }
     setBusy(true);
     try {
       await sendPasswordResetEmail(getFirebase().auth, email.trim());
-      setMessage(usingEmulators ? 'The reset link is available in the local Firebase emulator output. No email was sent.' : 'If an account exists, a reset email is on its way.');
+      setMessage(usingEmulators ? 'Find the reset link in the Firebase emulator output. No email was sent.' : 'If there’s an account with this email address, you’ll receive a password reset link.');
     } catch (e) { setError(authError(e)); }
     finally { setBusy(false); }
   }
@@ -69,7 +69,7 @@ export function AccountScreen() {
     setMessage('');
   }
 
-  if (!ready) return <View style={s.loading}><ActivityIndicator color={c.action} /><Text style={s.loadingText}>Opening your account…</Text></View>;
+  if (!ready) return <View style={s.loading}><ActivityIndicator color={c.action} /><Text style={s.loadingText}>Loading your account…</Text></View>;
   if (setupError) return <Notice text={setupError} error />;
   if(user&&settings)return <SettingsScreen onBack={()=>setSettings(false)}/>;
 
@@ -82,8 +82,8 @@ export function AccountScreen() {
         <View style={s.identityText}><View style={s.status}><Icon name="checkCircle" size={16} color={c.success} /><Text style={s.signedIn}>Signed in</Text></View><Text selectable style={s.email}>{user.email || user.phoneNumber || 'Your Bible Dept account'}</Text></View>
       </View>
       <View style={s.details}>
-        <AccountDetail icon="heart" title="Private prayer journal" text="Your saved prayers belong to this account." />
-        <AccountDetail icon="book" title="Reading history" text="Saved readings and reading streaks sync with your account." />
+        <AccountDetail icon="heart" title="Private prayer journal" text="Your prayers are saved to this account. Only you can see them." />
+        <AccountDetail icon="book" title="Reading history" text="Your saved chapters and reading streaks sync with this account." />
         <AccountDetail icon="calendar" title="Your plan day" text="Your place in the 365-day plan stays on this device." />
       </View>
       <ActionButton title="Settings" icon="settings" secondary onPress={()=>setSettings(true)}/>
@@ -91,8 +91,8 @@ export function AccountScreen() {
       <ActionButton title="Sign out" onPress={leave} loading={busy} variant="secondary" icon="logout" />
     </View> : phone ? <PhoneSignIn onEmail={() => { setPhone(false); setError(''); setMessage(''); }} /> : <View>
       <View style={s.status}><Icon name="user" size={16} color={c.muted} /><Text style={s.statusText}>Not signed in</Text></View>
-      <Text style={s.heading}>{register ? 'Create your account.' : 'Welcome back.'}</Text>
-      <Text style={s.intro}>Save your prayers and reading history. Your place in the daily plan stays on this device.</Text>
+      <Text style={s.heading}>{register ? 'Create an account' : 'Sign in'}</Text>
+      <Text style={s.intro}>Save your notes, prayers, and reading history. Your place in the 365-day plan stays on this device.</Text>
       <View style={s.form}>
         <Field label="Email address" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" autoComplete="email" editable={!busy} placeholder="you@example.com" />
         <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry textContentType={register ? 'newPassword' : 'password'} autoComplete={register ? 'new-password' : 'current-password'} onSubmitEditing={submit} returnKeyType="go" editable={!busy} />
@@ -106,7 +106,7 @@ export function AccountScreen() {
       <View style={s.divider}><View style={s.rule} /><Text style={s.dividerText}>or</Text><View style={s.rule} /></View>
       <ActionButton title="Continue with phone" onPress={() => { setPhone(true); setError(''); setMessage(''); }} variant="secondary" icon="phone" disabled={busy} />
     </View>}
-    <View style={s.freeNote}><Icon name="book" size={16} color={c.muted} /><Text style={s.freeText}>Reading is always free. An account is optional.</Text></View>
+    <View style={s.freeNote}><Icon name="book" size={16} color={c.muted} /><Text style={s.freeText}>The readings and podcast are free. You can use both without an account.</Text></View>
   </View>;
 }
 

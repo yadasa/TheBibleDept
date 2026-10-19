@@ -21,7 +21,7 @@ export function ReadingCompletion({
     { colors: c } = useTheme();
   if (!chapterFromReference(passage.reference))
     return (
-      <Notice text="Finish a whole chapter to count a reading day. You can highlight these verses and save a note." />
+      <Notice text="Only whole chapters count toward your reading streak. You can still highlight these verses and save a note." />
     );
   return (
     <View
@@ -34,18 +34,18 @@ export function ReadingCompletion({
       }}
     >
       <Text style={{ ...t.section, color: c.ink }}>
-        Take a moment. Let it settle.
+        Finished this chapter?
       </Text>
       <Notice
         text={
           habit.days.includes(habit.today)
-            ? "Today is counted. Another chapter is always welcome."
+            ? "Today’s reading is already counted. You can still save this chapter."
             : "One complete chapter counts as a reading day."
         }
       />
       {!user ? (
         <ActionButton
-          title="Sign in to save your reading"
+          title="Sign in to track reading days"
           secondary
           onPress={onAccount}
         />
@@ -70,9 +70,9 @@ export function ReadingCompletion({
           success
           text={
             habit.receipt.milestone
-              ? `${habit.receipt.milestone} days of showing up. Keep growing at your pace.`
+              ? `That’s a ${habit.receipt.milestone}-day streak. Your reading is saved.`
               : habit.receipt.awardedNewDay
-                ? `Reading saved · ${habit.receipt.current} ${habit.receipt.current === 1 ? "day" : "days"} in your rhythm.`
+                ? `Reading saved. Your current streak is ${habit.receipt.current} ${habit.receipt.current === 1 ? "day" : "days"}.`
                 : "Chapter saved. Your reading day was already counted."
           }
         />
@@ -81,16 +81,16 @@ export function ReadingCompletion({
       {!!habit.pending && (
         <View>
           <Notice
-            text={`Pending reading from ${habit.pending.expectedHabitDate}. Retry safely; a day that has ended will not be moved to today.`}
+            text={`Reading from ${habit.pending.expectedHabitDate} is waiting to sync. If that reading day has ended, it won’t be counted as today.`}
           />
           <ActionButton
-            title="Retry pending reading"
+            title="Retry saving"
             secondary
             disabled={habit.busy}
             onPress={() => void habit.retry().catch(() => {})}
           />
           <ActionButton
-            title="Dismiss pending reading"
+            title="Discard unsaved reading"
             variant="ghost"
             disabled={habit.busy}
             onPress={() => void habit.discard().catch(() => {})}

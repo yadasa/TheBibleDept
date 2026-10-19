@@ -41,15 +41,15 @@ export function HomeScreen({
         <Text style={s.eyebrow}>{date}</Text>
         <View style={s.badge}>
           <View style={s.dot} />
-          <Text style={s.badgeText}>AT YOUR PACE</Text>
+          <Text style={s.badgeText}>READ & LISTEN</Text>
         </View>
       </View>
       <Text accessibilityRole="header" style={s.hero}>
-        Make room{`\n`}for the Word<Text style={{ color: c.orange }}>.</Text>
+        Today’s{`\n`}reading<Text style={{ color: c.orange }}>.</Text>
       </Text>
       <Text style={s.intro}>
-        A little reading. A deeper understanding.{`\n`}A rhythm you can return
-        to.
+        Read the chapters below, then listen to Dr. Manny Arango’s teaching
+        for the day.
       </Text>
       <GlassSurface style={s.reading}>
         <View style={s.topline}>
@@ -66,7 +66,7 @@ export function HomeScreen({
           {plan.finished ? "Plan complete" : "Your next reading"}
         </Text>
         <ActionButton
-          title={plan.finished ? "Revisit your reading" : `Continue reading`}
+          title={plan.finished ? "Read again" : `Read day ${day.day}`}
           icon="arrowRight"
           disabled={!plan.ready}
           onPress={onRead}
@@ -89,7 +89,7 @@ export function HomeScreen({
         <>
           <Notice text={plan.error} error />
           <ActionButton
-            title="Retry saved plan"
+            title="Reload saved progress"
             secondary
             onPress={plan.retry}
           />
@@ -101,7 +101,7 @@ export function HomeScreen({
       {user && habit.ready ? (
         <View style={s.rhythm}>
           <View style={s.topline}>
-            <Text style={s.section}>Your reading rhythm</Text>
+            <Text style={s.section}>Reading streak</Text>
             <Icon name="flame" color={c.action} />
           </View>
           <View style={s.stats}>
@@ -115,15 +115,15 @@ export function HomeScreen({
               </Text>
               <Text style={s.small}>
                 {habit.days.includes(habit.today)
-                  ? "Today, you showed up."
+                  ? "Today’s reading is counted."
                   : habit.current
-                    ? "There’s room for a chapter today."
-                    : "Every chapter is a new beginning."}
+                    ? "Read a chapter to count today."
+                    : "Complete a chapter to start a streak."}
               </Text>
             </View>
             <View style={s.best}>
               <Text style={s.bestNumber}>{habit.streak.longest}</Text>
-              <Text style={s.small}>Personal best</Text>
+              <Text style={s.small}>Longest streak</Text>
             </View>
           </View>
           <View style={s.week}>
@@ -170,25 +170,25 @@ export function HomeScreen({
           </View>
           <Text style={s.small}>
             {habit.streak.totalReadingDays} reading{" "}
-            {habit.streak.totalReadingDays === 1 ? "day" : "days"} in all ·{" "}
+            {habit.streak.totalReadingDays === 1 ? "day" : "days"} total ·{" "}
             {habit.zone}
           </Text>
         </View>
       ) : (
         <View style={s.setup}>
           <View style={s.topline}>
-            <Text style={s.section}>Build a steady rhythm.</Text>
+            <Text style={s.section}>Track your reading</Text>
             <Icon name="flame" color={c.action} />
           </View>
           <Notice
             text={
               user
-                ? "Choose your reading time zone in Account → Settings to start tracking your days."
-                : "A chapter at a time. Sign in to keep your reading streak and your reflections together."
+                ? "Choose your time zone in Account → Settings to start counting reading days."
+                : "Sign in to track reading days and save your notes and prayers."
             }
           />
           <ActionButton
-            title={user ? "Open account settings" : "Create your free account"}
+            title={user ? "Open account" : "Sign in or create an account"}
             variant="ghost"
             icon="arrowRight"
             onPress={onAccount}
@@ -198,20 +198,20 @@ export function HomeScreen({
       {!!habit.error && <Notice text={habit.error} error />}
       <View style={s.sectionRow}>
         <Text accessibilityRole="header" style={s.section}>
-          A moment to reflect
+          Notes & prayers
         </Text>
-        <Text style={s.small}>MAKE IT PERSONAL</Text>
+        <Text style={s.small}>PRIVATE TO YOU</Text>
       </View>
       <View style={s.quickRow}>
         <QuickCard
           title="Your notes"
-          body="Keep what stands out."
+          body="Find your highlights and notes."
           icon="notes"
           onPress={onNotes}
         />
         <QuickCard
           title="Prayer journal"
-          body="Bring what’s on your heart."
+          body="Write a prayer or revisit one."
           icon="heart"
           onPress={onPrayer}
         />
@@ -223,7 +223,7 @@ export function HomeScreen({
           onPress={onNotes}
           style={s.lastNote}
         >
-          <Text style={s.eyebrow}>YOUR LATEST REFLECTION</Text>
+          <Text style={s.eyebrow}>YOUR LATEST NOTE</Text>
           <Text style={s.noteComment} numberOfLines={3}>
             {lastNote.comment}
           </Text>
@@ -237,7 +237,7 @@ export function HomeScreen({
       )}
       <View style={s.footer}>
         <View style={s.shortRule} />
-        <Text style={s.footerText}>Read. Understand. Grow.</Text>
+        <Text style={s.footerText}>The Bible Dept. with Dr. Manny Arango</Text>
       </View>
     </View>
   );

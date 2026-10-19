@@ -41,27 +41,27 @@ export function PlanScreen({active=true,onAccount}:{active?:boolean;onAccount:()
     <View style={s.planHeader}>
       <View style={s.headingRow}><Text accessibilityRole="header" style={s.day}>Day {day.day}<Text style={s.total}> / 365</Text></Text><GlassPressable accessibilityRole="button" accessibilityLabel="Choose a plan day" disabled={plan.busy} onPress={()=>setPicker(true)} style={({pressed})=>[s.choose,pressed&&s.pressed]}><Icon name="calendar" size={18}/><Text style={s.chooseText}>Days</Text></GlassPressable></View>
       <Text style={s.label}>{day.label}</Text>
-      <View style={s.statusRow}><Icon name={done?'checkCircle':current?'book':'search'} size={16} color={done?c.success:c.action}/><Text style={s.status}>{done?'Completed reading':current?'Your current day':`Exploring · your place is day ${plan.currentDay}`}</Text></View>
+      <View style={s.statusRow}><Icon name={done?'checkCircle':current?'book':'search'} size={16} color={done?c.success:c.action}/><Text style={s.status}>{done?'Day complete':current?'Your current day':`Browsing · your saved day is ${plan.currentDay}`}</Text></View>
       {!current&&<ActionButton title={`Return to day ${plan.currentDay}`} variant="ghost" onPress={plan.returnToCurrent}/>}
     </View>
     <ReaderControls translation={translation} onTranslation={setTranslation}/>
     <Text style={s.caption}>Chapter {chapterIndex+1} of {chapters.length}</Text>
     <View style={s.chapters}>{chapters.map((item,index)=><GlassPressable key={item.reference} accessibilityRole="button" accessibilityLabel={`Read ${item.reference}`} accessibilityState={{selected:index===chapterIndex}} onPress={()=>selectChapter(index)} style={({pressed})=>[s.chip,index===chapterIndex&&s.activeChip,pressed&&s.pressed]}><Text style={[s.chipText,index===chapterIndex&&s.activeText]}>{item.reference}</Text>{index===chapterIndex&&<View style={s.selectionMark}/>}</GlassPressable>)}</View>
     {!reading?.passage&&!reading?.error&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text={`Opening ${chapter.reference}…`}/></View>}
-    {reading?.error&&<View style={s.error}><Text style={s.errorTitle}>This chapter couldn't load</Text><Notice text={reading.error} error/><ActionButton title="Retry this reading" icon="refresh" onPress={()=>setRetry(value=>value+1)} secondary/></View>}
+    {reading?.error&&<View style={s.error}><Text style={s.errorTitle}>We couldn’t load this chapter</Text><Notice text={reading.error} error/><ActionButton title="Try again" icon="refresh" onPress={()=>setRetry(value=>value+1)} secondary/></View>}
     {reading?.passage&&<><PassageView key={`${reading.passage.reference}:${translation}`} passage={reading.passage}/><ReadingCompletion passage={reading.passage} source="plan" planDay={day.day} onAccount={onAccount}/></>}
     {reading?.passage&&<View style={s.chapterNavigation}>
       {chapterIndex>0&&<ActionButton title={`Previous: ${chapters[chapterIndex-1].reference}`} icon="chevronLeft" onPress={()=>selectChapter(chapterIndex-1)} secondary/>}
       {chapterIndex<chapters.length-1&&<ActionButton title={`Next: ${chapters[chapterIndex+1].reference}`} icon="chevronRight" onPress={()=>selectChapter(chapterIndex+1)} secondary/>}
     </View>}
     <View style={s.completion}>
-      <Text accessibilityRole="header" style={s.completionTitle}>{plan.finished?'The whole plan, complete':current?'Finished this day’s reading?':'Keep your place'}</Text>
-      <Text style={s.meta}>{current&&!plan.finished?'Read all the chapters at your pace, then continue when you’re ready.':'You can return to any day without changing your saved place.'}</Text>
-      {!plan.ready?<Notice text="Opening your saved spot…"/>:!current?<ActionButton title={`Return to current day ${plan.currentDay}`} onPress={plan.returnToCurrent} secondary/>
-        :plan.finished?<Notice text="You made it through all 365 days. Revisit any passage whenever you like." success/>
+      <Text accessibilityRole="header" style={s.completionTitle}>{plan.finished?'Plan complete':current?`Finished day ${day.day}?`:'Reading another day'}</Text>
+      <Text style={s.meta}>{current&&!plan.finished?'Mark this day complete when you’ve read all the chapters.':'Opening another day won’t change your place in the plan.'}</Text>
+      {!plan.ready?<Notice text="Loading your saved day…"/>:!current?<ActionButton title={`Return to day ${plan.currentDay}`} onPress={plan.returnToCurrent} secondary/>
+        :plan.finished?<Notice text="All 365 days are marked complete. You can open any day to read it again." success/>
         :<ActionButton title={plan.currentDay===365?'Complete the plan':`Complete day ${plan.currentDay} & continue`} icon="check" onPress={()=>void plan.advance()} loading={plan.busy} disabled={!!plan.error}/>}
-      {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Retry saved progress" onPress={plan.retry} secondary/></View>}
-      <Text style={s.local}>Your place saves on this device.</Text>
+      {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Reload saved progress" onPress={plan.retry} secondary/></View>}
+      <Text style={s.local}>Your place in the plan is saved on this device.</Text>
     </View>
     <Pressable accessibilityRole="link" onPress={()=>Linking.openURL('https://bible-api.com/')} style={s.creditLink}><Text style={s.credit}>Public-domain Scripture via bible-api.com. Internet required.</Text></Pressable>
     {active&&<PodcastCard day={day.day}/>}
