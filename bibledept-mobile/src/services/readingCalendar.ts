@@ -44,6 +44,11 @@ export function readingGlowProfile(run: number) {
   };
 }
 
+/** The first three days retain their color and steady halo without animation. */
+export function readingShouldPulse(run:number) {
+  return run>=4;
+}
+
 /** Stable pseudorandom phase per date, without reshuffling on render or theme changes. */
 export function readingSquarePhase(date:string) {
   let hash=2166136261;

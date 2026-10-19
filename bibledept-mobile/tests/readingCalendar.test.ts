@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingRunIntensity, readingSquarePhase } from '../src/services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingRunIntensity, readingShouldPulse, readingSquarePhase } from '../src/services/readingCalendar';
+
+test('only day four onward receives an animated streak effect',()=>{
+  for(const run of [0,1,2,3])assert.equal(readingShouldPulse(run),false);
+  for(const run of [4,7,11,21,365])assert.equal(readingShouldPulse(run),true);
+});
 
 test('calendar totals unique valid reading dates and resets runs at gaps', () => {
   const result = readingCalendar(['2026-10-19','2026-10-18','2026-10-16','2026-10-15','2026-10-15','2026-10-20','invalid'], '2026-10-19');

@@ -1,10 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { cancelAnimation, Easing, interpolateColor, SharedValue, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { interpolateColor, SharedValue, useAnimatedStyle, useDerivedValue, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { shiftDate } from '../../shared/habits';
 import { Colors, useTheme, useThemedStyles, typography as t } from '../theme';
 import { luminousPalettes } from '../themeColors';
-import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingSquarePhase } from '../services/readingCalendar';
+import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowProfile, readingPulseLevel, readingRunColor, readingShouldPulse, readingSquarePhase } from '../services/readingCalendar';
 import { useReducedMotion } from './LiquidBottomNav';
 import { useScreenScrollControls } from './ScreenScrollView';
 import { CalendarWindow, sameCalendarWindow, visibleCalendarWindow } from '../services/calendarVisibility';
@@ -44,7 +44,7 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
     const first=shiftDate(today,-(25*7+weekday));
     return Array.from({length:26},(_,week)=>Array.from({length:7},(_,day)=>shiftDate(first,week*7+day)));
   },[today]);
-  // At most 21 UI-thread pulse groups, rather than one clock for every square.
+  // Cull before creating animated views: offscreen dates have no worklets.
   const haloGroups=useMemo(()=>{
     if(!visible)return [];
     const groups=new Map<number,HaloPosition[]>();
@@ -56,6 +56,19 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
     }));
     return [...groups];
   },[weeks,activity,visible]);
+  // One clock for the entire chart. Slow ambient pulses need only 30 updates/s;
+  // native scrolling keeps its full refresh rate independently of this clock.
+  const clock=useSharedValue(0),pendingTime=useSharedValue(0);
+  const pulseFrame=useFrameCallback(frame=>{
+    pendingTime.value+=Math.min(frame.timeSincePreviousFrame??0,64);
+    if(pendingTime.value>=1000/30){clock.value+=pendingTime.value;pendingTime.value=0;}
+  },false);
+  const animate=active&&foreground&&!reduced;
+  const hasPulsingSquares=haloGroups.some(([run])=>readingShouldPulse(run));
+  useEffect(()=>{
+    pulseFrame.setActive(animate&&hasPulsingSquares);
+    return()=>pulseFrame.setActive(false);
+  },[animate,hasPulsingSquares,pulseFrame]);
   const latest=[...activity.runs.keys()].at(-1)||today;
   const snapToRecent=useCallback(()=>scroll.current?.scrollTo({x:calendarRecencyOffset(latest,weeks[0][0],width,cellSize,CALENDAR_GAP,CALENDAR_PADDING),animated:false}),[latest,weeks,width,cellSize]);
   useEffect(()=>{if(active&&width>0)snapToRecent();},[active,width,snapToRecent]);
@@ -78,7 +91,7 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
         })}
       </View>),[weeks,activity,c.orange,palette.empty,palette.emptyBorder,cellSize,today,s])}
       <View testID="reading-streak-glow" pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} orange={c.orange} shadow={palette.streakGlow} animate={active&&foreground&&!reduced}/>)}
+        {width>0&&haloGroups.map(([run,positions])=><StreakHaloGroup key={run} run={run} positions={positions} cellSize={cellSize} orange={c.orange} shadow={palette.streakGlow} animate={animate&&readingShouldPulse(run)} clock={clock}/>)}
       </View>
     </ScrollView>
     </View>
@@ -88,29 +101,32 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today}:{d
 });
 
 type HaloPosition={date:string;column:number;row:number};
-function StreakHaloGroup({run,positions,cellSize,orange,shadow,animate}:{run:number;positions:HaloPosition[];cellSize:number;orange:string;shadow:string;animate:boolean}) {
-  const {cycleMs}=readingGlowProfile(run),clock=useSharedValue(0);
-  useEffect(()=>{
-    cancelAnimation(clock);clock.value=0;
-    if(animate)clock.value=withRepeat(withTiming(1,{duration:cycleMs,easing:Easing.linear}),-1,false);
-    return()=>cancelAnimation(clock);
-  },[animate,cycleMs,clock]);
+function StreakHaloGroup({run,positions,cellSize,orange,shadow,animate,clock}:{run:number;positions:HaloPosition[];cellSize:number;orange:string;shadow:string;animate:boolean;clock:SharedValue<number>}) {
   return <View testID={`reading-streak-fill-${run}`} style={StyleSheet.absoluteFill}>
-    {positions.map(position=><StreakSquareLight key={position.date} {...position} run={run} cellSize={cellSize} orange={orange} shadow={shadow} animate={animate} clock={clock}/>)}
+    {positions.map(position=>animate?<StreakSquareLight key={position.date} {...position} run={run} cellSize={cellSize} orange={orange} shadow={shadow} clock={clock}/>:<StaticSquareLight key={position.date} {...position} run={run} cellSize={cellSize} shadow={shadow}/>)}
   </View>;
 }
 
-/** Each square samples a different phase of its intensity group's shared clock. */
-const StreakSquareLight=memo(function StreakSquareLight({date,column,row,run,cellSize,orange,shadow,animate,clock}:HaloPosition&{run:number;cellSize:number;orange:string;shadow:string;animate:boolean;clock:SharedValue<number>}) {
-  const offset=readingSquarePhase(date),{minOpacity,maxOpacity}=readingGlowProfile(run);
-  const {rest,peak}=readingFillColors(orange,run),settledColor=readingRunColor(orange,run);
-  const glowStyle=useAnimatedStyle(()=>({opacity:animate?minOpacity+(maxOpacity-minOpacity)*readingPulseLevel(clock.value,offset):(minOpacity+maxOpacity)/2}));
-  const fillStyle=useAnimatedStyle(()=>({opacity:1,backgroundColor:animate?interpolateColor(readingPulseLevel(clock.value,offset),[0,1],[rest,peak]):settledColor}));
+const haloBounds=(column:number,row:number,cellSize:number)=>({position:'absolute' as const,left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden' as const});
+const SquareBloom=memo(function SquareBloom({cellSize,shadow}:{cellSize:number;shadow:string}) {
+  return <View style={{position:'absolute',left:GLOW_REACH,top:GLOW_REACH,width:cellSize,height:cellSize,borderRadius:3,backgroundColor:'rgba(255,188,66,0.01)',boxShadow:shadow}}/>;
+});
+const StaticSquareLight=memo(function StaticSquareLight({date,column,row,run,cellSize,shadow}:HaloPosition&{run:number;cellSize:number;shadow:string}) {
+  const {minOpacity,maxOpacity}=readingGlowProfile(run);
+  return <View testID={`reading-streak-static-${date}`} style={[haloBounds(column,row,cellSize),{opacity:(minOpacity+maxOpacity)/2}]}><SquareBloom cellSize={cellSize} shadow={shadow}/></View>;
+});
+
+/** Shared elapsed time, independent stable phases, one cosine per visible square. */
+const StreakSquareLight=memo(function StreakSquareLight({date,column,row,run,cellSize,orange,shadow,clock}:HaloPosition&{run:number;cellSize:number;orange:string;shadow:string;clock:SharedValue<number>}) {
+  const offset=readingSquarePhase(date),{minOpacity,maxOpacity,cycleMs}=readingGlowProfile(run);
+  const {rest,peak}=readingFillColors(orange,run);
+  const level=useDerivedValue(()=>readingPulseLevel(clock.value/cycleMs,offset));
+  const glowStyle=useAnimatedStyle(()=>({opacity:minOpacity+(maxOpacity-minOpacity)*level.value}));
+  const fillStyle=useAnimatedStyle(()=>({backgroundColor:interpolateColor(level.value,[0,1],[rest,peak])}));
   return <View style={StyleSheet.absoluteFill}>
-    <Animated.View testID={`reading-streak-glow-${date}`} style={[{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden'},glowStyle]}>
+    <Animated.View testID={`reading-streak-glow-${date}`} shouldRasterizeIOS renderToHardwareTextureAndroid style={[haloBounds(column,row,cellSize),glowStyle]}>
       {/* Visible soft bloom, leaving a 1 px dark separation in the 8 px gap. */}
-      <View style={{position:'absolute',left:GLOW_REACH,top:GLOW_REACH,width:cellSize,height:cellSize,borderRadius:3,
-        backgroundColor:'rgba(255,188,66,0.01)',boxShadow:shadow}}/>
+      <SquareBloom cellSize={cellSize} shadow={shadow}/>
     </Animated.View>
     <Animated.View testID={`reading-streak-color-${date}`} style={[{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,width:cellSize,height:cellSize,borderRadius:3,opacity:1},fillStyle]}/>
   </View>;
