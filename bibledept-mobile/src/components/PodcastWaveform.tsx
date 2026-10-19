@@ -5,13 +5,13 @@ import type { RendererProps } from 'react-native-waveforms';
 import Animated, { Easing, SharedValue, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { ClipPath, Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { audioTime } from '../services/podcasts';
-import { renderedPodcastAmplitude } from '../services/podcastWaveform';
+import { normalizePodcastAmplitude, renderedPodcastAmplitude } from '../services/podcastWaveform';
 import { useTheme } from '../theme';
 
 const BAR=3,GAP=2,HEIGHT=76,INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect);
 const AnimatedGradient=Animated.createAnimatedComponent(LinearGradient);
-type RenderConfig={id:string;orange:string;liveLevel:number;playing:boolean;progress:number;clock:SharedValue<number>};
+type RenderConfig={id:string;orange:string;liveLevel:number;referencePeak:number;playing:boolean;progress:number;clock:SharedValue<number>};
 const RenderContext=createContext<RenderConfig|null>(null);
 
 const PodcastBar=memo(function PodcastBar({x,width,height,level,fill}:{x:number;width:number;height:number;level:number;fill:string}) {
@@ -37,7 +37,7 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
     </Defs>}
     <G clipPath={filled?`url(#${config.id}clip)`:undefined}>
       {bars.map((amplitude,index)=><PodcastBar key={index} x={index*pitch} width={barWidth} height={height}
-        level={renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress)}
+        level={renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress,config.referencePeak)}
         fill={filled?`url(#${config.id})`:color}/>)}
     </G>
   </G>;
@@ -47,8 +47,8 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
 // object at runtime, so keep a plain stable adapter at the library boundary.
 function renderPodcastBars(props:RendererProps) { return <PodcastBars {...props}/>; }
 
-export function PodcastWaveform({samples,liveLevel,position,duration,playing,canSeek,onSeek}:{
-  samples:readonly number[];liveLevel:number;position:number;duration:number;playing:boolean;canSeek:boolean;onSeek:(seconds:number)=>void;
+export function PodcastWaveform({samples,referencePeak,liveLevel,position,duration,playing,canSeek,onSeek}:{
+  samples:readonly number[];referencePeak:number;liveLevel:number;position:number;duration:number;playing:boolean;canSeek:boolean;onSeek:(seconds:number)=>void;
 }) {
   const {colors:c,mode}=useTheme(),[width,setWidth]=useState(0);
   const [preview,setPreview]=useState<number|null>(null),[scrubbing,setScrubbing]=useState(false),[touching,setTouching]=useState(false);
@@ -59,10 +59,10 @@ export function PodcastWaveform({samples,liveLevel,position,duration,playing,can
   const clock=useSharedValue(progress),contact=useSharedValue(0);
   useEffect(()=>{clock.value=withTiming(progress,{duration:scrubbing?70:160,easing:Easing.out(Easing.cubic)});},[progress,scrubbing,clock]);
   useEffect(()=>{contact.value=withTiming(touching||scrubbing?1:0,{duration:touching||scrubbing?140:220,easing:Easing.out(Easing.cubic)});},[touching,scrubbing,contact]);
-  const amplitudes=useMemo(()=>samples.map(value=>Math.max(.035,Math.sqrt(Math.max(0,Math.min(1,value))))),[samples]);
+  const amplitudes=useMemo(()=>samples.map(value=>Math.max(.035,normalizePodcastAmplitude(value,referencePeak))),[samples,referencePeak]);
   // Previewing a seek moves the cursor, while live PCM still belongs to the
   // native audio position until the release actually seeks the transport.
-  const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,liveLevel,playing,progress:nativeProgress,clock}),[gradientId,c.orange,liveLevel,playing,nativeProgress,clock]);
+  const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,liveLevel,referencePeak,playing,progress:nativeProgress,clock}),[gradientId,c.orange,liveLevel,referencePeak,playing,nativeProgress,clock]);
   const count=Math.max(1,Math.min(samples.length,Math.floor((width+GAP)/(BAR+GAP))));
   const pitch=(width+GAP)/count;
   const cursor=useAnimatedProps(()=>{

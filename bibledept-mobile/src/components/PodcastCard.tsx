@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveforms';
+import { podcastAmplitudePeak } from '../services/podcastWaveform';
 import { usePodcast, PLAYBACK_RATES } from '../state/PodcastProvider';
 import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { GlassPressable } from './Glass';
@@ -14,13 +15,15 @@ const unknownSamples = Array(96).fill(0) as number[];
 export function PodcastCard({day}:{day:number}) {
   const {c,s}=useThemedStyles(styles),audio=usePodcast();
   const episode=getDayPodcast(day),[linkError,setLinkError]=useState('');
+  const reference=getPodcastReferenceSamples(day)||unknownSamples;
+  const referencePeak=useMemo(()=>podcastAmplitudePeak(reference),[reference]);
   if(!episode)return null;
   const current=audio.episode?.day===day;
   const problem=current?audio.error||audio.status.error:'';
   const position=current?audio.position:0,duration=current?audio.duration:episode.durationSeconds;
   const loaded=current&&audio.status.isLoaded&&!problem;
   const playing=current&&audio.status.playing;
-  const waveform=current?audio.samples:getPodcastReferenceSamples(day)||unknownSamples;
+  const waveform=current?audio.samples:reference;
   async function open(url:string) {
     setLinkError('');
     try {await Linking.openURL(url);}catch{setLinkError('This link couldn’t open. Try again.');}
@@ -30,7 +33,7 @@ export function PodcastCard({day}:{day:number}) {
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
     {!!episode.rangeNote&&<Text style={s.note}>{episode.rangeNote}</Text>}
-    <PodcastWaveform samples={waveform} liveLevel={current?audio.liveLevel:0} position={position} duration={duration} playing={playing&&audio.hasLiveSamples} canSeek={!!loaded} onSeek={audio.seek}/>
+    <PodcastWaveform samples={waveform} referencePeak={referencePeak} liveLevel={current?audio.liveLevel:0} position={position} duration={duration} playing={playing&&audio.hasLiveSamples} canSeek={!!loaded} onSeek={audio.seek}/>
     <View style={s.times}><Text style={s.time}>{audioTime(position)}</Text><Text style={s.time}>{audioTime(duration)}</Text></View>
     <Text style={s.waveCaption}>{loaded?'Drag the waveform to skip through the episode.':'Press play to listen to this episode.'}</Text>
     <View style={s.controls}>

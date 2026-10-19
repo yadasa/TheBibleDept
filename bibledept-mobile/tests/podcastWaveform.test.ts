@@ -1,12 +1,51 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { podcastLiveBarWeight, renderedPodcastAmplitude } from '../src/services/podcastWaveform';
+import { normalizePodcastAmplitude, podcastAmplitudePeak, podcastLiveBarWeight, renderedPodcastAmplitude } from '../src/services/podcastWaveform';
+import { getPodcastReferenceSamples } from '../src/services/podcastReferenceWaveforms';
 
 test('quiet speech still pulses when a phone-width bar contains an older louder peak',()=>{
   // 96 stored time bins have been reduced to 58 visible bars on a phone.
-  assert.equal(renderedPodcastAmplitude(.9,.04,true,29,58,.5),.2);
+  assert.ok(Math.abs(renderedPodcastAmplitude(.9,.04,true,29,58,.5,.2)-.2)<1e-12);
   assert.ok(renderedPodcastAmplitude(.9,.04,true,28,58,.5)<.9*.67);
   assert.equal(renderedPodcastAmplitude(.9,.04,false,29,58,.5),.9*.67);
+});
+
+test('the real Day 1 silhouette uses the available 67% height and preserves linear RMS ratios',()=>{
+  const reference=getPodcastReferenceSamples(1)!,peak=podcastAmplitudePeak(reference);
+  const normalized=reference.map(value=>normalizePodcastAmplitude(value,peak));
+  const paused=normalized.map((value,index)=>renderedPodcastAmplitude(value,0,false,index,reference.length,0,peak));
+  assert.equal(Math.max(...normalized),1);
+  assert.equal(Math.max(...paused),.67);
+  assert.ok(Math.max(...paused)-Math.min(...paused)>.2,'the real measured shape must remain visibly distinct');
+  assert.equal(Math.max(...paused)/Math.min(...paused),Math.max(...reference)/Math.min(...reference));
+});
+
+test('a fixed reference scale keeps unrelated bars steady when a louder live bin arrives',()=>{
+  const reference=[.03,.06,.12],peak=podcastAmplitudePeak(reference);
+  const before=reference.map(value=>normalizePodcastAmplitude(value,peak));
+  const heard=[.5,reference[1],reference[2]];
+  const after=heard.map(value=>normalizePodcastAmplitude(value,peak));
+  assert.equal(after[0],1);
+  assert.equal(after[1],before[1]);
+  assert.equal(after[2],before[2]);
+});
+
+test('historical and current PCM share linear units instead of mixing normalized bars with absolute square roots',()=>{
+  const peak=.12,amplitude=.06;
+  const historical=normalizePodcastAmplitude(amplitude,peak);
+  assert.equal(historical,.5);
+  assert.equal(renderedPodcastAmplitude(historical,amplitude,true,29,58,.5,peak),.5);
+  assert.equal(renderedPodcastAmplitude(historical,amplitude/2,true,29,58,.5,peak),.25);
+  assert.equal(renderedPodcastAmplitude(historical,peak,true,29,58,.5,peak),1);
+});
+
+test('silent or invalid reference values cannot produce infinite gain or invented amplitude',()=>{
+  assert.equal(podcastAmplitudePeak([0,NaN,-1,Infinity]),1);
+  assert.equal(normalizePodcastAmplitude(0,0),0);
+  assert.equal(normalizePodcastAmplitude(NaN,.12),0);
+  assert.equal(normalizePodcastAmplitude(-.2,.12),0);
+  assert.equal(normalizePodcastAmplitude(.2,NaN),.2);
+  assert.equal(normalizePodcastAmplitude(.4,.12),1);
 });
 test('silence, invalid samples, and the final visible bar remain bounded',()=>{
   assert.equal(renderedPodcastAmplitude(.8,0,true,57,58,1),.035);

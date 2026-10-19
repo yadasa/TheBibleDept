@@ -111,7 +111,10 @@ UI publication stop when the app becomes inactive/backgrounded and resume in the
 foreground; the complete reference silhouette remains visible throughout.
 
 The large player applies its live response after visual downsampling, so an older
-peak cannot mask quiet speech. Uninfluenced and paused bars preserve their relative
+peak cannot mask quiet speech. Both historical and live RMS use one fixed linear
+scale derived from the episode's complete reference peak, making the measured
+shape visible without changing unrelated bar heights as louder PCM arrives.
+Uninfluenced and paused bars preserve their relative
 measured heights at a maximum of 67% of the waveform area. While playing, the actual
 current PCM level also influences neighboring bars with a symmetric smoothstep
 falloff that reaches zero four bar pitches away. The permitted height rises toward
