@@ -47,7 +47,7 @@ Email/password accounts support registration, sign-in, recovery, profile-name ch
 
 ![Dark reading preferences and light appearance choices in realistic angled iPhones](docs/images/bibledept-account-preferences.webp)
 
-- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 12-week orange activity calendar with a total-day count and current streak. Consecutive days brighten gradually with a capped gold glow. Chapter reading checks and account streak credits have separate purposes.
+- **Progress:** synced current plan day and completed lessons, saved chapter history, and a 26-week activity calendar that opens at the most recent reading. Consecutive squares brighten from orange toward near-white over 21 days, with a pulsing orange/gold outer glow. Chapter reading checks and account streak credits have separate purposes.
 - **Notes and prayers:** owner-private records under /bibledeptUsers/{uid}; notes stay connected to Scripture, and saved prayers can be marked answered.
 - **Reading preferences:** usual translation, text size with a preview, and a confirmed reading time zone.
 - **Appearance:** dark and light themes with shared orange, grain, circular light, and frosted controls.
