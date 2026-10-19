@@ -1,4 +1,5 @@
 import { memo, useMemo, useState } from 'react';
+import { Image } from 'expo-image';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveforms';
@@ -39,7 +40,7 @@ export function PodcastCard({day}:{day:number}) {
   return <View style={s.card}>
     <PodcastCardFrost/>
     <View style={s.content}>
-    <View style={s.heading}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>{day===0?'Introduction':'Daily teaching'}</Text></View>
+    <View style={s.heading}><View style={s.headingLabel}><Icon name="headphones" size={20} color={c.action}/><Text style={s.kicker}>{day===0?'Introduction':'Daily teaching'}</Text></View><Image source={require('../../assets/teaching-cover.jpg')} contentFit="cover" accessibilityLabel="The Bible Dept podcast cover" style={s.cover}/></View>
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
     {!!episode.rangeNote&&<Text style={s.note}>{episode.rangeNote}</Text>}
@@ -76,7 +77,9 @@ function SkipButton({forward,disabled,onPress}:{forward:boolean;disabled:boolean
 
 const styles=(c:Colors)=>StyleSheet.create({
   card:{position:'relative',borderWidth:0,borderRadius:radius,marginTop:32,overflow:'visible'},content:{padding:20},
-  heading:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},
+  heading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:12},
+  headingLabel:{flexDirection:'row',alignItems:'center',gap:8,flex:1,minWidth:0},
+  cover:{width:44,height:44,borderRadius:10,flexShrink:0},
   kicker:{...t.label,color:c.actionText},
   title:{...t.section,color:c.ink},
   host:{...t.meta,color:c.muted,marginTop:8},
