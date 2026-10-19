@@ -26,7 +26,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
     return()=>cancelAnimation(pulse);
   },[active,foreground,reduced,hasRun,pulse]);
   const glowStyle=useAnimatedStyle(()=>({opacity:pulse.value}));
-  const cellSize=Math.max(18,Math.min(36,(width-44)/12));
+  const cellSize=Math.max(14,Math.min(28,(width-56)/15));
   const weeks=useMemo(()=>{
     const weekday=new Date(`${today}T12:00:00Z`).getUTCDay();
     const first=shiftDate(today,-(25*7+weekday));
@@ -65,7 +65,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({
-  section:{marginTop:28,paddingVertical:24,borderTopWidth:1,borderBottomWidth:1,borderColor:c.border},
+  section:{marginTop:28,paddingVertical:24,borderBottomWidth:1,borderColor:c.border},
   heading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},title:{...t.section,fontSize:20,lineHeight:27,color:c.ink},meta:{...t.meta,fontSize:11,color:c.muted},
   stats:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12,marginBottom:20},streak:{...t.body,color:c.ink},current:{...t.meta,fontSize:12,color:c.ink},number:{fontSize:30,lineHeight:36,fontWeight:'800',color:c.actionText,fontVariant:['tabular-nums']},
   chart:{alignSelf:'stretch'},weeks:{flexDirection:'row',gap:4,padding:4},week:{gap:4},square:{borderRadius:3,backgroundColor:c.tint,borderWidth:.5,borderColor:c.border},read:{backgroundColor:c.orange,borderColor:c.orange},today:{borderColor:c.ink,borderWidth:1},future:{opacity:.25},
