@@ -42,11 +42,14 @@ export function GlassBackdrop({
   color,
   target,
   material = "control",
+  blur = true,
 }: {
   tone?: Tone;
   color?: string;
   target?: Target;
   material?: "control" | "navigation";
+  /** Layer color over an already frosted surface without sampling it again. */
+  blur?: boolean;
 }) {
   const { mode } = useTheme(),
     backdrop = useContext(GlassContext);
@@ -73,7 +76,7 @@ export function GlassBackdrop({
       accessible={false}
       style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
     >
-      {Platform.OS === "web" ? (
+      {blur && (Platform.OS === "web" ? (
         <View
           testID="glass-backdrop"
           style={[
@@ -97,7 +100,7 @@ export function GlassBackdrop({
           blurReductionFactor={2}
           style={StyleSheet.absoluteFill}
         />
-      )}
+      ))}
       <View style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} />
       <Svg
         width="100%"

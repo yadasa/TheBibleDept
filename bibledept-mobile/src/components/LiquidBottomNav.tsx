@@ -3,9 +3,11 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  Platform,
   Pressable,
   Text,
   View,
+  ViewStyle,
 } from "react-native";
 import { useTheme } from "../theme";
 import { Icon, IconName } from "./Icon";
@@ -151,6 +153,7 @@ export function LiquidBottomNav({
           borderRadius: 29,
           overflow: "hidden",
           backgroundColor: "transparent",
+          isolation: "isolate",
           boxShadow: "0 14px 40px rgba(0,0,0,.18)",
         }}
       >
@@ -171,12 +174,17 @@ export function LiquidBottomNav({
               width: indicatorWidth,
             }}
           >
-            <GlassBackdrop tone="primary" target={blurTarget} />
+            {/* The shell already frosts the page; a second moving blur can
+                retain stale icon/text pixels in browser compositing layers. */}
+            <GlassBackdrop tone="primary" blur={false} />
           </Animated.View>
         )}
         <View
           accessibilityRole="tablist"
-          style={{ position: "relative", zIndex: 2, flexDirection: "row", gap: 4, padding: 7 }}
+          style={[{ position: "relative", zIndex: 2, isolation: "isolate", flexDirection: "row", gap: 4, padding: 7 },
+            // Keep the foreground on its own stable layer as the pill changes
+            // width beneath it. The transform never moves the tab row.
+            Platform.OS === "web" && { transform: "translateZ(0)", willChange: "transform" } as ViewStyle]}
         >
           {tabOrder.map((item) => (
             <Pressable
