@@ -36,7 +36,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     anchorGeneration.current++;
     scrollIntent.clear();
     offset.current = { x: 0, y: Math.max(0, y) };
-    if (activeRef.current) { ref.current?.scrollTo({ y: offset.current.y, animated }); restorePending.current = false; }
+    if (activeRef.current) { ref.current?.scrollTo({ x: 0, y: offset.current.y, animated }); restorePending.current = false; }
     else restorePending.current = true;
     notify();
   }, [notify,scrollIntent]);
@@ -77,7 +77,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   }), [top, scrollTo, getMetrics, measureContent, scheduleAnchor]);
   const restore = useCallback(() => {
     if (!activeRef.current || !restorePending.current) return;
-    ref.current?.scrollTo({ ...offset.current, animated: false });
+    ref.current?.scrollTo({ x: 0, y: offset.current.y, animated: false });
     restorePending.current = false;
     scrollIntent.clear();
     notify();
@@ -97,9 +97,13 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     onWheel:()=>beginUserScroll('wheel'),
     onKeyDown:(event:{key:string})=>{if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))beginUserScroll('key');},
   }:{};
-  return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1}}><ScrollView {...props} {...webGestures} ref={ref} scrollEventThrottle={props.scrollEventThrottle ?? 32}
+  return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1,minWidth:0,minHeight:0,width:'100%'}}><ScrollView {...props} {...webGestures} ref={ref}
+    horizontal={false} directionalLockEnabled alwaysBounceHorizontal={false}
+    style={[props.style,{minWidth:0,width:'100%'}]}
+    contentContainerStyle={[props.contentContainerStyle,{minWidth:0,width:'100%'}]}
+    scrollEventThrottle={props.scrollEventThrottle ?? 32}
     onScroll={event => {
-      if (activeRef.current && !restorePending.current) { offset.current = { ...event.nativeEvent.contentOffset }; notify(); }
+      if (activeRef.current && !restorePending.current) { offset.current = { x: 0, y: event.nativeEvent.contentOffset.y }; notify(); }
       props.onScroll?.(event);
     }}
     onScrollBeginDrag={event => { beginUserScroll('drag');props.onScrollBeginDrag?.(event); }}

@@ -8,6 +8,7 @@ import {
   Platform,
   Text,
   View,
+  ViewStyle,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurTargetView } from "expo-blur";
@@ -151,10 +152,14 @@ function AppShell() {
     [page],
   );
   const settle = useCallback((next: Tab) => {
-    if (next === displayed.current) {
-      position.current = tabOrder.indexOf(next);
-    }
-  }, []);
+    if (next !== displayed.current) return;
+    const index = tabOrder.indexOf(next);
+    // Pin both the visible track and its clock after an interrupted journey.
+    // A delayed progress notification must not move a settled page again.
+    journeyRef.current = { from: index, to: index };
+    position.current = index;
+    page.setValue(index);
+  }, [page]);
   useEffect(() => {
     const listener = slide.addListener(({ value }) => {
       position.current = pagePosition(journeyRef.current, value);
@@ -174,7 +179,7 @@ function AppShell() {
   };
   return (
     <GlassProvider target={grainTarget}>
-      <View style={{ flex: 1, backgroundColor: c.background }} onLayout={event => setScreenHeight(event.nativeEvent.layout.height)}>
+      <View style={{ flex: 1, minWidth: 0, width: "100%", backgroundColor: c.background }} onLayout={event => setScreenHeight(event.nativeEvent.layout.height)}>
       <AppBackdrop page={page} panelWidth={panelWidth} target={grainTarget}/>
       <SafeAreaView style={{ flex: 1, backgroundColor: "transparent" }}>
         <StatusBar style={mode === "dark" ? "light" : "dark"} />
@@ -207,7 +212,9 @@ function AppShell() {
             <View
               testID="page-viewport"
               onLayout={(e) => {setPanelWidth(e.nativeEvent.layout.width);setContentTop(e.nativeEvent.layout.y + insets.top);}}
-              style={{ flex: 1, overflow: "hidden" }}
+              // Unlike hidden, CSS clip cannot scroll to a focused retained
+              // panel and leave the entire pager horizontally displaced.
+              style={{ flex: 1, minWidth: 0, overflow: Platform.OS === "web" ? "clip" : "hidden" } as ViewStyle}
             >
               <>
                 <PageMask>
@@ -259,7 +266,9 @@ function AppShell() {
                               bottom: 0,
                               left: tabOrder.indexOf(item) * panelWidth,
                               width: panelWidth,
-                            }}
+                              minWidth: 0,
+                              overflow: Platform.OS === "web" ? "clip" : "hidden",
+                            } as ViewStyle}
                           >
                             <ScreenScrollView
                               active={active}
