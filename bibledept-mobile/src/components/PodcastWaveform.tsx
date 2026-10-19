@@ -9,7 +9,7 @@ import { useTheme } from '../theme';
 
 const BAR=3,GAP=2,HEIGHT=76;
 export function PodcastWaveform({samples,liveLevel,position,duration,playing,canSeek,onSeek}:{
-  samples:number[];liveLevel:number;position:number;duration:number;playing:boolean;canSeek:boolean;onSeek:(seconds:number)=>void;
+  samples:readonly number[];liveLevel:number;position:number;duration:number;playing:boolean;canSeek:boolean;onSeek:(seconds:number)=>void;
 }) {
   const {colors:c,mode}=useTheme(),[width,setWidth]=useState(0);
   const gradientId=`podcast${useId().replace(/[^a-zA-Z0-9]/g,'')}`;

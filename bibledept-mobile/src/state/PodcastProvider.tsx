@@ -5,14 +5,17 @@ import {
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { getDayPodcast } from '../services/podcasts';
+import { getPodcastReferenceWaveform } from '../services/podcastReferenceWaveforms';
+import { PodcastListeningContext, PodcastListeningState, usePodcastListeningEngine } from './usePodcastListening';
 import {
   canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, PLAYBACK_RATES,
   needsPodcastSessionActivation, podcastDuration, podcastSampleTime, recordPodcastSample,
 } from '../services/podcastAudio';
 
 export { PLAYBACK_RATES } from '../services/podcastAudio';
+export { usePodcastListening } from './usePodcastListening';
 export type Episode = NonNullable<ReturnType<typeof getDayPodcast>>;
-export type PodcastState = {
+export type PodcastState = PodcastListeningState & {
   episode: Episode | null;
   status: AudioStatus;
   error: string;
@@ -23,6 +26,8 @@ export type PodcastState = {
   samples: number[];
   liveLevel: number;
   hasSamples: boolean;
+  hasLiveSamples: boolean;
+  hasReferenceWaveform: boolean;
   samplingSupported: boolean;
   play: (day: number) => void;
   toggle: () => void;
@@ -65,6 +70,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const [sourceReady, setSourceReady] = useState(false), [playbackRate, setPlaybackRate] = useState(1);
   const [samples, setSamples] = useState(emptyPodcastSamples), [liveLevel, setLiveLevel] = useState(0);
   const [hasSamples, setHasSamples] = useState(false);
+  const [hasLiveSamples, setHasLiveSamples] = useState(false);
   const [appState, setAppState] = useState(AppState.currentState);
   const appActive = useRef(AppState.currentState === 'active');
   const [sessionQueue] = useState(createPodcastSessionQueue);
@@ -73,6 +79,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const alive = useRef(true), wantsPlayback = useRef(false), readyRef = useRef(false);
   const rateRef = useRef(1), lastPosition = useRef(0), lastDuration = useRef(0);
   const bins = useRef(emptyPodcastSamples()), sampleLevel = useRef(0), sampled = useRef(false);
+  const heardBins = useRef(emptyPodcastSamples());
   const publishedAt = useRef(0), publishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resume = useRef<{ position: number; generation: number; command: number } | null>(null);
   const loadedGeneration = useRef(-1);
@@ -81,6 +88,8 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const rawStatus = useRef(status);
   const previousPlaying = useRef(false), previousError = useRef<string | null>(null);
   rawStatus.current = status;
+  const listening = usePodcastListeningEngine(player, () =>
+    readyRef.current && episodeRef.current ? { day: episodeRef.current.day, generation: generation.current } : null);
 
   const hasLoadedStatus = sourceReady && status.isLoaded && !status.error;
   const duration = episode ? podcastDuration(hasLoadedStatus ? status.duration : 0, lastDuration.current || episode.durationSeconds) : 0;
@@ -109,11 +118,13 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     if (!alive.current) return;
     publishedAt.current = Date.now();
     setSamples([...bins.current]);
-    setHasSamples(sampled.current);
+    setHasSamples(sampled.current || !!(episodeRef.current && getPodcastReferenceWaveform(episodeRef.current.day)));
+    setHasLiveSamples(sampled.current);
     setLiveLevel(wantsPlayback.current ? sampleLevel.current : 0);
   }
   function fail(message = streamError) {
     if (!alive.current) return;
+    listening.breakContinuity();
     command.current++;
     wantsPlayback.current = false;
     resume.current = null;
@@ -128,9 +139,14 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     const activeDuration = podcastDuration(player.duration, lastDuration.current || episodeRef.current.durationSeconds);
     const timestamp = podcastSampleTime(sample.timestamp, player.currentTime, Platform.OS);
     if (timestamp === null) return;
-    const recorded = recordPodcastSample(bins.current, { ...sample, timestamp }, activeDuration);
+    const recorded = recordPodcastSample(heardBins.current, { ...sample, timestamp }, activeDuration);
     if (!recorded) return;
-    bins.current = recorded.samples;
+    heardBins.current = recorded.samples;
+    // Keep genuine future bars from the reference stream, but replace heard
+    // bins (including real silence) with this playback's PCM. Dynamic ads may
+    // differ from the reference request; live data must take precedence.
+    const index = Math.min(bins.current.length - 1, Math.floor(timestamp / activeDuration * bins.current.length));
+    bins.current[index] = heardBins.current[index];
     sampleLevel.current = recorded.liveLevel;
     sampled.current = true;
     const wait = Math.max(0, 100 - (Date.now() - publishedAt.current));
@@ -285,6 +301,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     ).finally(() => { if (sessionActivation.current === token) sessionActivation.current = null; });
   }
   function pause() {
+    listening.breakContinuity();
     command.current++;
     wantsPlayback.current = false;
     resume.current = null;
@@ -295,6 +312,7 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     releaseSession(command.current);
   }
   function start(value: Episode, replace: boolean) {
+    listening.breakContinuity();
     const currentCommand = ++command.current;
     wantsPlayback.current = true;
     setError('');
@@ -310,11 +328,14 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
         setStarting(true);
         stopPublishing();
         if (!same) {
-          bins.current = emptyPodcastSamples();
+          const reference = getPodcastReferenceWaveform(value.day);
+          bins.current = reference ? [...reference.samples] : emptyPodcastSamples();
+          heardBins.current = emptyPodcastSamples();
           sampled.current = false;
           sampleLevel.current = 0;
           setSamples([...bins.current]);
-          setHasSamples(false);
+          setHasSamples(!!reference);
+          setHasLiveSamples(false);
           setLiveLevel(0);
         }
         lastPosition.current = savedPosition;
@@ -333,12 +354,13 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
       enableSampling();
       const state = rawStatus.current;
       if (!replace && (state.didJustFinish || lastPosition.current >= lastDuration.current - .1)) {
+        const finishSeek = listening.beginSeek();
         const currentGeneration = generation.current;
         setStarting(true);
         lastPosition.current = 0;
         player.seekTo(0).then(() => {
           if (alive.current && command.current === currentCommand && generation.current === currentGeneration && wantsPlayback.current) player.play();
-        }).catch(() => { if (command.current === currentCommand) fail(); });
+        }).catch(() => { if (command.current === currentCommand) fail(); }).finally(finishSeek);
       } else if (!resume.current) player.play();
     } catch { fail(); }
   }
@@ -363,13 +385,14 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   function seek(seconds: number) {
     if (!episodeRef.current || !readyRef.current || problem || !Number.isFinite(seconds)) return;
     const target = clampPodcastPosition(seconds, podcastDuration(player.duration, lastDuration.current));
+    const finishSeek = listening.beginSeek();
     lastPosition.current = target;
     sampleLevel.current = 0;
     setLiveLevel(0);
     const currentGeneration = generation.current;
     try {
-      player.seekTo(target).catch(() => { if (generation.current === currentGeneration) fail('We couldn’t skip to that point. Try again.'); });
-    } catch { fail('We couldn’t skip to that point. Try again.'); }
+      player.seekTo(target).catch(() => { if (generation.current === currentGeneration) fail('We couldn’t skip to that point. Try again.'); }).finally(finishSeek);
+    } catch { finishSeek(); fail('We couldn’t skip to that point. Try again.'); }
   }
   function setRate(rate: number) {
     if (!(PLAYBACK_RATES as readonly number[]).includes(rate)) return;
@@ -388,20 +411,24 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     lastPosition.current = 0;
     lastDuration.current = 0;
     bins.current = emptyPodcastSamples();
+    heardBins.current = emptyPodcastSamples();
     sampled.current = false;
     setEpisode(null);
     setSourceReady(false);
     setError('');
     setSamples([...bins.current]);
     setHasSamples(false);
+    setHasLiveSamples(false);
     try { player.clearLockScreenControls(); player.setAudioSamplingEnabled(false); player.replace(null); } catch {}
   }
 
-  return <Context.Provider value={{ episode, status, error: problem, loading, duration, position, playbackRate,
-    samples, liveLevel, hasSamples, samplingSupported, play, toggle, pause, seek, setRate, dismiss }}>
+  return <PodcastListeningContext.Provider value={listening.value}><Context.Provider value={{ ...listening.value, episode, status, error: problem, loading, duration, position, playbackRate,
+    samples, liveLevel, hasSamples, hasLiveSamples,
+    hasReferenceWaveform: !!episode && !!getPodcastReferenceWaveform(episode.day),
+    samplingSupported, play, toggle, pause, seek, setRate, dismiss }}>
     {episode && canSamplePodcast(appState, Platform.OS, samplingSupported, disableSamplingForPlaybackCheck) && <SampleListener player={player} listener={onSample}/>}
     {children}
-  </Context.Provider>;
+  </Context.Provider></PodcastListeningContext.Provider>;
 }
 
 export function usePodcast(): PodcastState {
