@@ -29,7 +29,7 @@ import {
   tabOrder,
   Tab,
 } from "./src/components/LiquidBottomNav";
-import { ReadingTextProvider } from "./src/components/ReaderControls";
+import { ReadingTextProvider, useReadingText } from "./src/components/ReaderControls";
 import { ScreenScrollView } from "./src/components/ScreenScrollView";
 import { NativeScrollFade } from "./src/components/NativeScrollFade";
 import { BibleHub } from "./src/screens/BibleHub";
@@ -48,6 +48,7 @@ import { NotesProvider } from "./src/services/NotesProvider";
 import { parseAppLink } from "./src/services/links";
 import type { Translation } from "./src/services/bible";
 import { PlanProvider, usePlan } from "./src/services/PlanProvider";
+import { usePrepareReading } from './src/services/usePrepareReading';
 
 // Retained pages keep their own context updates, but unrelated pager renders
 // should not rebuild a reading, prayer draft or account form before motion.
@@ -101,7 +102,11 @@ function AppShell() {
     [revision, setRevision] = useState(0),
     [planRequestDay, setPlanRequestDay] = useState<number>(),
     [podcastRequestRevision, setPodcastRequestRevision] = useState(0),
-    [podcastRequestDay, setPodcastRequestDay] = useState(1);
+    [podcastRequestDay, setPodcastRequestDay] = useState(1),
+    [preparedReadKey,setPreparedReadKey]=useState('');
+  const {preferredTranslation}=useReadingText();
+  const currentReadKey=`${user?.uid||'guest'}:${plan.currentDay}`;
+  usePrepareReading(tab==='Home'&&plan.ready,plan.currentDay,plan.getReadingPosition(plan.currentDay).chapter,preferredTranslation);
   const journeyRef = useRef<PageJourney>({ from: 2, to: 2 }),
     position = useRef(2),
     page = useRef(new Animated.Value(2)).current,
@@ -149,12 +154,25 @@ function AppShell() {
     setPodcastRequestRevision((value) => value + 1);
   }, [openPlan]);
   const read = useCallback(() => {
+    if(preparedReadKey===`${user?.uid||'guest'}:${latestPlan.current.currentDay}`&&latestPlan.current.selectedDay===latestPlan.current.currentDay&&!reference){
+      navigate('Bible');return;
+    }
     latestPlan.current.returnToCurrent();
     setPlanRequestDay(latestPlan.current.currentDay);
     setReference(undefined);
     setRevision((v) => v + 1);
     navigate("Bible");
-  }, [navigate]);
+  }, [navigate,preparedReadKey,reference,user?.uid]);
+  useEffect(()=>{
+    if(tab!=='Home'||!plan.ready)return;
+    // Prepare the exact Home destination after paint, before the next tap.
+    // Stored reading offsets remain intact; no lesson is marked complete here.
+    startTransition(()=>{
+      latestPlan.current.returnToCurrent();setPlanRequestDay(plan.currentDay);
+      setReference(undefined);setRevision(value=>value+1);
+      setVisited(current=>retainPages(current,['Bible']));setPreparedReadKey(currentReadKey);
+    });
+  },[tab,plan.ready,plan.currentDay,currentReadKey]);
   useEffect(() => {
     if (visited.length === tabOrder.length) return;
     let live = true,

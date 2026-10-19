@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
@@ -21,8 +21,13 @@ const PodcastCardFrost=memo(function PodcastCardFrost() {
   return <View pointerEvents="none" accessible={false} style={frostStyles.frame}><GlassSurface style={frostStyles.surface}/></View>;
 });
 
-export function PodcastCard({day}:{day:number}) {
-  const {c,s}=useThemedStyles(styles),audio=usePodcast();
+export function PodcastCard({day,active=true}:{day:number;active?:boolean}) {
+  const audio=usePodcast(),snapshot=useRef({day,audio});
+  if(active||snapshot.current.day!==day)snapshot.current={day,audio};
+  return <PodcastCardContent day={day} active={active} audio={snapshot.current.audio}/>;
+}
+const PodcastCardContent=memo(function PodcastCardContent({day,active,audio}:{day:number;active:boolean;audio:ReturnType<typeof usePodcast>}) {
+  const {c,s}=useThemedStyles(styles);
   const episode=getDayPodcast(day),[linkError,setLinkError]=useState(''),[controlsWidth,setControlsWidth]=useState(0),[speedWidth,setSpeedWidth]=useState(44);
   const stackedControls=controlsWidth>0&&controlsWidth<172+2*(speedWidth+8);
   const reference=getPodcastReferenceSamples(day)||unknownSamples;
@@ -32,7 +37,7 @@ export function PodcastCard({day}:{day:number}) {
   const problem=current?audio.error||(audio.status.error?'We couldn’t play this episode. Please try again.':''):'';
   const position=current?audio.position:0,duration=current?audio.duration:episode.durationSeconds;
   const loaded=current&&audio.status.isLoaded&&!problem;
-  const playing=current&&audio.status.playing;
+  const playing=active&&current&&audio.status.playing;
   const waveform=current?audio.samples:reference;
   async function open(url:string) {
     setLinkError('');
@@ -45,7 +50,7 @@ export function PodcastCard({day}:{day:number}) {
     <Text accessibilityRole="header" style={s.title}>{episode.title}</Text>
     <Text style={s.host}>Dr. Manny Arango · The Bible Dept.</Text>
     {!!episode.rangeNote&&<Text style={s.note}>{episode.rangeNote}</Text>}
-    <PodcastWaveform samples={waveform} referencePeak={referencePeak} liveLevel={current?audio.liveLevel:0} position={position} duration={duration} playing={playing&&audio.hasLiveSamples} canSeek={!!loaded} onSeek={audio.seek}/>
+    <PodcastWaveform samples={waveform} referencePeak={referencePeak} liveLevel={active&&current?audio.liveLevel:0} position={position} duration={duration} playing={playing&&audio.hasLiveSamples} canSeek={!!loaded} onSeek={audio.seek}/>
     <View style={s.times}><Text style={s.time}>{audioTime(position)}</Text><Text style={s.time}>{audioTime(duration)}</Text></View>
     <Text style={s.waveCaption}>{loaded?'Drag the waveform to skip through the episode.':'Press play to listen to this episode.'}</Text>
     <View testID="podcast-transport-controls" onLayout={event=>setControlsWidth(event.nativeEvent.layout.width)} style={[s.controls,stackedControls&&s.stackedControls]}>
@@ -66,7 +71,7 @@ export function PodcastCard({day}:{day:number}) {
     <View style={s.follow}><Text style={s.followLabel}>Follow the podcast</Text><View style={s.platforms}><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Apple Podcasts" onPress={()=>void open(PODCAST_LINKS.apple)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Apple Podcasts</Text><Icon name="external" size={14}/></Pressable><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Spotify" onPress={()=>void open(PODCAST_LINKS.spotify)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Spotify</Text><Icon name="external" size={14}/></Pressable></View></View>
     </View>
   </View>;
-}
+});
 
 function SkipButton({forward,disabled,onPress}:{forward:boolean;disabled:boolean;onPress:()=>void}) {
   const {s}=useThemedStyles(styles);

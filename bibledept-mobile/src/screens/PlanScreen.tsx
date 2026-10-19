@@ -57,7 +57,7 @@ function PlanIntroduction({active,openAtPlayer,currentDay,selectedDay,finished,c
       <Text style={s.meta}>Dr. Manny introduces the plan and explains how to follow each day’s reading and teaching.</Text>
       <Text style={s.local}>This introduction is optional. Your reading plan still starts on day 1.</Text>
     </View>
-    <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={0}/>}</View>
+    <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}><PodcastCard day={0} active={active}/></View>
     <View style={s.introContinue}><ActionButton title={`Continue to day ${currentDay}`} icon="arrowRight" onPress={onContinue}/></View>
     <DayPicker visible={picker} selectedDay={selectedDay} selectedIntro currentDay={currentDay} finished={finished} completedDays={completedDays} onSelect={onDay} onIntro={()=>setPicker(false)} onClose={()=>setPicker(false)}/>
   </View>;
@@ -90,7 +90,8 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
     }).catch(error=>{if(!controller.signal.aborted)setResult({key,error:messageForUser(error,'We couldn’t open this reading. Please try again.')});});
     return()=>controller.abort();
   },[key,plan.ready]);
-  const reading=result.key===key?result:undefined;
+  const cached=fetchPassage.peek(chapter.reference,translation);
+  const reading:{key:string;passage?:Passage;error?:string}|undefined=result.key===key?result:cached?{key,passage:cached}:undefined;
   const current=plan.selectedDay===plan.currentDay,done=plan.completedDays.includes(day.day);
   const loaded=!!reading?.passage?.verses.length;
   const listened=audio.listenedDays?.includes(day.day)??false;
@@ -165,7 +166,7 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
     <View style={s.chapters}>{chapters.map((item,index)=><GlassPressable key={item.reference} accessibilityRole="button" accessibilityLabel={`Read ${item.reference}${savedLesson.readChapters.includes(index)?', reading complete':''}`} accessibilityState={{selected:index===chapterIndex}} onPress={()=>selectChapter(index)} style={({pressed})=>[s.chip,index===chapterIndex&&s.activeChip,pressed&&s.pressed]}><View style={s.chapterLabel}><Text style={[s.chipText,index===chapterIndex&&s.activeText]}>{item.reference}</Text>{savedLesson.readChapters.includes(index)&&<Icon name="check" size={14} color={c.success}/>}</View></GlassPressable>)}</View>
     {!reading?.passage&&!reading?.error&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text={`Opening ${chapter.reference}…`}/></View>}
     {reading?.error&&<View style={s.error}><Text style={s.errorTitle}>We couldn’t load this chapter</Text><Notice text={reading.error} error/><ActionButton title="Try again" icon="refresh" onPress={()=>setRetry(value=>value+1)} secondary/></View>}
-    {reading?.passage&&<><View ref={textRef} collapsable={false} onLayout={measureReading}><PassageView key={`${reading.passage.reference}:${translation}`} passage={reading.passage} onAccount={onAccount}/></View><ReadingCompletion passage={reading.passage} source="plan" planDay={day.day} onAccount={onAccount}/></>}
+    {reading?.passage&&<><View testID="plan-passage" ref={textRef} collapsable={false} onLayout={measureReading}><PassageView key={`${reading.passage.reference}:${translation}`} passage={reading.passage} onAccount={onAccount}/></View><ReadingCompletion passage={reading.passage} source="plan" planDay={day.day} onAccount={onAccount}/></>}
     {reading?.passage&&<View style={s.chapterNavigation}>
       {chapterIndex>0&&<ActionButton title={`Previous: ${chapters[chapterIndex-1].reference}`} icon="chevronLeft" onPress={()=>selectChapter(chapterIndex-1)} secondary/>}
       {chapterIndex<chapters.length-1&&<ActionButton title={`Next: ${chapters[chapterIndex+1].reference}`} icon="chevronRight" onPress={()=>selectChapter(chapterIndex+1)} secondary/>}
@@ -182,7 +183,7 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
       {!!plan.syncError&&<Notice text={plan.syncError}/>}
       {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
     </View>
-    <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={day.day}/>}</View>
+    <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}><PodcastCard day={day.day} active={active}/></View>
     <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={onDay} onIntro={onIntro} onClose={()=>setPicker(false)}/>
   </View>;
 }

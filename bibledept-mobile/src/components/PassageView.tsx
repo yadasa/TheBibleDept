@@ -1,5 +1,5 @@
 import { GlassPressable } from "./Glass";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { Passage } from "../services/bible";
@@ -14,6 +14,9 @@ import { VerseFadeGroup, VerseFadeRow, VerseFadeText } from './VerseFade';
 import { annotationForSelection, selectPassageVerse, selectedPassageText, selectedVerse, selectionReference, VerseSelection } from "../services/passageSelection";
 
 export function PassageView({ passage, onAccount }: { passage: Passage; onAccount?: () => void }) {
+  return <MemoizedPassageView passage={passage} onAccount={onAccount}/>;
+}
+const MemoizedPassageView=memo(function PassageViewContent({ passage, onAccount }: { passage: Passage; onAccount?: () => void }) {
   const { c, s } = useThemedStyles(styles);
   const { fontSize } = useReadingText();
   const { user } = useAuth(),
@@ -205,7 +208,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
       )}
     </View>
   );
-}
+});
 const styles = (c: Colors) =>
   StyleSheet.create({
     paper: { paddingTop: 8 },
