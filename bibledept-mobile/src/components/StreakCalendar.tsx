@@ -60,7 +60,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
           const run=activity.runs.get(date)||0,done=run>0,future=date>today;
           const fill=done?readingRunColor(c.orange,run):undefined;
           return <View key={date} accessible accessibilityLabel={`${new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'})}: ${future?'upcoming':done?'read':'no reading saved'}${done?`, ${run} ${run===1?'day':'days'} in a row`:''}`}
-            style={[s.square,{width:cellSize,height:cellSize},done&&{backgroundColor:fill,borderColor:c.orange},date===today&&s.today,future&&s.future]}/>;
+            style={[s.square,{width:cellSize,height:cellSize},date===today&&s.today,done&&{backgroundColor:fill,borderWidth:0},future&&s.future]}/>;
         })}
       </View>)}
     </ScrollView>
@@ -72,6 +72,6 @@ const styles=(c:Colors)=>StyleSheet.create({
   section:{marginTop:28,paddingVertical:24,borderBottomWidth:1,borderColor:c.border},
   heading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},title:{...t.section,fontSize:20,lineHeight:27,color:c.ink},meta:{...t.meta,fontSize:11,color:c.muted},
   stats:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12,marginBottom:20},streak:{...t.body,color:c.ink},current:{...t.meta,fontSize:12,color:c.ink},number:{fontSize:30,lineHeight:36,fontWeight:'800',color:c.actionText,fontVariant:['tabular-nums']},
-  chart:{alignSelf:'stretch'},weeks:{flexDirection:'row',gap:4,padding:4},week:{gap:4},square:{borderRadius:3,backgroundColor:c.tint,borderWidth:.5,borderColor:c.border},read:{backgroundColor:c.orange,borderColor:c.orange},today:{borderColor:c.ink,borderWidth:1},future:{opacity:.25},
+  chart:{alignSelf:'stretch'},weeks:{flexDirection:'row',gap:4,padding:4},week:{gap:4},square:{borderRadius:3,backgroundColor:c.tint,borderWidth:.5,borderColor:c.border},read:{backgroundColor:c.orange,borderWidth:0},today:{borderColor:c.ink,borderWidth:1},future:{opacity:.25},
   legend:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:7,marginTop:16},key:{width:10,height:10,borderRadius:2,backgroundColor:c.tint,borderWidth:1,borderColor:c.border},
 });
