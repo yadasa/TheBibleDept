@@ -38,8 +38,8 @@ BibleDept is a **free app**. The active client has no giving, checkout, subscrip
 
 | Available in the current client | Status |
 | --- | --- |
-| Website-inspired design | Default dark theme with orange accents, visible grain, and the original transparent navbar logo in the header and sign-in screen. Signed-in users can choose Light or Dark under Account → Settings. |
-| Floating frosted navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The stretch/compress indicator and directional page slides share one 430 ms animation clock. |
+| Website-inspired design | Default dark theme with orange accents, moving grain, borderless frosted buttons and plan card, and the original transparent navbar logo with safe top clearance. Signed-in users can choose Light or Dark under Account → Settings. |
+| Floating frosted navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The stretch/compress indicator, continuous page track, moving background and motion blur share one clock. Long jumps pass through intermediate pages; content fades to zero opacity at the scroll edges. |
 | Home | Next-reading card, honest device plan progress, private streak/week/best stats, reflection shortcuts, and the latest saved comment. |
 | Online Bible reading | Real passages from bible-api.com, with World English Bible and King James Version selection. No API key required. |
 | Official 365-day plan | A compact 5.1 KB mapping bundled inside the app, Day 1 start, current-day marker, next-day continuation, chapter selection, and a numbered day picker with direct jump. Plan position saves only on the device. |
@@ -104,7 +104,7 @@ The retained projects reference Stream Chat, Branch, Mailchimp, video processing
 
 The retained source includes the [older mobile app](bibledept-app/README.md), [web dashboard](bibledept-dashboard/README.md), and [Firebase backend](bibledept-functions/README.md). The older app includes Android and iOS native projects.
 
-The app is branded **BibleDept**, with website and email references using **thebibledept.com**. TypeScript checks, 24 unit tests, two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports passed. Browser review covered phone-emulator sign-in, both themes and persistence, private Settings visibility, completion-to-streak updates, highlight/comment synchronization, note editing/opening, responsive layout, and simultaneous page/nav motion. A signed native build and physical iPhone/Android validation are still needed before release. Real SMS, push delivery, public universal links, and native glass rendering have not been device-verified.
+The app is branded **BibleDept**, with website and email references using **thebibledept.com**. TypeScript checks, 27 unit tests, two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports passed. Browser review covered phone-emulator sign-in, both themes and persistence, private Settings visibility, completion-to-streak updates, highlight/comment synchronization, note editing/opening, responsive layout, real backdrop blur in both themes, alpha fades, intermediate-page travel, and synchronized page/nav/motion blur. A signed native build and physical iPhone/Android validation are still needed before release. Real SMS, push delivery, public universal links, and native glass rendering have not been device-verified.
 
 ## Learn more
 
