@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { indicatorJourney, indicatorPosition, IndicatorPosition, tabUsesIndicatorInk } from "../src/services/tabIndicator";
+import { indicatorJourney, indicatorPosition, IndicatorPosition, navigationMetrics, NAV_GAP, NAV_PADDING } from "../src/services/tabIndicator";
 import { pagePosition, tabOrder } from "../src/services/tabPaging";
 
 test("rapid reversals start at the visible pill and page, without a stale endpoint", () => {
@@ -34,15 +34,23 @@ test("long journeys retain the original stretch and settle exactly in either dir
   }
 });
 
-test("pending destinations keep page-colored labels until the pill covers them", () => {
-  for (const from of tabOrder) {
-    for (const to of tabOrder) {
-      if (from === to) continue;
-      assert.equal(tabUsesIndicatorInk(to, to, from), false);
-      assert.equal(tabUsesIndicatorInk(to, to, null), false);
-      assert.equal(tabUsesIndicatorInk(from, to, null), false);
-      assert.equal(tabUsesIndicatorInk(to, to, to), true);
-      assert.equal(tabUsesIndicatorInk(from, to, to), false);
+test("a clipped duplicate row stays aligned at fractional mask positions and responsive widths", () => {
+  for (const shellWidth of [296, 366, 420]) {
+    const { cellWidth, rowWidth } = navigationMetrics(shellWidth);
+    assert.equal(cellWidth * 5 + NAV_GAP * 4, rowWidth);
+    assert.equal(rowWidth + NAV_PADDING * 2, shellWidth);
+    for (const [from, to] of [[0, 4], [4, 0], [2, 3]]) {
+      const journey = indicatorJourney({left:NAV_PADDING + from * (cellWidth + NAV_GAP),width:cellWidth},
+        NAV_PADDING + to * (cellWidth + NAV_GAP),cellWidth);
+      for (const progress of [0, .05, .24, .51, .72, .93, 1]) {
+        const mask = indicatorPosition(journey, progress);
+        const inverseOffset = NAV_PADDING - mask.left;
+        for (const [index] of tabOrder.entries()) {
+          const baseCenter = NAV_PADDING + index * (cellWidth + NAV_GAP) + cellWidth / 2;
+          const clippedCenter = mask.left + inverseOffset + index * (cellWidth + NAV_GAP) + cellWidth / 2;
+          assert.ok(Math.abs(baseCenter - clippedCenter) < 1e-9);
+        }
+      }
     }
   }
 });

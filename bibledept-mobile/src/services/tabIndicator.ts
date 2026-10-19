@@ -1,4 +1,12 @@
 export type IndicatorPosition = { left: number; width: number };
+export const NAV_PADDING = 7;
+export const NAV_GAP = 4;
+
+/** Both visual rows must share these widths for a moving spatial mask. */
+export function navigationMetrics(width: number) {
+  const rowWidth = Math.max(0, width - NAV_PADDING * 2);
+  return { rowWidth, cellWidth: Math.max(0, (rowWidth - NAV_GAP * 4) / 5) };
+}
 type IndicatorJourney = {
   left: readonly [number, number, number, number];
   width: readonly [number, number, number, number];
@@ -31,11 +39,4 @@ export function indicatorPosition(journey: IndicatorJourney, progress: number): 
     left: journey.left[segment] + (journey.left[segment + 1] - journey.left[segment]) * fraction,
     width: journey.width[segment] + (journey.width[segment + 1] - journey.width[segment]) * fraction,
   };
-}
-import type { Tab } from "./tabPaging";
-
-
-/** Destination labels stay readable on the page while the pill travels. */
-export function tabUsesIndicatorInk(tab: Tab, active: Tab, settled: Tab | null) {
-  return tab === active && active === settled;
 }
