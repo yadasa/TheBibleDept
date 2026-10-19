@@ -17,6 +17,7 @@ import { hasReachedReadingEnd, lessonProgressFor } from '../services/lessonProgr
 import { usePodcastListening } from '../state/PodcastProvider';
 import { messageForUser } from '../services/userMessage';
 import { showPlanIntroduction } from '../services/planEntry';
+import { usePrepareReading } from '../services/usePrepareReading';
 
 type PlanScreenProps={active?:boolean;onAccount:()=>void;requestRevision?:number;planRequestDay?:number;podcastRequestRevision?:number;podcastRequestDay?:number};
 
@@ -64,11 +65,47 @@ function PlanIntroduction({active,openAtPlayer,currentDay,selectedDay,finished,c
 }
 
 function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro,onDay}:{active?:boolean;onAccount:()=>void;podcastRequestRevision?:number;onIntro:()=>void;onDay:(day:number)=>void}) {
-  const {c,s}=useThemedStyles(styles);
-  const scrollTop=useScreenScroll();
-  const plan=usePlan(),day=getReadingPlanDay(plan.selectedDay)!;
-  const controls=useScreenScrollControls(),audio=usePodcastListening(),savedLesson=lessonProgressFor(plan.lessons,day.day),savedPosition=plan.getReadingPosition(day.day);
-  const [picker,setPicker]=useState(false);
+  const {c,s}=useThemedStyles(styles),plan=usePlan(),audio=usePodcastListening(),controls=useScreenScrollControls();
+  const day=getReadingPlanDay(plan.selectedDay)!,chapters=getPlanChapters(day.day),savedLesson=lessonProgressFor(plan.lessons,day.day);
+  const current=plan.selectedDay===plan.currentDay,done=plan.completedDays.includes(day.day),listened=audio.listenedDays?.includes(day.day)??false;
+  const [picker,setPicker]=useState(false),podcastRef=useRef<View>(null);
+  const registerPodcast=useCallback(()=>{
+    if(active&&plan.ready)controls.registerAnchor('podcast',podcastRef.current);
+  },[active,plan.ready,controls]);
+  useEffect(()=>{
+    if(!active||!plan.ready)return controls.registerAnchor('podcast',null);
+    return controls.registerAnchor('podcast',podcastRef.current);
+  },[active,plan.ready,day.day,controls]);
+  return <View>
+    <View style={s.planHeader}>
+      <View style={s.headingRow}><Text accessibilityRole="header" style={s.day}>Day {day.day}<Text style={s.total}> / 365</Text></Text><GlassPressable accessibilityRole="button" accessibilityLabel="Choose a plan day" disabled={plan.busy} onPress={()=>setPicker(true)} style={({pressed})=>[s.choose,pressed&&s.pressed]}><Icon name="calendar" size={18}/><Text style={s.chooseText}>Days</Text></GlassPressable></View>
+      <Text style={s.label}>{day.label}</Text>
+      <View style={s.statusRow}><Icon name={done?'checkCircle':current?'book':'search'} size={16} color={done?c.success:c.action}/><Text style={s.status}>{done?'Day complete':current?'Your current day':`Browsing · your saved day is ${plan.currentDay}`}</Text></View>
+      {!current&&<ActionButton title={`Return to day ${plan.currentDay}`} variant="ghost" onPress={plan.returnToCurrent}/>}
+      {day.day===1&&<GlassPressable accessibilityRole="button" accessibilityLabel="Open the optional introduction" onPress={onIntro} style={({pressed})=>[s.introLink,pressed&&s.pressed]}><Icon name="headphones" size={18}/><View style={s.introLinkText}><Text style={s.chooseText}>New to The Bible Dept.?</Text><Text style={s.introHint}>Listen to the introduction</Text></View><Icon name="chevronRight" size={18}/></GlassPressable>}
+    </View>
+    <PlanReading dayNumber={day.day} active={active} onAccount={onAccount} podcastRequestRevision={podcastRequestRevision}/>
+    <View style={s.completion}>
+      <Text accessibilityRole="header" style={s.completionTitle}>{plan.finished?'Plan complete':done?`Day ${day.day} complete`:current?`Day ${day.day} progress`:'Reading another day'}</Text>
+      <Text style={s.meta}>{done?'Your reading is saved. Continue whenever you’re ready.':`${savedLesson.readChapters.length} of ${chapters.length} chapters read · Teaching ${listened?'complete':'in progress'}`}</Text>
+      {!done&&<Text style={s.local}>Read every chapter and listen to the teaching to finish the day. The last two minutes of audio are optional.</Text>}
+      {!plan.ready?<Notice text="Loading your saved day…"/>:!current?<ActionButton title={`Return to day ${plan.currentDay}`} onPress={plan.returnToCurrent} secondary/>
+        :plan.finished?<Notice text="All 365 days are marked complete. You can open any day to read it again." success/>
+        :<ActionButton title={plan.currentDay===365?'Complete the plan':done?`Continue to day ${plan.currentDay+1}`:`Mark day ${plan.currentDay} complete & continue`} icon="check" onPress={()=>void plan.advance()} loading={plan.busy} disabled={!!plan.error}/>}
+      {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Reload saved progress" onPress={plan.retry} secondary/></View>}
+      <Text style={s.local}>Your place is saved.</Text>
+      {!!plan.syncError&&<Notice text={plan.syncError}/>}
+      {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
+    </View>
+    <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}><PodcastCard day={day.day} active={active}/></View>
+    <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={onDay} onIntro={onIntro} onClose={()=>setPicker(false)}/>
+  </View>;
+}
+
+/** Chapter selection, fetching and scroll restoration update this region only. */
+function PlanReading({dayNumber,active,onAccount,podcastRequestRevision}:{dayNumber:number;active:boolean;onAccount:()=>void;podcastRequestRevision:number}) {
+  const {c,s}=useThemedStyles(styles),plan=usePlan(),controls=useScreenScrollControls(),scrollTop=useScreenScroll();
+  const day=getReadingPlanDay(dayNumber)!,savedLesson=lessonProgressFor(plan.lessons,dayNumber),savedPosition=plan.getReadingPosition(dayNumber);
   const {preferredTranslation:translation,setPreferredTranslation:setTranslation}=useReadingText();
   const [result,setResult]=useState<{key:string;passage?:Passage;error?:string}>({key:''});
   const [retry,setRetry]=useState(0);
@@ -76,7 +113,8 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
   const chapters=getPlanChapters(day.day);
   const chapterIndex=chapterSelection.day===day.day?chapterSelection.index:savedPosition.chapter;
   const chapter=chapters[chapterIndex];
-  const textRef=useRef<View>(null),podcastRef=useRef<View>(null);
+  usePrepareReading(active&&plan.ready,dayNumber,chapterIndex,translation);
+  const textRef=useRef<View>(null),readingHeight=useRef(0);
   const restoredKey=useRef(''),textBounds=useRef<{key:string;top:number;bottom:number}|null>(null);
   const podcastRevisionSeen=useRef(0),readReported=useRef(new Set<string>());
   function selectChapter(index:number){setChapterSelection({day:day.day,index});scrollTop();}
@@ -92,9 +130,7 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
   },[key,plan.ready]);
   const cached=fetchPassage.peek(chapter.reference,translation);
   const reading:{key:string;passage?:Passage;error?:string}|undefined=result.key===key?result:cached?{key,passage:cached}:undefined;
-  const current=plan.selectedDay===plan.currentDay,done=plan.completedDays.includes(day.day);
   const loaded=!!reading?.passage?.verses.length;
-  const listened=audio.listenedDays?.includes(day.day)??false;
   useEffect(()=>{
     if(!podcastRequestRevision||podcastRevisionSeen.current===podcastRequestRevision)return;
     podcastRevisionSeen.current=podcastRequestRevision;
@@ -146,45 +182,19 @@ function DailyPlanScreen({active=true,onAccount,podcastRequestRevision=0,onIntro
     const appState=AppState.addEventListener('change',state=>{if(state!=='active')flush();});
     return()=>{unsubscribe();appState.remove();flush();};
   },[active,loaded,plan.ready,key,controls,day.day,chapterIndex,plan.rememberPosition,plan.markChapterRead]);
-  const registerPodcast=useCallback(()=>{
-    if(active&&plan.ready&&reading)controls.registerAnchor('podcast',podcastRef.current);
-  },[active,plan.ready,reading,controls]);
-  useEffect(()=>{
-    if(!active||!plan.ready||!reading)return controls.registerAnchor('podcast',null);
-    return controls.registerAnchor('podcast',podcastRef.current);
-  },[active,plan.ready,reading,day.day,controls]);
-  return <View>
-    <View style={s.planHeader}>
-      <View style={s.headingRow}><Text accessibilityRole="header" style={s.day}>Day {day.day}<Text style={s.total}> / 365</Text></Text><GlassPressable accessibilityRole="button" accessibilityLabel="Choose a plan day" disabled={plan.busy} onPress={()=>setPicker(true)} style={({pressed})=>[s.choose,pressed&&s.pressed]}><Icon name="calendar" size={18}/><Text style={s.chooseText}>Days</Text></GlassPressable></View>
-      <Text style={s.label}>{day.label}</Text>
-      <View style={s.statusRow}><Icon name={done?'checkCircle':current?'book':'search'} size={16} color={done?c.success:c.action}/><Text style={s.status}>{done?'Day complete':current?'Your current day':`Browsing · your saved day is ${plan.currentDay}`}</Text></View>
-      {!current&&<ActionButton title={`Return to day ${plan.currentDay}`} variant="ghost" onPress={plan.returnToCurrent}/>}
-      {day.day===1&&<GlassPressable accessibilityRole="button" accessibilityLabel="Open the optional introduction" onPress={onIntro} style={({pressed})=>[s.introLink,pressed&&s.pressed]}><Icon name="headphones" size={18}/><View style={s.introLinkText}><Text style={s.chooseText}>New to The Bible Dept.?</Text><Text style={s.introHint}>Listen to the introduction</Text></View><Icon name="chevronRight" size={18}/></GlassPressable>}
-    </View>
+  return <View testID="plan-chapter-reader">
     <ReaderControls translation={translation} onTranslation={setTranslation}/>
     <Text style={s.caption}>Chapter {chapterIndex+1} of {chapters.length}</Text>
     <View style={s.chapters}>{chapters.map((item,index)=><GlassPressable key={item.reference} accessibilityRole="button" accessibilityLabel={`Read ${item.reference}${savedLesson.readChapters.includes(index)?', reading complete':''}`} accessibilityState={{selected:index===chapterIndex}} onPress={()=>selectChapter(index)} style={({pressed})=>[s.chip,index===chapterIndex&&s.activeChip,pressed&&s.pressed]}><View style={s.chapterLabel}><Text style={[s.chipText,index===chapterIndex&&s.activeText]}>{item.reference}</Text>{savedLesson.readChapters.includes(index)&&<Icon name="check" size={14} color={c.success}/>}</View></GlassPressable>)}</View>
+    <View testID="plan-reading-area" onLayout={event=>{if(loaded)readingHeight.current=event.nativeEvent.layout.height;}} style={!loaded?{minHeight:readingHeight.current}:undefined}>
     {!reading?.passage&&!reading?.error&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text={`Opening ${chapter.reference}…`}/></View>}
     {reading?.error&&<View style={s.error}><Text style={s.errorTitle}>We couldn’t load this chapter</Text><Notice text={reading.error} error/><ActionButton title="Try again" icon="refresh" onPress={()=>setRetry(value=>value+1)} secondary/></View>}
     {reading?.passage&&<><View testID="plan-passage" ref={textRef} collapsable={false} onLayout={measureReading}><PassageView key={`${reading.passage.reference}:${translation}`} passage={reading.passage} onAccount={onAccount}/></View><ReadingCompletion passage={reading.passage} source="plan" planDay={day.day} onAccount={onAccount}/></>}
+    </View>
     {reading?.passage&&<View style={s.chapterNavigation}>
       {chapterIndex>0&&<ActionButton title={`Previous: ${chapters[chapterIndex-1].reference}`} icon="chevronLeft" onPress={()=>selectChapter(chapterIndex-1)} secondary/>}
       {chapterIndex<chapters.length-1&&<ActionButton title={`Next: ${chapters[chapterIndex+1].reference}`} icon="chevronRight" onPress={()=>selectChapter(chapterIndex+1)} secondary/>}
     </View>}
-    <View style={s.completion}>
-      <Text accessibilityRole="header" style={s.completionTitle}>{plan.finished?'Plan complete':done?`Day ${day.day} complete`:current?`Day ${day.day} progress`:'Reading another day'}</Text>
-      <Text style={s.meta}>{done?'Your reading is saved. Continue whenever you’re ready.':`${savedLesson.readChapters.length} of ${chapters.length} chapters read · Teaching ${listened?'complete':'in progress'}`}</Text>
-      {!done&&<Text style={s.local}>Read every chapter and listen to the teaching to finish the day. The last two minutes of audio are optional.</Text>}
-      {!plan.ready?<Notice text="Loading your saved day…"/>:!current?<ActionButton title={`Return to day ${plan.currentDay}`} onPress={plan.returnToCurrent} secondary/>
-        :plan.finished?<Notice text="All 365 days are marked complete. You can open any day to read it again." success/>
-        :<ActionButton title={plan.currentDay===365?'Complete the plan':done?`Continue to day ${plan.currentDay+1}`:`Mark day ${plan.currentDay} complete & continue`} icon="check" onPress={()=>void plan.advance()} loading={plan.busy} disabled={!!plan.error}/>}
-      {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Reload saved progress" onPress={plan.retry} secondary/></View>}
-      <Text style={s.local}>Your place is saved.</Text>
-      {!!plan.syncError&&<Notice text={plan.syncError}/>}
-      {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
-    </View>
-    <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}><PodcastCard day={day.day} active={active}/></View>
-    <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={onDay} onIntro={onIntro} onClose={()=>setPicker(false)}/>
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({
