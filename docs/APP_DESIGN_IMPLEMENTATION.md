@@ -54,6 +54,6 @@ Product headings now name the task: **Today’s reading**, **Track your reading*
 
 ## Current verification
 
-The audio/UI revision passes TypeScript, 39 unit tests, and an iOS JavaScript export. The tests include AM/PM conversion, page journey timing, PCM stereo/RMS handling, real timestamp bins, and finite seek/duration guards. Native configuration introspection confirms audio background mode without microphone permission. These checks do not produce a signed native build or verify physical-device behavior.
+The audio/UI revision passes TypeScript, 43 unit tests, and an iOS JavaScript export. The tests include AM/PM conversion, page journey timing, PCM stereo/RMS handling, real timestamp bins, and finite seek/duration guards. Native configuration introspection confirms audio background mode without microphone permission. These checks do not produce a signed native build or verify physical-device behavior.
 
 The earlier Firebase client/backend integration results and earlier web/Android export results remain historical verification recorded in [the release review](APP_RELEASE_REVIEW.md); those suites were not rerun for this revision.

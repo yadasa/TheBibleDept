@@ -52,3 +52,18 @@ The motion-blur measurements above remain as the earlier review baseline. The cu
 The repo still defaults to `demo-bibledept`; this work did not choose or deploy a production Firebase project. [Setup instructions](HABIT_FEATURES_SETUP.md) cover reviewed/merged rules, indexes/TTL, enabling Auth providers and SMS regions, Expo/APNs/FCM credentials, the push secret and allowlist, and the disabled-by-default dispatch flag.
 
 Build and install signed iPhone and Android applications, then validate SMS app verification, notification permission/revocation, foreground/background/cold-start routing, token refresh, native blur, accessibility/text scaling, and real receipt handling. Universal-link association deployment and App Check configuration also remain release work. Notes synchronization requires a connection; durable offline annotation drafts are outside this release.
+
+
+### Audio session and SVG repair — October 18, 2026
+
+The first phone lock test stopped audio. The global player now retains its audio
+session while buffering, removes its redundant pre-replace pause, and serializes
+explicit activation/release. Backgrounding disables PCM visualization work without
+pausing the transport; foreground return restores sampling. Lock-screen controls
+register after playback begins. The repeat iPhone lock test remains outstanding.
+
+Numeric SVG gradient stops replace leading-decimal strings that the native SVG
+parser rejected and logged repeatedly. This repairs the material's stop positions
+and removes that warning source. The final repair passes TypeScript, 43 unit tests,
+and iOS JavaScript export. Browser checks cover rapid navigation reversals, exact
+pill/page alignment, continued audio across pages, and no snapshot layers.

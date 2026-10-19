@@ -83,11 +83,14 @@ opposite stereo phases into silence. The current displayed bar follows the lates
 level after downsampling, so older peaks cannot mask quiet speech; UI sample updates are limited to roughly 10 per second. The level resets
 on pause/end while historical peaks remain for the active episode.
 
-Unheard or skipped sections have no invented peaks. They render a low baseline,
+Unmeasured or skipped sections have no invented peaks. They render a low baseline,
 with the caption **The waveform fills in as you listen.** A perceptual square-root
 scale makes quieter speech visible. Listened bars are orange, with a contrasting
 gradient at the current progress edge fading backward over approximately 1.5 bar
 pitches. Samples remain in memory; no waveform data is uploaded to Firebase.
+The PCM tap and UI sample timer stop while the app is inactive or backgrounded,
+without pausing the transport. Sampling resumes when the app returns. Audio heard
+in the background may therefore leave gaps in the waveform history.
 
 iPhone sampling uses the playback audio and requests no microphone access. Web
 sampling uses an anonymous-CORS audio source and a browser analyser. Android
@@ -112,6 +115,24 @@ playback still need device validation. A signed native app must retain the
 background capability. Force quitting the app on iOS stops playback; the engine
 does not auto-resume after a restart.
 
+## Lock-screen regression repair
+
+The first physical iPhone lock test stopped playback. The repair removes a
+redundant pre-replace pause and sets `keepAudioSessionActive` on the global player:
+SDK 57's delayed pause deactivation can otherwise run while a replacement stream
+is buffering. Explicit Pause, Close, errors, and completion release the session;
+serialized native calls prevent an old pause from deactivating a newer play.
+Lock-screen metadata registers after actual playback starts. Native playback
+requests can reactivate a deliberately released session, and development-only
+lifecycle diagnostics log state changes without account data or stream URLs.
+
+These changes follow the installed SDK's [session implementation](https://github.com/expo/expo/blob/sdk-57/packages/expo-audio/ios/AudioModule.swift).
+[Expo Go's SDK 57 host](https://github.com/expo/expo/blob/sdk-57/apps/expo-go/ios/Exponent/Supporting/Info.plist)
+already declares audio background mode; no blanket Expo Go restriction is assumed.
+The repaired build passes TypeScript, unit tests, browser playback checks, and iOS
+export. A repeat physical lock-screen test is still required before calling the
+reported device problem resolved.
+
 ## Refresh and verify
 
 From `bibledept-mobile`:
@@ -133,7 +154,7 @@ python scripts/update-podcast-map.py --feed-file path/to/feed.xml --check
 The metadata is intentionally local and stable. A normal app launch does not download
 or parse the multi-megabyte RSS feed, and no extra cloud service is needed.
 
-Current audio/UI verification on 2026-10-18: TypeScript, all 39 unit tests, and the
+Current audio/UI verification on 2026-10-18: TypeScript, all 43 unit tests, and the
 iOS JavaScript export passed. The audio tests cover real PCM levels and stereo
 phase handling, timestamp-based bins and unheard gaps, invalid clocks, endpoint
 binning, finite duration/seek guards, and speed choices. Native configuration

@@ -33,7 +33,7 @@ Reminder and quiet-hour times use AM/PM pickers; internal schedule values remain
 
 ## Verification
 
-The current audio/UI revision passes TypeScript, 39 unit tests, and iOS JavaScript export. Previous Firebase/backend integration results are documented in the [release review](../docs/APP_RELEASE_REVIEW.md); those suites were not rerun for this revision. Native export and configuration checks do not replace signed-device validation.
+The current audio/UI revision passes TypeScript, 43 unit tests, and iOS JavaScript export. Previous Firebase/backend integration results are documented in the [release review](../docs/APP_RELEASE_REVIEW.md); those suites were not rerun for this revision. Native export and configuration checks do not replace signed-device validation.
 
 Configure Firebase using ignored `.env.local`; see [local setup](../docs/LOCAL_TESTING.md), [habit/backend setup](../docs/HABIT_FEATURES_SETUP.md), [design implementation](../docs/APP_DESIGN_IMPLEMENTATION.md), and [release verification](../docs/APP_RELEASE_REVIEW.md). `npm run emulators` includes the active Functions codebase; `npm run test:emulators` uses an isolated disposable suite.
 

@@ -104,7 +104,7 @@ The retained projects reference Stream Chat, Branch, Mailchimp, video processing
 
 The retained source includes the [older mobile app](bibledept-app/README.md), [web dashboard](bibledept-dashboard/README.md), and [Firebase backend](bibledept-functions/README.md). The older app includes Android and iOS native projects.
 
-The app is branded **BibleDept**, with website and email references using **thebibledept.com**. The current audio/UI revision passes TypeScript, **39 unit tests**, and an iOS JavaScript export. Native configuration introspection confirms `UIBackgroundModes: ["audio"]`. These checks do not build or sign an iPhone application and do not establish that PCM sampling, lock-screen controls, or background playback have worked on a physical device.
+The app is branded **BibleDept**, with website and email references using **thebibledept.com**. The current audio/UI revision passes TypeScript, **43 unit tests**, and an iOS JavaScript export. Native configuration introspection confirms `UIBackgroundModes: ["audio"]`. These checks do not build or sign an iPhone application and do not establish that PCM sampling, lock-screen controls, or background playback have worked on a physical device.
 
 Earlier verification recorded two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports, plus browser checks for authentication, themes, streaks, notes, and navigation. Those backend suites were not rerun for this audio/UI revision; see the [release review](docs/APP_RELEASE_REVIEW.md) for that baseline. Signed native builds and physical iPhone/Android review remain necessary. Real SMS, push delivery, public universal links, native glass, and transition performance still need device validation.
 
