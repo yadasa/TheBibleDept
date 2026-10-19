@@ -35,7 +35,7 @@ export const PageBackdrop = memo(function PageBackdrop() {
               so neighboring pages never expose a clipped gradient edge. */}
           {tabOrder.map((tab, index) => (
             <RadialGradient key={`${tab}warm`} id={`${id}warm${index}`}
-              gradientUnits="userSpaceOnUse" cx={index * pageWidth + pageWidth*.86} cy={size.height*.84} rx={radius} ry={radius}>
+              gradientUnits="userSpaceOnUse" cx={index * pageWidth + pageWidth*.86} cy={size.height*.84} r={radius}>
               <Stop offset={0} stopColor="#F05A00" stopOpacity={dark ? .16 : .1}/>
               <Stop offset={1} stopColor="#F05A00" stopOpacity={0}/>
             </RadialGradient>
