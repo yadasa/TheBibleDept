@@ -2,13 +2,14 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import { isDevice } from "expo-device";
 import { Platform } from "react-native";
 import { parseResumeIntent, ResumeIntent } from "../../shared/reminders";
+import { UserFacingError } from "./userMessage";
 export const pushSupported =
   Constants.executionEnvironment !== ExecutionEnvironment.StoreClient &&
   isDevice;
 function notifications() {
   if (!pushSupported)
-    throw new Error(
-      "Push reminders need a signed native build on a physical device.",
+    throw new UserFacingError(
+      "Reminders aren’t available here yet.",new Error("Push reminders need a signed native build on a physical device."),
     );
   return require("expo-notifications") as typeof import("expo-notifications");
 }
@@ -20,8 +21,8 @@ export async function requestPushToken(
       Constants.expoConfig?.extra?.eas?.projectId ||
       Constants.easConfig?.projectId;
   if (!projectId)
-    throw new Error(
-      "This build needs its EAS project ID before push reminders can be registered.",
+    throw new UserFacingError(
+      "Reminders aren’t available right now. Please try again later.",new Error("This build needs its EAS project ID before push reminders can be registered."),
     );
   if (Platform.OS === "android")
     await n.setNotificationChannelAsync("reading-reminders", {

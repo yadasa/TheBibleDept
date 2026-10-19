@@ -50,7 +50,7 @@ export function usePodcastListeningEngine(player: AudioPlayer, source: () => Sou
     void current.store.save().catch(() => {
       current.dirty = true;
       if (mounted.current && active.current === current)
-        setSnapshot(value => ({ ...value, error: 'Your listening progress could not be saved on this device.' }));
+        setSnapshot(value => ({ ...value, error: 'We couldn’t save your listening progress. Please try again.' }));
     });
   }, [publish]);
   const capture = useCallback((suppliedStatus?: AudioStatus) => {
@@ -107,7 +107,7 @@ export function usePodcastListeningEngine(player: AudioPlayer, source: () => Sou
       publish();
     }).catch(() => {
       if (mounted.current && active.current === current)
-        setSnapshot({ owner, ready: false, coverage: {}, error: 'Your saved listening progress could not be opened on this device.' });
+        setSnapshot({ owner, ready: false, coverage: {}, error: 'We couldn’t open your saved listening progress. Please try again.' });
     });
     return () => { flush(); anchor.current = null; };
   }, [owner, ready, flush, publish]);

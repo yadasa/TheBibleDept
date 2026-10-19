@@ -1,6 +1,6 @@
 import { GlassPressable } from "../components/Glass";
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
 import { ActionButton, Notice } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { DayPicker } from '../components/DayPicker';
@@ -15,6 +15,7 @@ import { PodcastCard } from '../components/PodcastCard';
 import { ReadingCompletion } from '../components/ReadingCompletion';
 import { hasReachedReadingEnd, lessonProgressFor } from '../services/lessonProgress';
 import { usePodcastListening } from '../state/PodcastProvider';
+import { messageForUser } from '../services/userMessage';
 
 export function PlanScreen({active=true,onAccount,podcastRequestRevision=0}:{active?:boolean;onAccount:()=>void;podcastRequestRevision?:number}) {
   const {c,s}=useThemedStyles(styles);
@@ -39,7 +40,7 @@ export function PlanScreen({active=true,onAccount,podcastRequestRevision=0}:{act
     const controller=new AbortController();
     fetchPassage(chapter.reference,translation,controller.signal).then(passage=>{
       if(!controller.signal.aborted)setResult({key,passage});
-    }).catch(error=>{if(!controller.signal.aborted)setResult({key,error:error instanceof Error?error.message:'Could not open this reading.'});});
+    }).catch(error=>{if(!controller.signal.aborted)setResult({key,error:messageForUser(error,'We couldn’t open this reading. Please try again.')});});
     return()=>controller.abort();
   },[key,plan.ready]);
   const reading=result.key===key?result:undefined;
@@ -124,20 +125,20 @@ export function PlanScreen({active=true,onAccount,podcastRequestRevision=0}:{act
     <View style={s.completion}>
       <Text accessibilityRole="header" style={s.completionTitle}>{plan.finished?'Plan complete':done?`Day ${day.day} complete`:current?`Day ${day.day} progress`:'Reading another day'}</Text>
       <Text style={s.meta}>{done?'Your reading is saved. Continue whenever you’re ready.':`${savedLesson.readChapters.length} of ${chapters.length} chapters read · Teaching ${listened?'complete':'in progress'}`}</Text>
-      {!done&&<Text style={s.local}>Read to the end of each chapter and listen to the teaching to complete this day automatically. The final two minutes of audio are optional.</Text>}
+      {!done&&<Text style={s.local}>Read every chapter and listen to the teaching to finish the day. The last two minutes of audio are optional.</Text>}
       {!plan.ready?<Notice text="Loading your saved day…"/>:!current?<ActionButton title={`Return to day ${plan.currentDay}`} onPress={plan.returnToCurrent} secondary/>
         :plan.finished?<Notice text="All 365 days are marked complete. You can open any day to read it again." success/>
         :<ActionButton title={plan.currentDay===365?'Complete the plan':done?`Continue to day ${plan.currentDay+1}`:`Mark day ${plan.currentDay} complete & continue`} icon="check" onPress={()=>void plan.advance()} loading={plan.busy} disabled={!!plan.error}/>}
       {!!plan.error&&<View><Notice text={plan.error} error/><ActionButton title="Reload saved progress" onPress={plan.retry} secondary/></View>}
-      <Text style={s.local}>Your place in the plan is saved on this device.</Text>
+      <Text style={s.local}>Your place is saved.</Text>
       {!!plan.lessonError&&<Notice text={plan.lessonError} error/>}
     </View>
-    <Pressable accessibilityRole="link" onPress={()=>Linking.openURL('https://bible-api.com/')} style={s.creditLink}><Text style={s.credit}>Public-domain Scripture via bible-api.com. Internet required.</Text></Pressable>
+    <Text style={s.credit}>Public-domain Scripture. Connect to the internet to read.</Text>
     <View ref={podcastRef} collapsable={false} onLayout={registerPodcast}>{active&&<PodcastCard day={day.day}/>}</View>
     <DayPicker visible={picker} selectedDay={day.day} currentDay={plan.currentDay} finished={plan.finished} completedDays={plan.completedDays} onSelect={plan.selectDay} onClose={()=>setPicker(false)}/>
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({
   planHeader:{paddingTop:4},headingRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'},day:{fontSize:28,lineHeight:36,fontWeight:'800',letterSpacing:-.7,color:c.ink},total:{fontSize:16,fontWeight:'400',color:c.muted,letterSpacing:0},label:{fontSize:18,lineHeight:27,fontWeight:'500',color:c.ink,marginTop:8},choose:{minHeight:44,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:8,borderRadius:4,borderWidth:1,borderColor:c.controlBorder,backgroundColor:c.surface},chooseText:{...t.label,color:c.ink},statusRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:12},status:{...t.meta,color:c.muted,flex:1},
-  caption:{...t.meta,color:c.muted,marginBottom:10},chapters:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:24},chip:{minHeight:44,paddingHorizontal:14,paddingVertical:11,borderRadius:4,borderWidth:1,borderColor:c.controlBorder,backgroundColor:c.surface,justifyContent:'center'},chapterLabel:{flexDirection:'row',alignItems:'center',gap:6},activeChip:{backgroundColor:c.ink,borderColor:c.ink},chipText:{...t.label,color:c.ink},activeText:{color:c.actionText,fontWeight:'700'},selectionMark:{height:2,backgroundColor:c.orange,marginTop:4},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},chapterNavigation:{marginBottom:24},completion:{borderTopWidth:1,borderColor:c.border,paddingTop:24,marginTop:16},completionTitle:{...t.section,color:c.ink},meta:{...t.body,color:c.muted,marginTop:8,marginBottom:12},local:{...t.meta,color:c.muted,marginTop:12},creditLink:{minHeight:44,justifyContent:'center',paddingVertical:12},credit:{...t.meta,color:c.muted,textDecorationLine:'underline'},pressed:{opacity:.65},
+  caption:{...t.meta,color:c.muted,marginBottom:10},chapters:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:24},chip:{minHeight:44,paddingHorizontal:14,paddingVertical:11,borderRadius:4,borderWidth:1,borderColor:c.controlBorder,backgroundColor:c.surface,justifyContent:'center'},chapterLabel:{flexDirection:'row',alignItems:'center',gap:6},activeChip:{backgroundColor:c.ink,borderColor:c.ink},chipText:{...t.label,color:c.ink},activeText:{color:c.actionText,fontWeight:'700'},selectionMark:{height:2,backgroundColor:c.orange,marginTop:4},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},chapterNavigation:{marginBottom:24},completion:{borderTopWidth:1,borderColor:c.border,paddingTop:24,marginTop:16},completionTitle:{...t.section,color:c.ink},meta:{...t.body,color:c.muted,marginTop:8,marginBottom:12},local:{...t.meta,color:c.muted,marginTop:12},credit:{...t.meta,color:c.muted,marginTop:12},pressed:{opacity:.65},
 });

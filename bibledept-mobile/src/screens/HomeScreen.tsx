@@ -97,7 +97,7 @@ export function HomeScreen({
         </>
       )}
       <Text style={s.device}>
-        Your place in the plan is saved on this device.
+        Pick up where you left off.
       </Text>
       {user && habit.ready ? (
         <View style={s.rhythm}>

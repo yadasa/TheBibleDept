@@ -34,7 +34,7 @@ test('encodes references and serves recent repeat passages from memory', async (
 test('does not cache failed or malformed provider responses', async () => {
   let calls=0;
   const reader=createBibleClient({interval:0,fetcher:async()=>{calls++;return calls===1?new Response('{}'):new Response(JSON.stringify(passage));}});
-  await assert.rejects(reader('John 3:16'),/unreadable/);
+  await assert.rejects(reader('John 3:16'),/read this passage/);
   await reader('John 3:16');assert.equal(calls,2);
 });
 test('rejects empty references and canceled requests before contacting the API', async () => {

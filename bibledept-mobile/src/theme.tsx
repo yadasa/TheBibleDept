@@ -81,7 +81,7 @@ function ThemeSession({
       .catch(() => {})
       .then(() => AsyncStorage.setItem(storageKey, value))
       .catch(() =>
-        setError("Theme changed, but could not be saved on this device."),
+        setError("Your appearance changed, but we couldn’t save it. Please try again."),
       );
   }
   return (

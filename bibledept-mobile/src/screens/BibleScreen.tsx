@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Keyboard, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Keyboard, StyleSheet, Text, View } from 'react-native';
 import { ActionButton, Field, Notice } from '../components/ui';
 import { ReaderControls } from '../components/ReaderControls';
 import { PassageView } from '../components/PassageView';
@@ -11,6 +11,7 @@ import { passageLink } from '../services/links';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as ExpoLinking from 'expo-linking';
 import { ReadingCompletion } from '../components/ReadingCompletion';
+import { messageForUser } from '../services/userMessage';
 
 export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 'web', requestRevision = 0, onPassageLoaded, onAccount }: { initialReference?: string; initialTranslation?: Translation; requestRevision?: number; onPassageLoaded?: (passage: Passage) => void; onAccount: () => void }) {
   const {c,s}=useThemedStyles(styles);
@@ -27,7 +28,7 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
     fetchPassage(reference,translation,controller.signal).then(result=>{
       if(controller.signal.aborted)return;
       setPassage(result);onPassageLoaded?.(result);
-    }).catch(e=>{if(!controller.signal.aborted)setError(e.message||'Unable to load this passage.');}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    }).catch(e=>{if(!controller.signal.aborted)setError(messageForUser(e,'We couldn’t open this passage. Please try again.'));}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return()=>controller.abort();
   },[reference,translation,retry]);
   function read(){Keyboard.dismiss();scrollTop();if(draft.trim()===reference)setRetry(v=>v+1);else setReference(draft.trim());}
@@ -46,13 +47,13 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
           const url=Constants.executionEnvironment===ExecutionEnvironment.StoreClient
             ?ExpoLinking.createURL('read',{queryParams:{ref:passage.reference,translation}})
             :passageLink(passage.reference,translation);
-          Clipboard.setStringAsync(url).then(copied=>setLinkMessage(copied?'Passage link copied.':'This browser couldn’t copy the link.')).catch(()=>setLinkMessage('We couldn’t copy the link. Try again.'));
+          Clipboard.setStringAsync(url).then(copied=>setLinkMessage(copied?'Passage link copied.':'We couldn’t copy the link. Try again.')).catch(()=>setLinkMessage('We couldn’t copy the link. Try again.'));
         }}/>
         {!!linkMessage&&<Notice text={linkMessage}/>}
       </View>
-      <Pressable accessibilityRole="link" onPress={()=>Linking.openURL('https://bible-api.com/')} style={s.creditLink}><Text style={s.credit}>Public-domain Scripture via bible-api.com.</Text></Pressable>
+      <Text style={s.credit}>Public-domain Scripture.</Text>
     </View>}
     <Notice text="You’ll need an internet connection to load a passage."/>
   </View>;
 }
-const styles=(c:Colors)=>StyleSheet.create({intro:{...t.body,color:c.muted,marginBottom:20},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},actions:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},creditLink:{minHeight:44,justifyContent:'center',paddingVertical:12},credit:{...t.meta,color:c.muted,textDecorationLine:'underline'}});
+const styles=(c:Colors)=>StyleSheet.create({intro:{...t.body,color:c.muted,marginBottom:20},loading:{alignItems:'center',paddingVertical:48},error:{paddingVertical:24},errorTitle:{...t.section,color:c.ink},actions:{borderTopWidth:1,borderColor:c.border,paddingTop:16,marginTop:16},credit:{...t.meta,color:c.muted,marginTop:12}});

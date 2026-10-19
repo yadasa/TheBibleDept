@@ -14,7 +14,7 @@ export function ReadingProvider({children}:{children:ReactNode}) {
     if(!user)return;
     return onSnapshot(query(collection(getFirebase().db,USER_COLLECTION,user.uid,'readings'),orderBy('completedAt','desc'),limit(366)),snapshot=>{
       setReadings(snapshot.docs.map(d=>({day:d.id,reference:String(d.data().reference),translation:String(d.data().translation)})));
-    },()=>setError('Your reading progress could not be loaded. Check the Firebase connection.'));
+    },()=>setError('We couldn’t open your reading history. Check your internet connection and try again.'));
   },[user?.uid]);
   const visible=owner===user?.uid?readings:[];
   return <Context.Provider value={{readings:visible,error}}>{children}</Context.Provider>;

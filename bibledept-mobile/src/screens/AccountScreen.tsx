@@ -48,7 +48,7 @@ export function AccountScreen() {
     setBusy(true);
     try {
       await sendPasswordResetEmail(getFirebase().auth, email.trim());
-      setMessage(usingEmulators ? 'Find the reset link in the Firebase emulator output. No email was sent.' : 'If there’s an account with this email address, you’ll receive a password reset link.');
+      setMessage(usingEmulators ? 'No email was sent in this preview.' : 'If there’s an account with this email address, you’ll receive a password reset link.');
     } catch (e) { setError(authError(e)); }
     finally { setBusy(false); }
   }
@@ -75,7 +75,7 @@ export function AccountScreen() {
 
   return <View>
     {!user&&<View style={{marginBottom:24}}><BrandLogo large/></View>}
-    {usingEmulators && <View style={s.mode}><Text style={s.modeTitle}>Local test account</Text><Text style={s.modeText}>This uses the Firebase emulators. No account data is sent to the live project.</Text></View>}
+    {usingEmulators && <View style={s.mode}><Text style={s.modeTitle}>Practice account</Text><Text style={s.modeText}>Changes made here won’t appear in your usual account.</Text></View>}
     {user ? <View>
       <View style={s.identity}>
         <View style={s.avatar}><Icon name="user" size={26} color={c.ink} /></View>
@@ -83,8 +83,8 @@ export function AccountScreen() {
       </View>
       <View style={s.details}>
         <AccountDetail icon="heart" title="Private prayer journal" text="Your prayers are saved to this account. Only you can see them." />
-        <AccountDetail icon="book" title="Reading history" text="Your saved chapters and reading streaks sync with this account." />
-        <AccountDetail icon="calendar" title="Your plan day" text="Your place in the 365-day plan stays on this device." />
+        <AccountDetail icon="book" title="Reading history" text="Your saved chapters and reading streaks are kept with your account." />
+        <AccountDetail icon="calendar" title="Your reading plan" text="Pick up where you left off and see the days you’ve completed." />
       </View>
       <ActionButton title="Settings" icon="settings" secondary onPress={()=>setSettings(true)}/>
       {!!error && <Notice text={error} error />}
@@ -92,7 +92,7 @@ export function AccountScreen() {
     </View> : phone ? <PhoneSignIn onEmail={() => { setPhone(false); setError(''); setMessage(''); }} /> : <View>
       <View style={s.status}><Icon name="user" size={16} color={c.muted} /><Text style={s.statusText}>Not signed in</Text></View>
       <Text style={s.heading}>{register ? 'Create an account' : 'Sign in'}</Text>
-      <Text style={s.intro}>Save your notes, prayers, and reading history. Your place in the 365-day plan stays on this device.</Text>
+      <Text style={s.intro}>Save your notes, prayers, and reading history.</Text>
       <View style={s.form}>
         <Field label="Email address" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" autoComplete="email" editable={!busy} placeholder="you@example.com" />
         <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry textContentType={register ? 'newPassword' : 'password'} autoComplete={register ? 'new-password' : 'current-password'} onSubmitEditing={submit} returnKeyType="go" editable={!busy} />

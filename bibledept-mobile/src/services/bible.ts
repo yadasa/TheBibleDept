@@ -1,3 +1,5 @@
+import { messageForUser, UserFacingError } from './userMessage';
+
 export type Translation = 'web' | 'kjv';
 export type Verse = { book_id: string; book_name: string; chapter: number; verse: number; text: string };
 export type Passage = { reference: string; verses: Verse[]; text: string; translation_id: Translation; translation_name: string };
@@ -39,8 +41,8 @@ export function createBibleClient({ fetcher = fetch, interval = 2100, now = Date
   }
   return async (input: string, translation: Translation = 'web', signal?: AbortSignal): Promise<Passage> => {
     const reference = input.trim().replace(/\s+/g, ' ');
-    if (!reference || reference.length > 100) throw new Error('Enter a Bible reference, such as Luke 1 or John 3:16.');
-    if (!['web', 'kjv'].includes(translation)) throw new Error('Choose WEB or KJV.');
+    if (!reference || reference.length > 100) throw new UserFacingError('Enter a Bible reference, such as Luke 1 or John 3:16.');
+    if (!['web', 'kjv'].includes(translation)) throw new UserFacingError('Choose WEB or KJV.');
     if (signal?.aborted) throw canceled();
     const key = `${translation}:${reference.toLowerCase()}`;
     const saved = cache.get(key);
@@ -56,12 +58,12 @@ export function createBibleClient({ fetcher = fetch, interval = 2100, now = Date
         timeout = setTimeout(abort, 15000);
         return fetcher(url, { signal: controller.signal });
       }, signal);
-      if (response.status === 429) throw new Error('The Bible service is busy. Wait 30 seconds, then try again.');
-      if (response.status === 400) throw new Error('That reference could not be opened. Try one chapter or a verse range, such as Luke 1 or John 3:16.');
-      if (!response.ok) throw new Error(response.status === 404 ? 'That passage was not found. Try a reference such as Luke 1.' : 'The Bible service is unavailable. Please try again.');
+      if (response.status === 429) throw new UserFacingError('Wait 30 seconds, then try opening this passage again.');
+      if (response.status === 400) throw new UserFacingError('That reference could not be opened. Try one chapter or a verse range, such as Luke 1 or John 3:16.');
+      if (!response.ok) throw new UserFacingError(response.status === 404 ? 'That passage was not found. Try a reference such as Luke 1.' : 'We couldn’t open this passage. Please try again.');
       const data = await response.json();
       if (typeof data.reference !== 'string' || !Array.isArray(data.verses) || !data.verses.length || data.verses.some((v: Verse) => typeof v.text !== 'string' || !Number.isInteger(v.chapter) || !Number.isInteger(v.verse))) {
-        throw new Error('The Bible service returned an unreadable passage. Please try again.');
+        throw new UserFacingError('We couldn’t read this passage. Please try again.');
       }
       const passage: Passage = { ...data, translation_id: translation };
       if (cache.size >= 20) cache.delete(cache.keys().next().value!);
@@ -69,9 +71,9 @@ export function createBibleClient({ fetcher = fetch, interval = 2100, now = Date
       return passage;
     } catch (error) {
       if (signal?.aborted) throw canceled();
-      if (controller.signal.aborted) throw new Error('The passage took too long to load. Check your connection and retry.');
-      if (error instanceof TypeError) throw new Error('You are offline or the Bible service could not be reached. Connect to the internet and retry.');
-      throw error;
+      if (controller.signal.aborted) throw new UserFacingError('This passage took too long to open. Check your internet connection and try again.',error);
+      if (error instanceof UserFacingError) throw error;
+      throw new UserFacingError(messageForUser(error,'We couldn’t open this passage. Check your internet connection and try again.'),error);
     } finally {
       clearTimeout(timeout);
       signal?.removeEventListener('abort', abort);

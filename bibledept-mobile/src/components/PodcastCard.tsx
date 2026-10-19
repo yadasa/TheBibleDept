@@ -20,7 +20,7 @@ export function PodcastCard({day}:{day:number}) {
   const referencePeak=useMemo(()=>podcastAmplitudePeak(reference),[reference]);
   if(!episode)return null;
   const current=audio.episode?.day===day;
-  const problem=current?audio.error||audio.status.error:'';
+  const problem=current?audio.error||(audio.status.error?'We couldn’t play this episode. Please try again.':''):'';
   const position=current?audio.position:0,duration=current?audio.duration:episode.durationSeconds;
   const loaded=current&&audio.status.isLoaded&&!problem;
   const playing=current&&audio.status.playing;
@@ -53,7 +53,6 @@ export function PodcastCard({day}:{day:number}) {
     {!!linkError&&<Notice text={linkError} error/>}
     <Pressable accessibilityRole="link" onPress={()=>void open(episode.episodeUrl)} style={({pressed})=>[s.episodeLink,pressed&&s.pressed]}><Text style={s.link}>Open episode page</Text><Icon name="external" size={16} color={c.action}/></Pressable>
     <View style={s.follow}><Text style={s.followLabel}>Follow the podcast</Text><View style={s.platforms}><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Apple Podcasts" onPress={()=>void open(PODCAST_LINKS.apple)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Apple Podcasts</Text><Icon name="external" size={14}/></Pressable><Pressable accessibilityRole="link" accessibilityLabel="Follow The Bible Dept on Spotify" onPress={()=>void open(PODCAST_LINKS.spotify)} style={({pressed})=>[s.platform,pressed&&s.pressed]}><Text style={s.platformText}>Spotify</Text><Icon name="external" size={14}/></Pressable></View></View>
-    <Text style={s.credit}>Streaming from the official RedCircle podcast feed.</Text>
   </View>;
 }
 
@@ -89,5 +88,4 @@ const styles=(c:Colors)=>StyleSheet.create({
   platforms:{flexDirection:'row',gap:20,flexWrap:'wrap',marginTop:4},
   platform:{minHeight:44,flexDirection:'row',gap:6,alignItems:'center'},
   platformText:{...t.meta,fontWeight:'600',color:c.ink,textDecorationLine:'underline'},
-  credit:{...t.meta,color:c.muted,marginTop:8},
 });

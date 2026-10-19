@@ -14,7 +14,7 @@ export function ReadingTextProvider({children}:{children:ReactNode}) {
   function setFontSize(value:number){
     if(value<18||value>28)return;
     changed.current=true;setSize(value);setError('');
-    AsyncStorage.setItem('bibledept.readingTextSize',String(value)).catch(()=>setError('Text size changed for this session, but could not be saved on this device.'));
+    AsyncStorage.setItem('bibledept.readingTextSize',String(value)).catch(()=>setError('Your text size changed, but we couldn’t save it. Please try again.'));
   }
   return <Context.Provider value={{fontSize,setFontSize,error}}>{children}</Context.Provider>;
 }

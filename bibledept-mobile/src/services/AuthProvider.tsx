@@ -1,13 +1,14 @@
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { getFirebase } from './firebase';
+import { messageForUser } from './userMessage';
 
 const Context = createContext<{user:User|null;ready:boolean;error:string}>({user:null,ready:false,error:''});
 export function AuthProvider({children}:{children:ReactNode}) {
   const [user,setUser]=useState<User|null>(null), [ready,setReady]=useState(false), [error,setError]=useState('');
   useEffect(()=>{
-    try { return onAuthStateChanged(getFirebase().auth,value=>{setUser(value);setReady(true);},e=>{setError(e.message);setReady(true);}); }
-    catch(e){setError(e instanceof Error?e.message:'Firebase could not start.');setReady(true);}
+    try { return onAuthStateChanged(getFirebase().auth,value=>{setUser(value);setReady(true);},e=>{setError(messageForUser(e,'We couldn’t open your account. Please try again.'));setReady(true);}); }
+    catch(e){setError(messageForUser(e,'We couldn’t open your account. Please try again.'));setReady(true);}
   },[]);
   return <Context.Provider value={{user,ready,error}}>{children}</Context.Provider>;
 }
@@ -28,8 +29,8 @@ export function authError(error:unknown) {
     'auth/session-expired':'Your code has expired. Request a new code.',
     'auth/captcha-check-failed':'Verification could not finish. Request a new code and complete the security check.',
     'auth/operation-not-allowed':'This sign-in method isn’t available. Try another method.',
-    'auth/unauthorized-domain':'This web address is not authorized for phone sign-in. Use the published app or email.',
-    'auth/quota-exceeded':'SMS is temporarily unavailable. Try later or use email.',
+    'auth/unauthorized-domain':'Phone sign-in isn’t available here. Use email instead.',
+    'auth/quota-exceeded':'Text messages are temporarily unavailable. Try later or use email.',
   };
-  return messages[code||''] || (error instanceof Error?error.message:'We couldn’t sign you in. Try again.');
+  return messages[code||''] || messageForUser(error,'We couldn’t sign you in. Please try again.');
 }

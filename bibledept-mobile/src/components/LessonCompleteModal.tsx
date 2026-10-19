@@ -21,7 +21,7 @@ export function LessonCompleteModal({day,busy,error,onClose}:{day?:number;busy:b
         <Text style={s.eyebrow}>DAY {day} COMPLETE</Text>
         <Text ref={heading} accessibilityRole="header" style={s.title}>Congratulations!</Text>
         <Text style={s.copy}>You’ve finished day {day}: {day?getReadingPlanDay(day)?.label:''}.</Text>
-        <Text style={s.detail}>The reading and teaching are complete. Your progress is saved on this device.</Text>
+        <Text style={s.detail}>You’ve finished the reading and teaching. Continue whenever you’re ready.</Text>
         <ActionButton title="Keep going" icon="arrowRight" onPress={onClose} loading={busy}/>
         {!!error&&<Notice text={error} error/>}
       </GlassSurface>

@@ -81,7 +81,7 @@ export function ReadingCompletion({
       {!!habit.pending && (
         <View>
           <Notice
-            text={`Reading from ${habit.pending.expectedHabitDate} is waiting to sync. If that reading day has ended, it won’t be counted as today.`}
+            text={`Your reading from ${habit.pending.expectedHabitDate} hasn’t been saved yet. If that day has ended, it won’t count as today.`}
           />
           <ActionButton
             title="Retry saving"

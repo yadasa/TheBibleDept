@@ -48,7 +48,7 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
     readingPositions.current[day]={chapter,offset};
     // Position writes do not rerender every retained page while a reader scrolls.
     void lessonStore.remember(day,chapter,offset)
-      .catch(()=>{if(alive.current)setLessonError('Your reading place could not be saved on this device.');});
+      .catch(()=>{if(alive.current)setLessonError('We couldn’t save your reading place. Please try again.');});
   },[lessonStore]);
   const getReadingPosition=useCallback((day:number)=>{
     const saved=readingPositions.current[day]||lessonProgressFor(lessonsRef.current,day);
@@ -56,7 +56,7 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
   },[]);
   const markChapterRead=useCallback((day:number,chapter:number)=>{
     return lessonStore.readChapter(day,chapter).then(value=>{if(alive.current)setLessons(value);return true;})
-      .catch(()=>{if(alive.current)setLessonError('Your reading progress could not be saved on this device.');return false;});
+      .catch(()=>{if(alive.current)setLessonError('We couldn’t save your reading progress. Please try again.');return false;});
   },[lessonStore]);
   useEffect(()=>{
     if(!ready||!audio.listeningReady||audio.listeningOwner!==owner)return;
@@ -65,7 +65,7 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
       if(!lesson||lesson.completed||!hasReadLesson(lesson,day)||completing.current.has(day))continue;
       completing.current.add(day);
       void lessonStore.complete(day,true).then(value=>{if(alive.current){setLessons(value);setLessonError('');}})
-        .catch(()=>{if(alive.current)setLessonError('Day completion could not be saved. Retry your saved progress.');})
+        .catch(()=>{if(alive.current)setLessonError('We couldn’t save this completed day. Please try again.');})
         .finally(()=>completing.current.delete(day));
     }
   },[ready,audio.listeningReady,audio.listeningOwner,audio.listenedDays,owner,lessons,lessonStore]);
@@ -85,7 +85,7 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
     if(!ready||busy||selectedDay!==progress.currentDay)return;
     setBusy(true);setError('');
     try {const value=await store.advance(progress.currentDay);setProgress(value);setSelectedDay(value.currentDay);}
-    catch {setError('Your next day could not be saved on this device. Please retry.');}
+    catch {setError('We couldn’t save your next day. Please try again.');}
     finally {setBusy(false);}
   }
   return <Context.Provider value={{...progress,selectedDay,ready,busy,error,lessons,completedDays,lessonError,rememberPosition,getReadingPosition,markChapterRead,

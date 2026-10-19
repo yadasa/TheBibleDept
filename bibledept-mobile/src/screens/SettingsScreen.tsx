@@ -51,14 +51,14 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         ))}
       </View>
       <Text style={s.body}>
-        Your choice is saved for this account on this device.
+        Choose the look that’s easiest on your eyes.
       </Text>
       {!!error && <Notice text={error} error />}
       <View style={{ marginTop: 32 }}>
         <Text style={s.label}>Reading streaks</Text>
         {habit.ready ? (
           <Notice
-            text={`Reading days are counted in ${habit.zone}. Mark a whole chapter as read to count the day. Your place in the plan is saved separately on this device.`}
+            text={`Reading days are counted in ${habit.zone}. Finish a whole chapter to count a reading day.`}
           />
         ) : (
           <>

@@ -19,6 +19,7 @@ import { useAuth } from "./AuthProvider";
 import { callBackend, getFirebase } from "./firebase";
 import { USER_COLLECTION } from "./dataPaths";
 import { listenForPush, pushSupported, requestPushToken } from "./push";
+import { messageForUser, UserFacingError } from "./userMessage";
 export { pushSupported } from "./push";
 type Binding = { owner: string; installationId: string; accountScope: string };
 const bindingKey = "bibledept.pushBinding",
@@ -191,7 +192,7 @@ function Session({ owner, children }: { owner?: string; children: ReactNode }) {
     try {
       await fn();
     } catch (e) {
-      if (active.current) setError((e as Error).message);
+      if (active.current) setError(messageForUser(e,"We couldn’t save your reminder settings. Please try again."));
       throw e;
     } finally {
       lock.current = false;
@@ -205,11 +206,11 @@ function Session({ owner, children }: { owner?: string; children: ReactNode }) {
   }
   async function enable() {
     await run(async () => {
-      if (!owner) throw new Error("Sign in to choose reminders.");
+      if (!owner) throw new UserFacingError("Sign in to choose reminders.");
       const token = await requestPushToken(true);
       if (!token)
-        throw new Error(
-          "Notifications are off for this app. You can enable them in your device settings.",
+        throw new UserFacingError(
+          "Turn on notifications in Settings to receive reminders.",
         );
       const id = await installation(),
         b = await callBackend<Omit<Binding, "owner">>(

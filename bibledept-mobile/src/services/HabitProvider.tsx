@@ -30,6 +30,7 @@ import { useAuth } from "./AuthProvider";
 import { Passage } from "./bible";
 import { callBackend, getFirebase } from "./firebase";
 import { USER_COLLECTION } from "./dataPaths";
+import { messageForUser, UserFacingError } from "./userMessage";
 
 type Habit = {
   zone: string | null;
@@ -107,7 +108,7 @@ function HabitSession({
       .catch(() => {
         if (active)
           setError(
-            "The reading waiting to sync couldn’t be loaded. Restart the app to try again.",
+            "We couldn’t open your unsaved reading. Restart the app to try again.",
           );
       });
     return () => {
@@ -170,8 +171,7 @@ function HabitSession({
     } catch (e) {
       if (mounted.current)
         setError(
-          (e as Error).message ||
-            "We couldn’t save your reading. Check your connection and try again.",
+          messageForUser(e,"We couldn’t save your reading. Please try again."),
         );
       throw e;
     } finally {
@@ -201,19 +201,19 @@ function HabitSession({
   ) {
     await run(async () => {
       if (!owner || !ready || !zone || !queueReady)
-        throw new Error(
+        throw new UserFacingError(
           "Choose your reading time zone in Account → Settings before tracking reading days.",
         );
       const chapterId = chapterFromReference(passage.reference);
       if (!chapterId)
-        throw new Error(
+        throw new UserFacingError(
           "Read a whole chapter to count a reading day. You can save selected verses in Notes.",
         );
       const existing = pendingRef.current;
       if (existing) {
         if (existing.chapterId !== chapterId)
-          throw new Error(
-            "Retry or discard the reading waiting to sync before saving another chapter.",
+          throw new UserFacingError(
+            "Save or discard the unfinished reading before saving another chapter.",
           );
         await send(existing);
         return;

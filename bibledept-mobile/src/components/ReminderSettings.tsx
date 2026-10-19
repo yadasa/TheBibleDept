@@ -55,7 +55,7 @@ export function ReminderSettings() {
       <Text style={{ ...t.section, color: c.ink }}>Reading reminders</Text>
       <Notice text="Choose when you’d like a reminder. We send no more than one a day and three a week. You can pause or turn them off here." />
       {!pushSupported && (
-        <Notice text="Notifications need the installed app on your phone. You can save your preferences here, but Expo Go and the browser preview won’t send reminders." />
+        <Notice text="Reminders aren’t available here yet. You can still choose your preferred times." />
       )}
       {toggle("Enable reading reminders", "enabled")}
       {toggle("Remind me after a missed day", "keepMyRhythm")}
@@ -99,8 +99,8 @@ export function ReminderSettings() {
         <ActionButton
           title={
             n.binding
-              ? "Refresh permission on this device"
-              : "Allow notifications on this device"
+              ? "Check notification permission"
+              : "Allow notifications"
           }
           icon="bell"
           secondary
@@ -111,7 +111,7 @@ export function ReminderSettings() {
       )}
       {pushSupported && (
         <ActionButton
-          title="Open device notification settings"
+          title="Open notification settings"
           variant="ghost"
           onPress={() => void Linking.openSettings()}
         />

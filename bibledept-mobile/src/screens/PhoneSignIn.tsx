@@ -42,16 +42,16 @@ export function PhoneSignIn({ onEmail }: { onEmail: () => void }) {
   return <View>
     <View style={s.status}><Icon name="phone" size={16} color={c.muted} /><Text style={s.statusText}>{challenge ? 'Verify your number' : 'Sign in by phone'}</Text></View>
     <Text style={s.heading}>{challenge ? 'Enter your verification code' : 'Sign in with your phone'}</Text>
-    <Text style={s.intro}>{challenge ? usingEmulators ? 'Enter the local test code below. No text message was sent.' : 'Enter the 6-digit code sent to ' + number + '.' : 'Enter your phone number, including the country code, to sign in or create an account.'}</Text>
-    {!challenge && (usingEmulators || !available) && <View style={s.info}><Icon name="phone" size={18} color={c.action} /><Text style={s.infoText}>{usingEmulators ? 'Local test only. Use a fictional number from +16505550100 to +16505550199. No SMS is sent.' : 'SMS needs a signed development build. Use email to sign in to Expo Go.'}</Text></View>}
+    <Text style={s.intro}>{challenge ? usingEmulators ? 'Enter the practice code below. No text message was sent.' : 'Enter the 6-digit code sent to ' + number + '.' : 'Enter your phone number, including the country code, to sign in or create an account.'}</Text>
+    {!challenge && (usingEmulators || !available) && <View style={s.info}><Icon name="phone" size={18} color={c.action} /><Text style={s.infoText}>{usingEmulators ? 'Use a practice number from +16505550100 to +16505550199. No text message will be sent.' : 'Phone sign-in isn’t available here yet. Use email instead.'}</Text></View>}
     <View style={s.form}>
       <Field label="Phone number" value={number} onChangeText={setNumber} keyboardType="phone-pad" textContentType="telephoneNumber" editable={!challenge && !busy} autoComplete="tel" placeholder="+1 650 555 0123" />
       {challenge && <Field label="Verification code" value={code} onChangeText={setCode} keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="sms-otp" maxLength={6} onSubmitEditing={submit} editable={!busy} placeholder="6-digit code" />}
-      {challenge?.testCode && <Notice text={'Local emulator code: ' + challenge.testCode + '. This is a test code, not a text message.'} />}
+      {challenge?.testCode && <Notice text={'Practice code: ' + challenge.testCode + '. No text message was sent.'} />}
       {!!error && <Notice text={error} error />}
       {Platform.OS==='web'&&<View nativeID="phone-recaptcha"/>}
-      {!usingEmulators&&<Notice text="By continuing, you agree to receive a verification text. Message rates may apply. Google processes your number for authentication and abuse prevention. Phone sign-in creates a separate account from email unless you link them."/>}
-      <ActionButton title={challenge ? 'Verify and sign in' : usingEmulators ? 'Get local test code' : 'Send verification code'} onPress={submit} disabled={!available} loading={busy} icon={challenge ? 'check' : 'arrowRight'} />
+      {!usingEmulators&&<Notice text="By continuing, you agree to receive a verification text. Message rates may apply. Google processes your number for authentication and abuse prevention. Email and phone sign-ins use separate accounts."/>}
+      <ActionButton title={challenge ? 'Verify and sign in' : usingEmulators ? 'Show practice code' : 'Send verification code'} onPress={submit} disabled={!available} loading={busy} icon={challenge ? 'check' : 'arrowRight'} />
       {challenge&&<ActionButton title={cooldown?`Resend code in ${cooldown}s`:'Resend code'} secondary disabled={busy||cooldown>0} onPress={()=>{setBusy(true);setError('');send().catch(e=>setError(authError(e))).finally(()=>setBusy(false));}}/>}
       {challenge && <ActionButton title="Use a different number" variant="ghost" disabled={busy} onPress={() => { setChallenge(undefined); setCode(''); setError(''); }} />}
     </View>
