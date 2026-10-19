@@ -2,6 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /bibledeptUsers/{uid} {
+      match /settings/{setting} { allow read: if owner(uid); }
+      match /habitDays/{day} { allow read: if owner(uid); }
+      match /readingSessions/{session} { allow read: if owner(uid); }
+      match /stats/{stat} { allow read: if owner(uid); }
+      match /pushDevices/{device} { allow read: if owner(uid); }
+      match /annotations/{annotation} {
+        allow read, delete: if owner(uid);
+        allow create, update: if owner(uid)
+          && request.resource.data.keys().hasOnly(['chapterId','reference','translation','verseStart','verseEnd','excerpt','color','comment','createdAt','updatedAt'])
+          && request.resource.data.chapterId is string
+          && request.resource.data.chapterId.matches('^[A-Z0-9]{3}[.][0-9]{1,3}$')
+          && request.resource.data.reference is string && request.resource.data.reference.size() <= 100
+          && request.resource.data.translation in ['web','kjv']
+          && request.resource.data.verseStart is int && request.resource.data.verseEnd is int
+          && request.resource.data.verseStart >= 1 && request.resource.data.verseEnd >= request.resource.data.verseStart && request.resource.data.verseEnd <= 176
+          && request.resource.data.excerpt is string && request.resource.data.excerpt.size() > 0 && request.resource.data.excerpt.size() <= 1200
+          && request.resource.data.color in ['gold','orange','sage','none']
+          && request.resource.data.comment is string && request.resource.data.comment.size() <= 3000
+          && (request.resource.data.color != 'none' || request.resource.data.comment.size() > 0)
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.updatedAt == request.time
+          && (request.method == 'create' ? request.resource.data.createdAt == request.time : request.resource.data.createdAt == resource.data.createdAt);
+      }
       function owner(uid) {
         return request.auth != null && request.auth.uid == uid
           && request.auth.token.firebase.sign_in_provider in ['password', 'phone'];
@@ -13,12 +36,6 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 80;
       match /readings/{reading} {
         allow read, delete: if owner(uid);
-        allow create, update: if owner(uid)
-          && request.resource.data.keys().hasOnly(['reference', 'translation', 'completedAt'])
-          && request.resource.data.reference is string
-          && request.resource.data.reference.size() <= 100
-          && request.resource.data.translation in ['web', 'kjv']
-          && request.resource.data.completedAt is timestamp;
       }
       match /prayers/{prayer} {
         allow read, delete: if owner(uid);
