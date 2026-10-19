@@ -4,7 +4,7 @@ import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-nativ
 import { ActionButton, Notice } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { DayPicker } from '../components/DayPicker';
-import { ReaderControls } from '../components/ReaderControls';
+import { ReaderControls, useReadingText } from '../components/ReaderControls';
 import { PassageView } from '../components/PassageView';
 import { useScreenScroll, useScreenScrollControls } from '../components/ScreenScrollView';
 import { usePlan } from '../services/PlanProvider';
@@ -22,7 +22,8 @@ export function PlanScreen({active=true,onAccount,podcastRequestRevision=0}:{act
   const scrollTop=useScreenScroll();
   const plan=usePlan(),day=getReadingPlanDay(plan.selectedDay)!;
   const controls=useScreenScrollControls(),audio=usePodcastListening(),savedLesson=lessonProgressFor(plan.lessons,day.day),savedPosition=plan.getReadingPosition(day.day);
-  const [picker,setPicker]=useState(false),[translation,setTranslation]=useState<Translation>('web');
+  const [picker,setPicker]=useState(false);
+  const {preferredTranslation:translation,setPreferredTranslation:setTranslation}=useReadingText();
   const [result,setResult]=useState<{key:string;passage?:Passage;error?:string}>({key:''});
   const [retry,setRetry]=useState(0);
   const [chapterSelection,setChapterSelection]=useState({day:0,index:0});

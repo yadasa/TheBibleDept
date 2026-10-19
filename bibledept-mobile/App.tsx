@@ -303,7 +303,7 @@ function AppShell() {
                                     requestRevision={revision}
                                     podcastRequestRevision={podcastRequestRevision}
                                     initialReference={reference}
-                                    initialTranslation={translation}
+                                    initialTranslation={reference ? translation : undefined}
                                     onAccount={() => setTab("Account")}
                                   />
                                 ) : item === "Prayer" ? (

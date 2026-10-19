@@ -9,7 +9,7 @@ import { useThemedStyles, Colors } from '../theme';
 import type { Translation } from '../services/bible';
 
 type Mode='plan'|'search';
-export function BibleHub({initialReference,initialTranslation,onAccount,active=true,requestRevision=0,podcastRequestRevision=0}:{initialReference?:string;initialTranslation:Translation;onAccount:()=>void;active?:boolean;requestRevision?:number;podcastRequestRevision?:number}) {
+export function BibleHub({initialReference,initialTranslation,onAccount,active=true,requestRevision=0,podcastRequestRevision=0}:{initialReference?:string;initialTranslation?:Translation;onAccount:()=>void;active?:boolean;requestRevision?:number;podcastRequestRevision?:number}) {
   const {c,s}=useThemedStyles(styles);
   const id=useId().replace(/[^a-zA-Z0-9]/g,'');
   const [mode,setMode]=useState<Mode>(initialReference?'search':'plan');
