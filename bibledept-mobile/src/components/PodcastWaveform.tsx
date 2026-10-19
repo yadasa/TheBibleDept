@@ -15,7 +15,10 @@ type RenderConfig={id:string;orange:string;liveLevel:number;playing:boolean;prog
 const RenderContext=createContext<RenderConfig|null>(null);
 
 const PodcastBar=memo(function PodcastBar({x,width,height,level,fill}:{x:number;width:number;height:number;level:number;fill:string}) {
-  return <Rect x={x} y={(height-level*height)/2} width={width} height={level*height} rx={width/2} fill={fill}/>;
+  const easedLevel=useSharedValue(level);
+  useEffect(()=>{easedLevel.value=withTiming(level,{duration:150,easing:Easing.out(Easing.cubic)});},[level,easedLevel]);
+  const shape=useAnimatedProps(()=>({y:(height-easedLevel.value*height)/2,height:easedLevel.value*height}));
+  return <AnimatedRect x={x} width={width} rx={width/2} fill={fill} animatedProps={shape}/>;
 });
 
 // Stable component types retain native SVG nodes across PCM updates.
@@ -66,7 +69,7 @@ export function PodcastWaveform({samples,liveLevel,position,duration,playing,can
     const tip=Math.max(0,Math.min(width,clock.value*width)),trail=Math.min(tip,1.5*pitch);
     return {x:tip-trail,width:trail,opacity:tip>0?.65+.35*contact.value:0};
   });
-  const edge=useAnimatedProps(()=>({x:Math.max(0,clock.value*width-1),opacity:clock.value>0?.75+.25*contact.value:0}));
+  const edge=useAnimatedProps(()=>({x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),opacity:clock.value>0?.75+.25*contact.value:0}));
 
   function previewAt(pageX:number) {
     const value=Math.max(0,Math.min(1,(pageX-left.current)/Math.max(1,latest.current.width)));
@@ -139,7 +142,7 @@ export function PodcastWaveform({samples,liveLevel,position,duration,playing,can
         <Stop offset={0} stopColor="#FFD080" stopOpacity={0}/><Stop offset={.65} stopColor="#FFD080" stopOpacity={.15}/><Stop offset={1} stopColor="#FFF3C4" stopOpacity={.9}/>
       </LinearGradient></Defs>
       <AnimatedRect y={5} height={HEIGHT-10} fill={`url(#${gradientId}cursor)`} animatedProps={cursor}/>
-      <AnimatedRect y={5} width={1} height={HEIGHT-10} fill="#FFF3C4" stroke={mode==='light'?c.action:'none'} strokeWidth={mode==='light'?.5:0} animatedProps={edge}/>
+      <AnimatedRect y={5} height={HEIGHT-10} fill="#FFF3C4" stroke={mode==='light'?c.action:'none'} strokeWidth={mode==='light'?.5:0} animatedProps={edge}/>
     </Svg>}
   </View>;
 }

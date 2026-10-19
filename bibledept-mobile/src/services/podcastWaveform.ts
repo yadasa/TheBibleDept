@@ -1,6 +1,23 @@
-/** Apply live speech after downsampling so an older peak cannot mask it. */
+const RESTING_HEIGHT=.67,FALLOFF_PITCHES=4;
+const bounded=(value:number)=>Number.isFinite(value)?Math.max(0,Math.min(1,value)):0;
+
+/** Symmetric smoothstep influence around the native playback bar. */
+export function podcastLiveBarWeight(index:number,count:number,progress:number):number {
+  if(!Number.isInteger(index)||!Number.isInteger(count)||count<=0||index<0||index>=count||!Number.isFinite(progress))return 0;
+  const current=Math.min(count-1,Math.floor(bounded(progress)*count));
+  const proximity=Math.max(0,1-Math.abs(index-current)/FALLOFF_PITCHES);
+  return proximity*proximity*(3-2*proximity);
+}
+
+/**
+ * Keep the measured silhouette below 67% at rest, preserving relative heights.
+ * Nearby bars respond to the real current PCM level with a smooth falloff;
+ * only the current bar can reach 100%. Apply this after visual downsampling.
+ */
 export function renderedPodcastAmplitude(historical:number,live:number,playing:boolean,index:number,count:number,progress:number):number {
-  const current=Math.min(count-1,Math.max(0,Math.floor(progress*count)));
-  if(!playing||index!==current)return historical;
-  return Math.max(.035,Math.sqrt(Number.isFinite(live)?Math.max(0,Math.min(1,live)):0));
+  const resting=bounded(historical)*RESTING_HEIGHT;
+  const weight=playing?podcastLiveBarWeight(index,count,progress):0;
+  const cap=RESTING_HEIGHT+(1-RESTING_HEIGHT)*weight;
+  const actual=Math.sqrt(bounded(live));
+  return Math.max(.035,Math.min(cap,resting*(1-weight)+actual*cap*weight));
 }

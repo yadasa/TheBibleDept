@@ -68,7 +68,7 @@ export const MiniPodcastWaveform=memo(function MiniPodcastWaveform({samples,widt
   });
   const edge=useAnimatedProps(()=>{
     const maximumHeight=height*(.33+.34*expansion.value);
-    return {x:Math.max(0,clock.value*width-1),y:height-maximumHeight-2,height:maximumHeight,opacity:clock.value>0?.55+.45*contact.value:0};
+    return {x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),y:height-maximumHeight-2,height:maximumHeight,opacity:clock.value>0?.55+.45*contact.value:0};
   });
   if(width<=0||height<=0)return null;
   return <View pointerEvents="none">
@@ -79,7 +79,7 @@ export const MiniPodcastWaveform=memo(function MiniPodcastWaveform({samples,widt
         <Stop offset={0} stopColor="#FFD08E" stopOpacity={0}/><Stop offset={1} stopColor="#FFF3C4"/>
       </LinearGradient></Defs>
       <AnimatedRect fill={`url(#${id}tip)`} animatedProps={cursor}/>
-      <AnimatedRect width={1} fill="#FFF3C4" animatedProps={edge}/>
+      <AnimatedRect fill="#FFF3C4" animatedProps={edge}/>
     </Svg>
   </View>;
 });
