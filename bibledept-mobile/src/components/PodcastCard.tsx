@@ -79,7 +79,7 @@ const styles=(c:Colors)=>StyleSheet.create({
   card:{position:'relative',borderWidth:0,borderRadius:radius,marginTop:32,overflow:'visible'},content:{padding:20},
   heading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:12},
   headingLabel:{flexDirection:'row',alignItems:'center',gap:8,flex:1,minWidth:0},
-  cover:{width:44,height:44,borderRadius:10,flexShrink:0},
+  cover:{width:44*4/3,height:44*4/3,borderRadius:13,flexShrink:0},
   kicker:{...t.label,color:c.actionText},
   title:{...t.section,color:c.ink},
   host:{...t.meta,color:c.muted,marginTop:8},
