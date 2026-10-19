@@ -51,7 +51,7 @@ export function ReadingCompletion({
         />
       ) : !habit.ready ? (
         <ActionButton
-          title="Set up reading streaks in Settings"
+          title="Set up reading streaks"
           secondary
           onPress={onAccount}
         />

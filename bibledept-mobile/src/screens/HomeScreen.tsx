@@ -183,7 +183,7 @@ export function HomeScreen({
           <Notice
             text={
               user
-                ? "Choose your time zone in Account → Settings to start counting reading days."
+                ? "Choose your time zone in Account → Preferences to start counting reading days."
                 : "Sign in to track reading days and save your notes and prayers."
             }
           />
