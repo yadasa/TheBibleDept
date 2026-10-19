@@ -23,7 +23,8 @@ const PodcastCardFrost=memo(function PodcastCardFrost() {
 
 export function PodcastCard({day}:{day:number}) {
   const {c,s}=useThemedStyles(styles),audio=usePodcast();
-  const episode=getDayPodcast(day),[linkError,setLinkError]=useState('');
+  const episode=getDayPodcast(day),[linkError,setLinkError]=useState(''),[controlsWidth,setControlsWidth]=useState(0),[speedWidth,setSpeedWidth]=useState(44);
+  const stackedControls=controlsWidth>0&&controlsWidth<172+2*(speedWidth+8);
   const reference=getPodcastReferenceSamples(day)||unknownSamples;
   const referencePeak=useMemo(()=>podcastAmplitudePeak(reference),[reference]);
   if(!episode)return null;
@@ -47,7 +48,7 @@ export function PodcastCard({day}:{day:number}) {
     <PodcastWaveform samples={waveform} referencePeak={referencePeak} liveLevel={current?audio.liveLevel:0} position={position} duration={duration} playing={playing&&audio.hasLiveSamples} canSeek={!!loaded} onSeek={audio.seek}/>
     <View style={s.times}><Text style={s.time}>{audioTime(position)}</Text><Text style={s.time}>{audioTime(duration)}</Text></View>
     <Text style={s.waveCaption}>{loaded?'Drag the waveform to skip through the episode.':'Press play to listen to this episode.'}</Text>
-    <View style={s.controls}>
+    <View testID="podcast-transport-controls" onLayout={event=>setControlsWidth(event.nativeEvent.layout.width)} style={[s.controls,stackedControls&&s.stackedControls]}>
       <View style={s.transport}>
         <SkipButton forward={false} disabled={!loaded} onPress={()=>audio.seek(position-15)}/>
         <GlassPressable tone="primary" accessibilityRole="button" accessibilityLabel={problem?'Retry episode':playing?'Pause episode':'Play episode'}
@@ -56,7 +57,7 @@ export function PodcastCard({day}:{day:number}) {
         </GlassPressable>
         <SkipButton forward disabled={!loaded} onPress={()=>audio.seek(position+15)}/>
       </View>
-      <PlaybackSpeedControl day={day} rate={audio.playbackRate} onRate={audio.setRate}/>
+      <View onLayout={event=>setSpeedWidth(event.nativeEvent.layout.width)} style={[s.speedPosition,stackedControls&&s.stackedSpeed]}><PlaybackSpeedControl day={day} rate={audio.playbackRate} onRate={audio.setRate}/></View>
     </View>
     {!!problem&&<Notice text={String(problem)} error/>}
     {!current&&audio.episode&&<Text style={s.note}>{audio.episode.day===0?'The introduction':`Day ${audio.episode.day}`} is {audio.status.playing?'playing':'paused'}. Play this episode to switch.</Text>}
@@ -87,7 +88,8 @@ const styles=(c:Colors)=>StyleSheet.create({
   waveCaption:{...t.meta,color:c.muted,marginTop:6},
   times:{flexDirection:'row',justifyContent:'space-between'},
   time:{...t.meta,fontVariant:['tabular-nums'],color:c.muted},
-  controls:{flexDirection:'row',alignItems:'center',gap:8,marginTop:12},transport:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12},
+  controls:{position:'relative',flexDirection:'row',alignItems:'center',justifyContent:'center',minHeight:60,marginTop:12},transport:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12},
+  speedPosition:{position:'absolute',right:0,top:4,zIndex:5},stackedControls:{minHeight:116,paddingBottom:56},stackedSpeed:{top:64},
   skip:{minWidth:44,minHeight:44,alignItems:'center',justifyContent:'center',borderRadius:22},skipGlyph:{width:28,height:28},
   skipText:{position:'absolute',left:0,right:0,top:8,fontSize:9,lineHeight:12,textAlign:'center',color:c.ink,fontWeight:'800',fontVariant:['tabular-nums']},
   reverse:{transform:[{scaleX:-1}]},
