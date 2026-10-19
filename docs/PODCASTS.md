@@ -14,11 +14,21 @@ date, RSS position, or an inferred Spotify/Apple episode identifier.
 
 ## Bundled metadata
 
-`bibledept-mobile/src/data/bibledept-podcasts.json` contains 365 tuples:
+`bibledept-mobile/src/data/bibledept-podcasts.json` contains 365 daily tuples plus a separate introductory tuple:
 `[publisherEpisodeIdWithoutHyphens, streamIdWithoutHyphens, durationSeconds]`.
-The file is 28,218 bytes. Shared URL prefixes and normal reading labels are derived
+The file is 28,373 bytes. Shared URL prefixes and normal reading labels are derived
 in `src/services/podcasts.ts`; six reading-label differences are stored explicitly.
 Neither the feed's descriptions/artwork nor MP3 files are bundled or stored in Firebase.
+
+## Optional introduction
+
+The official full episode **START HERE! Introducing The Bible Dept, Day 000** is available from Day 1 and the day picker. It is separate from the 365-day reading map, has no assigned chapters and cannot earn lesson listening/reading credit. The feed lists 706 seconds; the measured stream response was 842.4 seconds, illustrating dynamic ad differences. The loaded media duration wins during playback.
+
+- Episode GUID: `61b3e9e0-ceea-415c-b7ff-67ca617ca0e9`
+- MP3: `https://audio3.redcircle.com/episodes/84aa09a5-8cf5-455d-b5ef-1967c6cd3da3/stream.mp3`
+- Published December 27, 2024. This full introduction is used instead of the separate 71-second trailer.
+
+Opening the introduction normally shows its heading. Returning through the mini-player targets its player. The default/current plan still begins at Day 1.
 
 The stream URL comes directly from the publisher's RSS enclosure. The episode-page
 URL uses the RSS GUID. Day 1's episode page and MP3 endpoint both returned HTTP 200;
@@ -87,7 +97,7 @@ nodes across updates.
 ### Complete reference silhouettes
 
 `src/data/bibledept-podcast-waveforms.json` bundles 96 genuine RMS measurements for
-each of the 365 episodes. Its 66,394 bytes include compact 8-bit amplitudes, matching
+each of the 365 episodes and the separate introduction. Its 66,573 bytes include compact 8-bit amplitudes, matching
 stream IDs and decoded durations. A development script streamed and decoded the
 actual public MP3s through FFmpeg, measured equal time bins and retained only those
 small values. The app does not run FFmpeg, download a second MP3 for analysis,
@@ -133,8 +143,9 @@ thread; previewing a seek moves the indicator but does not move the live-audio
 response until the transport actually seeks.
 
 Played bars in both waveforms use the shared `#F05A00` orange, with brightness
-variants derived from that pigment. Future bars are completely desaturated and
-use 67% of their previous opacity, including Mini press/drag feedback. Complementary
+variants derived from that pigment. Full-player future bars are completely desaturated and
+use 67% of their previous opacity. The later mini-only request keeps that entire
+silhouette saturated orange, with quieter future opacity. Complementary
 clips keep future bars on their own side of the cursor, so their gray or blurred
 layers cannot tint played bars. A bright gradient at the listening edge fades backward
 over approximately 4.5 bar pitches, painted inside the bars rather than as an
@@ -156,6 +167,13 @@ drag and soften it again on release. Its current-position indicator is also
 bottom edge aligned with the bars while its height eases over 180 ms. Dragging
 commits a seek on release; tapping opens the correct day's full player. The Mini
 guide follows only its regular 33%/67% drag height, never the current RMS level.
+
+The mini-player retains its last content through a 220 ms exit and enters over
+260 ms. Web applies a Gaussian blur filter; native uses a transient animated
+BlurView over a dedicated card target. A generation guard prevents an old exit
+callback from removing a reopened player. Reduced motion skips blur and movement.
+The full teaching card has its own frosted background; its controls remain outside
+the clipping layer so the speed menu is visible.
 
 iPhone sampling uses playback audio and requests no microphone access. Web uses
 an anonymous-CORS audio source and a browser analyser. Android live PCM sampling
