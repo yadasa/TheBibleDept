@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassPressable } from './Glass';
 import { Icon } from './Icon';
@@ -29,15 +29,14 @@ export function SelectField({ label, value, options, onChange, disabled = false,
         <Pressable style={StyleSheet.absoluteFill} accessible={false} onPress={() => setOpen(false)}/>
         <SafeAreaView edges={['bottom']} style={s.sheet} accessibilityViewIsModal onAccessibilityEscape={() => setOpen(false)}>
           <View style={s.heading}><Text accessibilityRole="header" style={s.title}>{label}</Text><IconButton name="close" label={`Close ${label.toLowerCase()} choices`} onPress={() => setOpen(false)}/></View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.choices}>
-            {options.map(option => <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label}
+          <FlatList style={s.list} data={options} keyExtractor={option=>option.value} initialNumToRender={14} maxToRenderPerBatch={12} windowSize={5} keyboardShouldPersistTaps="handled" contentContainerStyle={s.choices}
+            renderItem={({item:option}) => <Pressable accessibilityRole="radio" accessibilityLabel={option.label}
               accessibilityState={{ checked: option.value === value, disabled: !!option.disabled }} disabled={option.disabled}
               onPress={() => { onChange(option.value); setOpen(false); }}
               style={({ pressed }) => [s.option, option.value === value && s.selected, option.disabled && s.disabled, pressed && s.pressed]}>
               <View style={s.optionCopy}><Text style={[s.optionText, option.value === value && s.selectedText]}>{option.label}</Text>{!!option.detail && <Text style={s.detail}>{option.detail}</Text>}</View>
               {option.value === value && <Icon name="check" size={20} color={c.action}/>}
-            </Pressable>)}
-          </ScrollView>
+            </Pressable>}/>
         </SafeAreaView>
       </View>
     </Modal>
@@ -50,7 +49,7 @@ const styles = (c: Colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,.5)' },
   sheet: { backgroundColor: c.background, width: '100%', maxWidth: 560, maxHeight: '78%', alignSelf: 'center', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12 },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 20, paddingBottom: 10 },
-  title: { ...t.section, color: c.ink, flexShrink: 1 }, choices: { paddingHorizontal: 16, paddingBottom: 24, gap: 4 },
+  title: { ...t.section, color: c.ink, flexShrink: 1 }, list:{flexGrow:0,flexShrink:1}, choices: { paddingHorizontal: 16, paddingBottom: 24, gap: 4 },
   option: { minHeight: 52, borderRadius: 14, padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' },
   selected: { backgroundColor: c.tint }, optionCopy: { flex: 1 }, optionText: { ...t.body, color: c.ink },
   selectedText: { color: c.actionText, fontWeight: '700' }, detail: { ...t.meta, color: c.muted, marginTop: 3 },
