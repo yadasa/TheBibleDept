@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassPressable } from './Glass';
 import { Icon } from './Icon';
@@ -29,9 +29,9 @@ export function SelectField({ label, value, options, onChange, disabled = false,
         <Pressable style={StyleSheet.absoluteFill} accessible={false} onPress={() => setOpen(false)}/>
         <SafeAreaView edges={['bottom']} style={s.sheet} accessibilityViewIsModal onAccessibilityEscape={() => setOpen(false)}>
           <View style={s.heading}><Text accessibilityRole="header" style={s.title}>{label}</Text><IconButton name="close" label={`Close ${label.toLowerCase()} choices`} onPress={() => setOpen(false)}/></View>
-          <FlatList style={s.list} data={options} keyExtractor={option=>option.value} initialNumToRender={14} maxToRenderPerBatch={12} windowSize={5} keyboardShouldPersistTaps="handled" contentContainerStyle={s.choices}
+          <FlatList style={s.list} data={options} keyExtractor={option=>option.value} initialNumToRender={14} maxToRenderPerBatch={12} windowSize={5} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={Platform.OS!=='web'} contentContainerStyle={s.choices}
             renderItem={({item:option}) => <Pressable accessibilityRole="radio" accessibilityLabel={option.label}
-              accessibilityState={{ checked: option.value === value, disabled: !!option.disabled }} disabled={option.disabled}
+              accessibilityState={{ checked: option.value === value, disabled: !!option.disabled }} aria-checked={option.value===value} disabled={option.disabled}
               onPress={() => { onChange(option.value); setOpen(false); }}
               style={({ pressed }) => [s.option, option.value === value && s.selected, option.disabled && s.disabled, pressed && s.pressed]}>
               <View style={s.optionCopy}><Text style={[s.optionText, option.value === value && s.selectedText]}>{option.label}</Text>{!!option.detail && <Text style={s.detail}>{option.detail}</Text>}</View>
