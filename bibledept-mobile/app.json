@@ -25,7 +25,6 @@
     },
     "scheme": "bibledept",
     "plugins": [
-      "expo-web-browser",
       "expo-build-properties"
     ]
   }
