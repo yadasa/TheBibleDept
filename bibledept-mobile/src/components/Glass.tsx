@@ -44,6 +44,8 @@ export function GlassBackdrop({
   target,
   material = "control",
   blur = true,
+  behindContent = false,
+  edgeRadius,
 }: {
   tone?: Tone;
   color?: string;
@@ -51,6 +53,8 @@ export function GlassBackdrop({
   material?: "control" | "navigation";
   /** Layer color over an already frosted surface without sampling it again. */
   blur?: boolean;
+  behindContent?: boolean;
+  edgeRadius?: number;
 }) {
   const { mode } = useTheme(),
     backdrop = useContext(GlassContext);
@@ -73,7 +77,7 @@ export function GlassBackdrop({
     <View
       pointerEvents="none"
       accessible={false}
-      style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
+      style={[StyleSheet.absoluteFill, { zIndex: behindContent ? -1 : 0 }]}
     >
       {blur && (Platform.OS === "web" ? (
         <View
@@ -141,8 +145,17 @@ export function GlassBackdrop({
         {primary && <Rect width={100} height={100} fill={`url(#${id}pigment)`} />}
         <Rect width={100} height={100} fill={`url(#${id})`} />
       </Svg>
+      {(edgeRadius !== undefined || navigation) && <GlassEdge radius={edgeRadius ?? 29}/>}
     </View>
   );
+}
+
+/** A single rounded hairline catches light without dividing the glass fill. */
+function GlassEdge({radius}:{radius:number}) {
+  const {mode}=useTheme();
+  return <View pointerEvents="none" accessible={false} aria-hidden
+    style={[StyleSheet.absoluteFill,{borderRadius:radius,borderWidth:StyleSheet.hairlineWidth,
+      borderColor:mode === "dark" ? "rgba(255,255,255,.16)" : "rgba(30,20,14,.08)"}]}/>;
 }
 
 export function GlassSurface({
@@ -150,6 +163,8 @@ export function GlassSurface({
   style,
   tone,
 }: PropsWithChildren<{ style?: StyleProp<ViewStyle>; tone?: Tone }>) {
+  const original=StyleSheet.flatten(style);
+  const radius=typeof original?.borderRadius === "number" ? original.borderRadius : 20;
   return (
     <View
       style={[
@@ -159,10 +174,10 @@ export function GlassSurface({
           boxShadow: "0 10px 28px rgba(0,0,0,.12)",
         },
         style,
-        { borderWidth: 0 },
+        { borderWidth: 0, isolation:"isolate" },
       ]}
     >
-      <GlassBackdrop tone={tone} />
+      <GlassBackdrop tone={tone} behindContent edgeRadius={radius}/>
       {children}
     </View>
   );
@@ -178,6 +193,7 @@ export function GlassPressable({
   onBlur,
   ...props
 }: PressableProps & { tone?: Tone; glassColor?: string }) {
+  const {colors:c}=useTheme();
   const [focused, setFocused] = useState(false);
   const selected =
     props.accessibilityState?.selected ||
@@ -215,6 +231,8 @@ export function GlassPressable({
                 : 0,
             ),
             overflow: "hidden",
+            isolation: "isolate",
+            ...(Platform.OS !== "web" ? {opacity:1} : {}),
             boxShadow: "0 5px 18px rgba(0,0,0,.12)",
           },
           focused && {
@@ -224,15 +242,21 @@ export function GlassPressable({
         ];
       }}
     >
-      {(state) => (
-        <>
+      {(state) => {
+        const original=StyleSheet.flatten(typeof style === "function" ? style(state) : style);
+        const radius=Math.max(12,typeof original?.borderRadius === "number" ? original.borderRadius : 0);
+        const dim=typeof original?.opacity === "number" ? 1-Math.max(0,Math.min(1,original.opacity)) : 0;
+        return <>
           <GlassBackdrop
             tone={tone || (selected ? "selected" : "neutral")}
             color={glassColor}
+            behindContent edgeRadius={radius}
           />
           {typeof children === "function" ? children(state) : children}
-        </>
-      )}
+          {Platform.OS !== "web" && dim>0 && <View pointerEvents="none" accessible={false} aria-hidden
+            style={[StyleSheet.absoluteFill,{zIndex:2,borderRadius:radius,backgroundColor:c.background,opacity:dim}]}/>}
+        </>;
+      }}
     </Pressable>
   );
 }

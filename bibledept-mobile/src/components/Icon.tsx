@@ -1,5 +1,5 @@
 import Svg, { Path } from 'react-native-svg';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useTheme } from '../theme';
 
 // A single 24-unit stroke system. Decorative icons inherit the control's label.
@@ -11,6 +11,7 @@ const paths = {
   arrowRight: 'M4 12h16m-6-6 6 6-6 6',
   chevronLeft: 'm15 5-7 7 7 7',
   chevronRight: 'm9 5 7 7-7 7',
+  chevronDown: 'm5 9 7 7 7-7',
   check: 'm5 12 4 4L19 6',
   close: 'm6 6 12 12M6 18 18 6',
   calendar: 'M8 2v4m8-4v4M3 10h18M4 4h16a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z',
@@ -37,5 +38,8 @@ export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {
   const {colors}=useTheme();
   const nativeAccessibility=Platform.OS==='web'?{}:{accessible:false};
-  return <Svg {...nativeAccessibility} style={{position:'relative',zIndex:1}} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||colors.ink} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>;
+  return <View pointerEvents="none" accessible={false} aria-hidden
+    style={{width:size,height:size,minWidth:size,minHeight:size,flexShrink:0,position:'relative',zIndex:1,overflow:'visible'}}>
+    <Svg {...nativeAccessibility} focusable={false} style={{overflow:'visible'}} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||colors.ink} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><Path d={paths[name]} /></Svg>
+  </View>;
 }
