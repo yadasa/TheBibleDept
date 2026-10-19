@@ -43,6 +43,10 @@ Local-demo screenshots: [dark Home with floating navigation and transparent logo
 - Re-ran client TypeScript, all 27 unit tests and web/iOS/Android JavaScript exports after the changes. Backend behavior was unchanged; the prior Firebase/backend integration results above remain the baseline.
 - At 320 px width, the document had no horizontal overflow and nav targets measured about 53 × 60 px. A clean reload of the finished app reported no console warnings or errors.
 
+## Navigation repair — October 18, 2026
+
+The motion-blur measurements above remain as the earlier review baseline. The current implementation removes velocity-based exposure and native screen capture. Pages and grain now move directly on the continuous track, while synchronous transition setup and stable animated coordinates prevent rapid taps from restoring obsolete endpoints. The liquid pill remains, and labels stay readable while it moves. The transparent nav background and warm frosted materials are unchanged. Native transition performance still requires device review; snapshot capture is no longer part of that check.
+
 ## Remaining live-release requirements
 
 The repo still defaults to `demo-bibledept`; this work did not choose or deploy a production Firebase project. [Setup instructions](HABIT_FEATURES_SETUP.md) cover reviewed/merged rules, indexes/TTL, enabling Auth providers and SMS regions, Expo/APNs/FCM credentials, the push secret and allowlist, and the disabled-by-default dispatch flag.

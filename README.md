@@ -39,7 +39,7 @@ BibleDept is a **free app**. The active client has no giving, checkout, subscrip
 | Available in the current client | Status |
 | --- | --- |
 | Website-inspired design | Default dark theme with orange accents, moving grain, borderless frosted buttons and plan card, and the original transparent navbar logo with safe top clearance. Signed-in users can choose Light or Dark under Account → Settings. |
-| Transparent floating navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The bar has no background; the selected glass pill retains its stretch/compress motion. Page motion uses subtle horizontal exposures derived from travel velocity, capped at 3 points. Long jumps pass through intermediate pages; content fades at the scroll edges. |
+| Transparent floating navigation | Notes · Prayer · Home · Bible · Account, adapted from the Church repo. The bar has no background; the selected glass pill retains its stretch/compress motion. A continuous horizontal track carries pages through intermediate destinations. Interrupted transitions continue from the current position, and labels remain readable while the pill moves. Content fades at the scroll edges. |
 | Home | Current reading, device plan progress, private streak/week/longest-streak stats, notes and prayer shortcuts, and the latest saved note. |
 | Online Bible reading | Real passages from bible-api.com, with World English Bible and King James Version selection. No API key required. |
 | Official 365-day plan | A compact 5.1 KB mapping bundled inside the app, Day 1 start, current-day marker, next-day continuation, chapter selection, and a numbered day picker with direct jump. Plan position saves only on the device. |
@@ -106,7 +106,7 @@ The retained source includes the [older mobile app](bibledept-app/README.md), [w
 
 The app is branded **BibleDept**, with website and email references using **thebibledept.com**. The current audio/UI revision passes TypeScript, **39 unit tests**, and an iOS JavaScript export. Native configuration introspection confirms `UIBackgroundModes: ["audio"]`. These checks do not build or sign an iPhone application and do not establish that PCM sampling, lock-screen controls, or background playback have worked on a physical device.
 
-Earlier verification recorded two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports, plus browser checks for authentication, themes, streaks, notes, and navigation. Those backend suites were not rerun for this audio/UI revision; see the [release review](docs/APP_RELEASE_REVIEW.md) for that baseline. Signed native builds and physical iPhone/Android review remain necessary. Real SMS, push delivery, public universal links, native glass, and native motion snapshots still need device validation.
+Earlier verification recorded two Firebase auth/rules integration tests, five backend integration tests, and web/iOS/Android JavaScript exports, plus browser checks for authentication, themes, streaks, notes, and navigation. Those backend suites were not rerun for this audio/UI revision; see the [release review](docs/APP_RELEASE_REVIEW.md) for that baseline. Signed native builds and physical iPhone/Android review remain necessary. Real SMS, push delivery, public universal links, native glass, and transition performance still need device validation.
 
 ## Learn more
 

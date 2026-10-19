@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef, useState } from "react";
+import { RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Animated,
@@ -11,6 +11,7 @@ import { useTheme } from "../theme";
 import { Icon, IconName } from "./Icon";
 import { GlassBackdrop } from "./Glass";
 import { journeyDuration, tabOrder, Tab } from "../services/tabPaging";
+import { indicatorJourney, indicatorPosition, tabUsesIndicatorInk } from "../services/tabIndicator";
 export { tabOrder, Tab } from "../services/tabPaging";
 const icons: Record<Tab, IconName> = {
   Notes: "notes",
@@ -50,25 +51,19 @@ export function LiquidBottomNav({
 }: {
   active: Tab;
   onNavigate: (tab: Tab) => void;
-  onTransitionStart: (tab: Tab, immediate: boolean) => void | Promise<void>;
+  onTransitionStart: (tab: Tab, immediate: boolean) => void;
   onSettled: (tab: Tab) => void;
   progress: Animated.Value;
   blurTarget: RefObject<View | null>;
 }) {
   const { colors: c } = useTheme(),
     reduced = useReducedMotion(),
-    [width, setWidth] = useState(0);
-  const cell = (width - 14 - 16) / 5,
+    [width, setWidth] = useState(0),
+    [settledTab, setSettledTab] = useState<Tab | null>(null);
+  const cell = Math.max(0, (width - 14 - 16) / 5),
     target = 7 + tabOrder.indexOf(active) * (cell + 4);
-  const [frames, setFrames] = useState({
-    left: [target, target, target, target],
-    width: [
-      Math.max(0, cell),
-      Math.max(0, cell),
-      Math.max(0, cell),
-      Math.max(0, cell),
-    ],
-  });
+  const indicatorLeft = useRef(new Animated.Value(target)).current;
+  const indicatorWidth = useRef(new Animated.Value(cell)).current;
   const visual = useRef({ left: target, width: cell }),
     sequence = useRef(0),
     settled = useRef(onSettled),
@@ -77,15 +72,13 @@ export function LiquidBottomNav({
   settled.current = onSettled;
   start.current = onTransitionStart;
   const initialized = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (width <= 0) return;
     const seq = ++sequence.current;
     progress.stopAnimation();
     const from = visual.current,
       delta = target - from.left,
-      right = delta >= 0,
-      stretch = Math.min(Math.abs(delta) * 0.42 + 14, 76),
-      trailing = Math.min(stretch * 0.48, 34);
+      distance = Math.abs(delta) / (cell + 4);
     const resized = lastWidth.current !== 0 && lastWidth.current !== width;
     lastWidth.current = width;
     if (
@@ -96,57 +89,41 @@ export function LiquidBottomNav({
     ) {
       initialized.current = true;
       visual.current = { left: target, width: cell };
-      setFrames({
-        left: [target, target, target, target],
-        width: [cell, cell, cell, cell],
-      });
+      indicatorLeft.setValue(target);
+      indicatorWidth.setValue(cell);
+      setSettledTab(active);
       start.current(active, true);
       progress.setValue(1);
       settled.current(active);
       return;
     }
-    const next = {
-      left: right
-        ? [from.left, from.left, target - trailing, target]
-        : [from.left, from.left - stretch, target, target],
-      width: [from.width, from.width + stretch, cell + trailing, cell],
-    };
-    setFrames(next);
-    let listener: string | undefined;
-    // Native capture is bounded by MotionBlur; a superseded request must not
-    // restart an old journey after the user chooses another destination.
-    async function animate() {
-      const prepared = start.current(active, false);
-      // Hold both tracks at their real starting point while native capture
-      // completes; retaining progress=1 here would flash the new destination.
-      progress.setValue(0);
-      await prepared;
-      if (seq !== sequence.current) return;
-      listener = progress.addListener(({ value }) => {
-        const stops = [0, 0.24, 0.72, 1],
-          i = value < 0.24 ? 0 : value < 0.72 ? 1 : 2,
-          fraction = (value - stops[i]) / (stops[i + 1] - stops[i]);
-        visual.current = {
-          left: next.left[i] + (next.left[i + 1] - next.left[i]) * fraction,
-          width: next.width[i] + (next.width[i + 1] - next.width[i]) * fraction,
-        };
-      });
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: journeyDuration(0, Math.abs(delta) / (cell + 4)),
-        easing: Easing.bezier(0.22, 0.82, 0.18, 1),
-        useNativeDriver: false,
-      }).start(({ finished }) => {
-        if (finished && seq === sequence.current) {
-          visual.current = { left: target, width: cell };
-          settled.current(active);
-        }
-      });
-    }
-    void animate();
+    const journey = indicatorJourney(from, target, cell);
+    setSettledTab(null);
+    start.current(active, false);
+    const listener = progress.addListener(({ value }) => {
+      const current = indicatorPosition(journey, value);
+      visual.current = current;
+      indicatorLeft.setValue(current.left);
+      indicatorWidth.setValue(current.width);
+    });
+    progress.setValue(0);
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: journeyDuration(0, distance),
+      easing: Easing.bezier(0.22, 0.82, 0.18, 1),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (finished && seq === sequence.current) {
+        visual.current = { left: target, width: cell };
+        indicatorLeft.setValue(target);
+        indicatorWidth.setValue(cell);
+        setSettledTab(active);
+        settled.current(active);
+      }
+    });
     return () => {
       sequence.current += 1;
-      if (listener) progress.removeListener(listener);
+      progress.removeListener(listener);
       progress.stopAnimation();
     };
   }, [active, width, reduced]);
@@ -187,14 +164,8 @@ export function LiquidBottomNav({
               borderRadius: 21,
               overflow: "hidden",
               boxShadow: "0 2px 9px rgba(0,0,0,.16)",
-              left: progress.interpolate({
-                inputRange: [0, 0.24, 0.72, 1],
-                outputRange: frames.left,
-              }),
-              width: progress.interpolate({
-                inputRange: [0, 0.24, 0.72, 1],
-                outputRange: frames.width,
-              }),
+              left: indicatorLeft,
+              width: indicatorWidth,
             }}
           >
             <GlassBackdrop tone="primary" target={blurTarget} />
@@ -225,14 +196,14 @@ export function LiquidBottomNav({
               <Icon
                 name={icons[item]}
                 size={24}
-                color={active === item ? c.onAction : c.ink}
+                color={tabUsesIndicatorInk(item, active, settledTab) ? c.onAction : c.ink}
               />
               <Text
                 style={{
                   fontSize: 11,
                   lineHeight: 15,
                   fontWeight: "800",
-                  color: active === item ? c.onAction : c.ink,
+                  color: tabUsesIndicatorInk(item, active, settledTab) ? c.onAction : c.ink,
                 }}
               >
                 {item}
