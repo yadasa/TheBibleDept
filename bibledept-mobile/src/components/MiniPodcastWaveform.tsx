@@ -3,13 +3,14 @@ import { View } from 'react-native';
 import { PlayerWaveform, RendererProps } from 'react-native-waveforms';
 import Animated, { Easing, SharedValue, useAnimatedProps, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
 import { ClipPath, Defs, FeGaussianBlur, Filter, G, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { desaturatedPodcastColor, podcastFutureOpacity, podcastWaveformSplit, previousPodcastBarHeight } from '../services/podcastWaveform';
-import { BRAND_ORANGE, ORANGE_TONES } from '../themeColors';
+import { podcastFutureOpacity, podcastWaveformSplit, previousPodcastBarHeight } from '../services/podcastWaveform';
+import { BRAND_ORANGE, ORANGE_TONES, orangeAlpha } from '../themeColors';
 
 const INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect),AnimatedG=Animated.createAnimatedComponent(G);
 const AnimatedGradient=Animated.createAnimatedComponent(LinearGradient);
-const FUTURE_COLOR=desaturatedPodcastColor(BRAND_ORANGE);
+// Keep the complete Mini silhouette orange; the large player retains gray future bars.
+const FUTURE_COLOR=orangeAlpha(1);
 type RenderConfig={id:string;expansion:SharedValue<number>;contact:SharedValue<number>;clock:SharedValue<number>};
 const RenderContext=createContext<RenderConfig|null>(null);
 
