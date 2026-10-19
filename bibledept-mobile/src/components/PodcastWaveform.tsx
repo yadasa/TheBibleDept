@@ -2,16 +2,16 @@ import { createContext, memo, useContext, useEffect, useId, useMemo, useRef, use
 import { PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { PlayerWaveform } from 'react-native-waveforms';
 import type { RendererProps } from 'react-native-waveforms';
-import Animated, { Easing, SharedValue, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
-import Svg, { ClipPath, Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Animated, { Easing, SharedValue, useAnimatedProps, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ClipPath, Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { audioTime } from '../services/podcasts';
-import { normalizePodcastAmplitude, renderedPodcastAmplitude } from '../services/podcastWaveform';
+import { normalizePodcastAmplitude, previousPodcastBarHeight, renderedPodcastAmplitude } from '../services/podcastWaveform';
 import { useTheme } from '../theme';
 
 const BAR=3,GAP=2,HEIGHT=76,INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect);
 const AnimatedGradient=Animated.createAnimatedComponent(LinearGradient);
-type RenderConfig={id:string;orange:string;liveLevel:number;referencePeak:number;playing:boolean;progress:number;clock:SharedValue<number>};
+type RenderConfig={id:string;orange:string;outline:string;liveLevel:number;referencePeak:number;playing:boolean;progress:number;clock:SharedValue<number>;contact:SharedValue<number>};
 const RenderContext=createContext<RenderConfig|null>(null);
 
 const PodcastBar=memo(function PodcastBar({x,width,height,level,fill}:{x:number;width:number;height:number;level:number;fill:string}) {
@@ -21,11 +21,27 @@ const PodcastBar=memo(function PodcastBar({x,width,height,level,fill}:{x:number;
   return <AnimatedRect x={x} width={width} rx={width/2} fill={fill} animatedProps={shape}/>;
 });
 
+const PodcastAnchor=memo(function PodcastAnchor({levels,width,height,clock,contact,outline}:{
+  levels:readonly number[];width:number;height:number;clock:SharedValue<number>;contact:SharedValue<number>;outline:string;
+}) {
+  const anchorHeight=useSharedValue(0);
+  useAnimatedReaction(()=>previousPodcastBarHeight(levels,clock.value,height),(next,previous)=>{
+    if(next!==previous)anchorHeight.value=withTiming(next,{duration:180,easing:Easing.out(Easing.cubic)});
+  },[levels,height,clock]);
+  const edge=useAnimatedProps(()=>({
+    x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),
+    y:(height-anchorHeight.value)/2,height:anchorHeight.value,opacity:clock.value>0?.75+.25*contact.value:0,
+  }));
+  return <AnimatedRect fill="#FFF3C4" stroke={outline} strokeWidth={outline==='none'?0:.5} animatedProps={edge}/>;
+});
+
 // Stable component types retain native SVG nodes across PCM updates.
 const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:RendererProps) {
   const config=useContext(RenderContext)!;
   const clock=config.clock;
   const pitch=(width+GAP)/Math.max(1,bars.length),barWidth=Math.max(1,pitch-GAP),filled=color===config.orange;
+  const levels=useMemo(()=>bars.map((amplitude,index)=>renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress,config.referencePeak)),
+    [bars,config.liveLevel,config.playing,config.progress,config.referencePeak]);
   const clip=useAnimatedProps(()=>({width:Math.max(0,Math.min(width,clock.value*width))}));
   const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-4.5*pitch),x2:Math.max(.001,clock.value*width)}));
   return <G>
@@ -36,10 +52,10 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
       </AnimatedGradient>
     </Defs>}
     <G clipPath={filled?`url(#${config.id}clip)`:undefined}>
-      {bars.map((amplitude,index)=><PodcastBar key={index} x={index*pitch} width={barWidth} height={height}
-        level={renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress,config.referencePeak)}
+      {levels.map((level,index)=><PodcastBar key={index} x={index*pitch} width={barWidth} height={height} level={level}
         fill={filled?`url(#${config.id})`:color}/>)}
     </G>
+    {filled&&<PodcastAnchor levels={levels} width={width} height={height} clock={clock} contact={config.contact} outline={config.outline}/>}
   </G>;
 });
 
@@ -62,8 +78,8 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
   const amplitudes=useMemo(()=>samples.map(value=>Math.max(.035,normalizePodcastAmplitude(value,referencePeak))),[samples,referencePeak]);
   // Previewing a seek moves the cursor, while live PCM still belongs to the
   // native audio position until the release actually seeks the transport.
-  const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,liveLevel,referencePeak,playing,progress:nativeProgress,clock}),[gradientId,c.orange,liveLevel,referencePeak,playing,nativeProgress,clock]);
-  const edge=useAnimatedProps(()=>({x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),opacity:clock.value>0?.75+.25*contact.value:0}));
+  const outline=mode==='light'?c.action:'none';
+  const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,outline,liveLevel,referencePeak,playing,progress:nativeProgress,clock,contact}),[gradientId,c.orange,outline,liveLevel,referencePeak,playing,nativeProgress,clock,contact]);
 
   function previewAt(pageX:number) {
     const value=Math.max(0,Math.min(1,(pageX-left.current)/Math.max(1,latest.current.width)));
@@ -131,9 +147,6 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
         // competes with the native playback clock or the page's vertical scroll.
         progress={1} isPlaying={false} animationDuration={0}/>}</RenderContext.Provider>
     </Pressable>
-    {width>0&&<Svg pointerEvents="none" aria-hidden width={width} height={HEIGHT} style={StyleSheet.absoluteFill}>
-      <AnimatedRect y={5} height={HEIGHT-10} fill="#FFF3C4" stroke={mode==='light'?c.action:'none'} strokeWidth={mode==='light'?.5:0} animatedProps={edge}/>
-    </Svg>}
   </View>;
 }
 const s=StyleSheet.create({wave:{height:HEIGHT,marginTop:20,marginBottom:8,justifyContent:'center'}});

@@ -1,8 +1,9 @@
 import { createContext, memo, useContext, useEffect, useId, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { PlayerWaveform, RendererProps } from 'react-native-waveforms';
-import Animated, { Easing, SharedValue, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
-import Svg, { ClipPath, Defs, FeGaussianBlur, Filter, G, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Animated, { Easing, SharedValue, useAnimatedProps, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ClipPath, Defs, FeGaussianBlur, Filter, G, LinearGradient, Rect, Stop } from 'react-native-svg';
+import { previousPodcastBarHeight } from '../services/podcastWaveform';
 
 const INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect),AnimatedG=Animated.createAnimatedComponent(G);
@@ -18,6 +19,20 @@ const MiniBar=memo(function MiniBar({level,index,pitch,height,fill,expansion}:{
     return {height:barHeight,y:height-barHeight-2};
   });
   return <AnimatedRect x={index*pitch} width={Math.max(1,pitch-2)} rx={1} fill={fill} animatedProps={shape}/>;
+});
+
+const MiniAnchor=memo(function MiniAnchor({levels,width,height,clock,contact,expansion}:{
+  levels:readonly number[];width:number;height:number;clock:SharedValue<number>;contact:SharedValue<number>;expansion:SharedValue<number>;
+}) {
+  const anchorHeight=useSharedValue(0);
+  useAnimatedReaction(()=>previousPodcastBarHeight(levels,clock.value,height,.33+.34*expansion.value,1),(next,previous)=>{
+    if(next!==previous)anchorHeight.value=withTiming(next,{duration:180,easing:Easing.out(Easing.cubic)});
+  },[levels,height,clock,expansion]);
+  const edge=useAnimatedProps(()=>({
+    x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),
+    y:height-anchorHeight.value-2,height:anchorHeight.value,opacity:clock.value>0?.55+.45*contact.value:0,
+  }));
+  return <AnimatedRect fill="#FFF3C4" animatedProps={edge}/>;
 });
 
 // Static samples/config mean clock ticks do not rebuild these bar trees.
@@ -47,6 +62,7 @@ const MiniBars=memo(function MiniBars({samples:bars,width,height,color}:Renderer
         <AnimatedG animatedProps={sharp}>{elements}</AnimatedG>
       </AnimatedG>
     </G>
+    {filled&&<MiniAnchor levels={bars} width={width} height={height} clock={clock} contact={contact} expansion={expansion}/>}
   </G>;
 });
 
@@ -66,16 +82,9 @@ export const MiniPodcastWaveform=memo(function MiniPodcastWaveform({samples,widt
   useEffect(()=>{contact.value=withTiming(touching||scrubbing?1:0,{duration:touching||scrubbing?140:220,easing:Easing.out(Easing.cubic)});},[touching,scrubbing,contact]);
   useEffect(()=>{clock.value=withTiming(Math.max(0,Math.min(1,progress)),{duration:scrubbing?70:160,easing:Easing.out(Easing.cubic)});},[progress,scrubbing,clock]);
   const config=useMemo(()=>({id,expansion,contact,clock}),[id,expansion,contact,clock]);
-  const edge=useAnimatedProps(()=>{
-    const maximumHeight=height*(.33+.34*expansion.value);
-    return {x:Math.max(0,clock.value*width-2.5),width:Math.min(2.5,Math.max(0,clock.value*width)),y:height-maximumHeight-2,height:maximumHeight,opacity:clock.value>0?.55+.45*contact.value:0};
-  });
   if(width<=0||height<=0)return null;
   return <View pointerEvents="none">
     <RenderContext.Provider value={config}><PlayerWaveform samples={amplitudes} inputRange={INPUT_RANGE} width={width} height={height}
       barWidth={2} gap={2} baseline="bottom" rounded renderer={renderMiniBars} color="#C45D29" progressColor="#FF914D" progress={1} isPlaying={false} animationDuration={0}/></RenderContext.Provider>
-    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-      <AnimatedRect fill="#FFF3C4" animatedProps={edge}/>
-    </Svg>
   </View>;
 });

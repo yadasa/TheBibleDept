@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { normalizePodcastAmplitude, podcastAmplitudePeak, podcastLiveBarWeight, renderedPodcastAmplitude } from '../src/services/podcastWaveform';
+import { normalizePodcastAmplitude, podcastAmplitudePeak, podcastLiveBarWeight, previousPodcastBarHeight, renderedPodcastAmplitude } from '../src/services/podcastWaveform';
 import { getPodcastReferenceSamples } from '../src/services/podcastReferenceWaveforms';
 
 test('quiet speech still pulses when a phone-width bar contains an older louder peak',()=>{
@@ -46,6 +46,35 @@ test('silent or invalid reference values cannot produce infinite gain or invente
   assert.equal(normalizePodcastAmplitude(-.2,.12),0);
   assert.equal(normalizePodcastAmplitude(.2,NaN),.2);
   assert.equal(normalizePodcastAmplitude(.4,.12),1);
+});
+
+test('the current indicator averages the four preceding visible bars, excluding future bars',()=>{
+  const levels=[.2,.4,.6,.8,1,.1,.3,.5];
+  assert.equal(previousPodcastBarHeight(levels,.5,100),50);
+  assert.equal(previousPodcastBarHeight(levels,.75,100),62.5);
+  assert.equal(previousPodcastBarHeight(levels,1,100),47.5);
+  assert.equal(previousPodcastBarHeight(levels,.01,100),20);
+  assert.equal(previousPodcastBarHeight([.4],.8,100),40);
+});
+
+test('indicator height uses the actual full-player falloff profile and mini-player height caps',()=>{
+  const full=Array.from({length:12},(_,index)=>renderedPodcastAmplitude(.7,.5,true,index,12,.5));
+  const expected=full.slice(2,6).reduce((sum,value)=>sum+value*76,0)/4;
+  assert.equal(previousPodcastBarHeight(full,.5,76),expected);
+  const mini=[.2,.4,.6,.8,1];
+  assert.ok(Math.abs(previousPodcastBarHeight(mini,.8,56,.33,1)-9.24)<1e-12);
+  assert.ok(Math.abs(previousPodcastBarHeight(mini,.8,56,.67,1)-18.76)<1e-12);
+  assert.equal(previousPodcastBarHeight([0,0,0,0],1,56,.33,1),1);
+});
+
+test('indicator averaging handles track ends and invalid inputs without oversized or missing geometry',()=>{
+  assert.equal(previousPodcastBarHeight([],1,76),0);
+  assert.equal(previousPodcastBarHeight([1],NaN,76),0);
+  assert.equal(previousPodcastBarHeight([1],1,NaN),0);
+  assert.equal(previousPodcastBarHeight([1],1,-1),0);
+  assert.equal(previousPodcastBarHeight([NaN,-1,3,.5],1,100),37.5);
+  assert.equal(previousPodcastBarHeight([.2,.8],-1,100),20);
+  assert.equal(previousPodcastBarHeight([.2,.8],2,100),50);
 });
 test('silence, invalid samples, and the final visible bar remain bounded',()=>{
   assert.equal(renderedPodcastAmplitude(.8,0,true,57,58,1),.035);
