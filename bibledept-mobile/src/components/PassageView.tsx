@@ -10,6 +10,7 @@ import { Notice } from "./ui";
 import { useAuth } from "../services/AuthProvider";
 import { usePassageAnnotations, Annotation } from "../services/NotesProvider";
 import { Icon } from "./Icon";
+import { VerseFadeGroup, VerseFadeRow, VerseFadeText } from './VerseFade';
 import { annotationForSelection, selectPassageVerse, selectedPassageText, selectedVerse, selectionReference, VerseSelection } from "../services/passageSelection";
 
 export function PassageView({ passage, onAccount }: { passage: Passage; onAccount?: () => void }) {
@@ -74,8 +75,8 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
           : "Tap a verse for a note, or hold to select a range."}</Text>}
       </View>
       {!!notes.error && <Notice text={notes.error} error />}
-      {passage.verses.map((verse, index) => (
-        <View key={`${verse.book_id}:${verse.chapter}:${verse.verse}`}>
+      <VerseFadeGroup>{passage.verses.map((verse, index) => (
+        <VerseFadeRow key={`${verse.book_id}:${verse.chapter}:${verse.verse}`}>
           {multipleChapters &&
             (index === 0 ||
               passage.verses[index - 1].chapter !== verse.chapter) && (
@@ -116,7 +117,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
             );
             return (
               <>
-                  <Pressable
+                  <VerseFadeText disabled={selecting||tappedVerse===index}><Pressable
                     accessibilityRole={selecting ? "checkbox" : note ? "button" : "text"}
                     accessibilityLabel={`${selecting ? "Select verse" : "Verse"} ${verse.verse}: ${verse.text.trim()}`}
                     accessibilityHint={selecting ? "Select the first and last verse of the passage." : note ? "Edit your highlight and note." : "Tap to show the highlight and note button."}
@@ -133,7 +134,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
                     onLongPress={user ? () => choose(index,true) : undefined} delayLongPress={450}
                   >
                     {content}
-                  </Pressable>
+                  </Pressable></VerseFadeText>
                 {!selecting && !note && tappedVerse === index && <View style={s.verseAction}>
                   <GlassPressable testID={`verse-note-action-${verse.book_id}-${verse.chapter}-${verse.verse}`}
                     accessibilityRole="button"
@@ -184,8 +185,8 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
               </>
             );
           })()}
-        </View>
-      ))}
+        </VerseFadeRow>
+      ))}</VerseFadeGroup>
       {!!editing && user && (
         <AnnotationEditor
           key={

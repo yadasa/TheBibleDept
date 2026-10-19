@@ -1,10 +1,12 @@
 import { ComponentProps, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
+import { SharedValue, useSharedValue } from 'react-native-reanimated';
 import { usePlan } from '../services/PlanProvider';
 import { createReadingScrollIntent, isVerticalReadingGesture } from '../services/lessonProgress';
 
 export type ScreenScrollMetrics = Readonly<{ offsetY: number; viewportHeight: number; contentHeight: number; active: boolean; restoring: boolean; userInitiated: boolean }>;
 type Controls = {
+  motion: {offsetY:SharedValue<number>;viewportHeight:SharedValue<number>} | null;
   top: () => void;
   scrollTo: (options: { y: number; animated?: boolean }) => void;
   getMetrics: () => ScreenScrollMetrics;
@@ -13,12 +15,14 @@ type Controls = {
   registerAnchor: (name: string, target: View | null) => () => void;
   scrollToAnchor: (name: string) => void;
 };
-const empty: Controls = { top: () => {}, scrollTo: () => {}, getMetrics: () => ({ offsetY: 0, viewportHeight: 0, contentHeight: 0, active: false, restoring: true, userInitiated: false }), subscribe: () => () => {}, measureContent: () => {}, registerAnchor: () => () => {}, scrollToAnchor: () => {} };
+const empty: Controls = { motion:null, top: () => {}, scrollTo: () => {}, getMetrics: () => ({ offsetY: 0, viewportHeight: 0, contentHeight: 0, active: false, restoring: true, userInitiated: false }), subscribe: () => () => {}, measureContent: () => {}, registerAnchor: () => () => {}, scrollToAnchor: () => {} };
 const Context = createContext<Controls>(empty);
 export const useScreenScroll = () => useContext(Context).top;
 export const useScreenScrollControls = () => useContext(Context);
 
 export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, ...props }: ComponentProps<typeof ScrollView> & { active?: boolean; resetOnPlanDayChange?: boolean }) {
+  const motionY=useSharedValue(0),motionHeight=useSharedValue(0);
+  const motion=useMemo(()=>({offsetY:motionY,viewportHeight:motionHeight}),[motionY,motionHeight]);
   const ref = useRef<ScrollView>(null), viewport = useRef<View>(null), { selectedDay } = usePlan();
   const offset = useRef({ x: 0, y: 0 }), activeRef = useRef(active), restorePending = useRef(true);
   const viewportHeight = useRef(0), contentHeight = useRef(0);
@@ -33,7 +37,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     else {pendingAnchor.current=null;anchorGeneration.current++;}
   }
   const getMetrics = useCallback((): ScreenScrollMetrics => ({ offsetY: offset.current.y, viewportHeight: viewportHeight.current, contentHeight: contentHeight.current, active: activeRef.current, restoring: restorePending.current, userInitiated: scrollIntent.isUserInitiated() }), [scrollIntent]);
-  const notify = useCallback(() => { const value = getMetrics(); listeners.current.forEach(listener => listener(value)); }, [getMetrics]);
+  const notify = useCallback(() => { const value = getMetrics();motionY.value=value.offsetY;motionHeight.value=value.viewportHeight;listeners.current.forEach(listener => listener(value)); }, [getMetrics,motionY,motionHeight]);
   const positionScroll = useCallback(({ y, animated = false }: { y: number; animated?: boolean }, preserveAnchor = false) => {
     if (!Number.isFinite(y)) return;
     if(!preserveAnchor){pendingAnchor.current = null;anchorGeneration.current++;}
@@ -71,7 +75,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current);
     anchorFrame.current = requestAnimationFrame(() => { anchorFrame.current = null; resolveAnchor(); });
   }, [resolveAnchor]);
-  const controls = useMemo<Controls>(() => ({ top, scrollTo, getMetrics,
+  const controls = useMemo<Controls>(() => ({ motion, top, scrollTo, getMetrics,
     subscribe: listener => { listeners.current.add(listener); return () => { listeners.current.delete(listener); }; },
     measureContent,
     registerAnchor: (name, target) => {
@@ -80,7 +84,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
       return () => { if (anchors.current.get(name) === target) anchors.current.delete(name); };
     },
     scrollToAnchor: name => { pendingAnchor.current = name; anchorGeneration.current++; scheduleAnchor(); },
-  }), [top, scrollTo, getMetrics, measureContent, scheduleAnchor]);
+  }), [motion, top, scrollTo, getMetrics, measureContent, scheduleAnchor]);
   const restore = useCallback(() => {
     if (!activeRef.current || !restorePending.current) return;
     ref.current?.scrollTo({ x: 0, y: offset.current.y, animated: false });
