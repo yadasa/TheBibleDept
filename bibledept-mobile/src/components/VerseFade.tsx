@@ -1,6 +1,6 @@
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { View } from 'react-native';
-import Animated, { Easing, SharedValue, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { SharedValue, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useReducedMotion } from './LiquidBottomNav';
 import { useScreenScrollControls } from './ScreenScrollView';
 import { verseVisibilityOpacity } from '../services/verseMotion';
@@ -36,11 +36,12 @@ export function VerseFadeRow({children}:PropsWithChildren) {
 export function VerseFadeText({children,disabled=false}:PropsWithChildren<{disabled?:boolean}>) {
   const group=useContext(Origin),row=useContext(Row),{motion}=useScreenScrollControls();
   const top=useSharedValue(0),height=useSharedValue(0);
-  const animation=useMemo(()=>({duration:140,easing:Easing.out(Easing.cubic)}),[]);
   const style=useAnimatedStyle(()=>{
     if(disabled||!group||group.reduced||!motion||!row)return {opacity:1};
     const opacity=verseVisibilityOpacity(group.top.value+row.value+top.value-motion.offsetY.value,height.value,motion.viewportHeight.value);
-    return {opacity:withTiming(opacity,animation)};
-  },[disabled,group,motion,row,animation]);
+    // Visibility already uses a continuous smoothstep curve. Following native
+    // scroll frames avoids restarting a timing animation for every verse/tick.
+    return {opacity};
+  },[disabled,group,motion,row]);
   return <Animated.View testID="verse-scroll-fade" onLayout={event=>{top.value=event.nativeEvent.layout.y;height.value=event.nativeEvent.layout.height;}} style={style}>{children}</Animated.View>;
 }
