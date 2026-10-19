@@ -109,9 +109,9 @@ export function GlassBackdrop({
               stopColor="white"
               stopOpacity={tone === "primary" ? 0.12 : dark ? 0.22 : 0.48}
             />
-            <Stop offset=".30" stopColor="white" stopOpacity=".055" />
-            <Stop offset=".60" stopColor="white" stopOpacity=".015" />
-            <Stop offset="1" stopColor="white" stopOpacity=".09" />
+            <Stop offset={0.3} stopColor="white" stopOpacity={0.055} />
+            <Stop offset={0.6} stopColor="white" stopOpacity={0.015} />
+            <Stop offset={1} stopColor="white" stopOpacity={0.09} />
           </LinearGradient>
           <RadialGradient
             id={`${id}reflection`}
