@@ -93,7 +93,7 @@ function StreakHaloGroup({run,positions,cellSize,orange,animate}:{run:number;pos
   </View>;
 }
 const styles=(c:Colors)=>StyleSheet.create({
-  section:{marginTop:28,paddingVertical:24,borderBottomWidth:1,borderColor:c.border},
+  section:{marginTop:16,paddingTop:8,paddingBottom:24,borderBottomWidth:1,borderColor:c.border},
   heading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},title:{...t.section,fontSize:20,lineHeight:27,color:c.ink},meta:{...t.meta,fontSize:11,color:c.muted},
   stats:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12,marginBottom:20},streak:{...t.body,color:c.ink},current:{...t.meta,fontSize:12,color:c.ink},number:{fontSize:30,lineHeight:36,fontWeight:'800',color:c.actionText,fontVariant:['tabular-nums']},
   chart:{alignSelf:'stretch'},weeks:{flexDirection:'row',gap:CALENDAR_GAP,padding:CALENDAR_PADDING},week:{gap:CALENDAR_GAP},square:{borderRadius:3,backgroundColor:c.tint,borderWidth:.5,borderColor:c.border},read:{backgroundColor:c.orange,borderWidth:0},today:{borderColor:c.ink,borderWidth:1},future:{opacity:.25},
