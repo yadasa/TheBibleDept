@@ -40,7 +40,7 @@ export function BibleScreen({ initialReference = 'Luke 1', initialTranslation = 
     {loading&&<View style={s.loading}><ActivityIndicator color={c.action}/><Notice text="Loading passage…"/></View>}
     {!!error&&<View style={s.error}><Text style={s.errorTitle}>We couldn’t load this passage</Text><Notice text={error} error/><ActionButton title="Try again" icon="refresh" onPress={()=>setRetry(v=>v+1)} secondary/></View>}
     {passage&&<View>
-      <PassageView key={`${passage.reference}:${translation}`} passage={passage}/>
+      <PassageView key={`${passage.reference}:${translation}`} passage={passage} onAccount={onAccount}/>
       <ReadingCompletion passage={passage} source="reader" onAccount={onAccount}/>
       <View style={s.actions}>
         <ActionButton title="Copy passage link" variant="ghost" onPress={()=>{

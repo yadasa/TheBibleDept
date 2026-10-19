@@ -1,69 +1,46 @@
 import { GlassPressable } from "./Glass";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import type { Passage } from "../services/bible";
 import { useTheme, useThemedStyles, Colors, typography as t } from "../theme";
 import { useReadingText } from "./ReaderControls";
 import { AnnotationEditor, highlightBackground } from "./AnnotationEditor";
-import { ActionButton, Notice } from "./ui";
+import { Notice } from "./ui";
 import { useAuth } from "../services/AuthProvider";
 import { usePassageAnnotations, Annotation } from "../services/NotesProvider";
-import { annotationRange } from "../../shared/annotations";
+import { Icon } from "./Icon";
+import { annotationForSelection, selectPassageVerse, selectedPassageText, selectedVerse, selectionReference, VerseSelection } from "../services/passageSelection";
 
-export function PassageView({ passage }: { passage: Passage }) {
+export function PassageView({ passage, onAccount }: { passage: Passage; onAccount?: () => void }) {
   const { c, s } = useThemedStyles(styles);
   const { fontSize } = useReadingText();
   const { user } = useAuth(),
     { mode } = useTheme(),
     [selecting, setSelecting] = useState(false),
-    [selection, setSelection] = useState<{
-      chapterId: string;
-      first: number;
-      last: number;
-      reference: string;
-    } | null>(null),
+    [selection, setSelection] = useState<VerseSelection | null>(null),
+    [copyMessage, setCopyMessage] = useState(""),
     [editing, setEditing] = useState<Annotation | null>(null);
   const chapterIds = [
     ...new Set(passage.verses.map((v) => `${v.book_id}.${v.chapter}`)),
   ];
   const notes = usePassageAnnotations(chapterIds, passage.translation_id);
-  function choose(index: number) {
-    const v = passage.verses[index],
-      chapterId = `${v.book_id}.${v.chapter}`;
-    setSelection((old) =>
-      old?.chapterId === chapterId
-        ? { ...old, last: v.verse }
-        : {
-            chapterId,
-            first: v.verse,
-            last: v.verse,
-            reference: `${v.book_name} ${v.chapter}`,
-          },
-    );
+  function choose(index: number, restart = false) {
+    if (!user) return;
+    setSelecting(true);
+    setCopyMessage("");
+    setSelection(old => selectPassageVerse(old, passage.verses[index], restart));
   }
   function annotate() {
+    if (!selection || !user) return;
+    setEditing(annotationForSelection(passage, selection));
+  }
+  async function copySelection() {
     if (!selection) return;
-    const range = annotationRange(selection.first, selection.last);
-    const excerpt = passage.verses
-      .filter(
-        (v) =>
-          `${v.book_id}.${v.chapter}` === selection.chapterId &&
-          v.verse >= range.verseStart &&
-          v.verse <= range.verseEnd,
-      )
-      .map((v) => v.text.trim())
-      .join(" ")
-      .slice(0, 1200);
-    setEditing({
-      id: "",
-      chapterId: selection.chapterId,
-      reference: selection.reference,
-      translation: passage.translation_id,
-      ...range,
-      excerpt,
-      color: "gold",
-      comment: "",
-    });
+    try {
+      const copied = await Clipboard.setStringAsync(`${selectionReference(selection)}\n${selectedPassageText(passage, selection)}\n${passage.translation_name}`);
+      setCopyMessage(copied ? "Verses copied." : "This browser couldn’t copy the verses. Cancel selection, then copy the text directly.");
+    } catch { setCopyMessage("We couldn’t copy the verses. Try again."); }
   }
   const multipleChapters = passage.verses.some(
     (verse) => verse.chapter !== passage.verses[0].chapter,
@@ -74,38 +51,26 @@ export function PassageView({ passage }: { passage: Passage }) {
         {passage.reference}
       </Text>
       <Text style={s.translation}>{passage.translation_name}</Text>
-      {user ? (
-        <View style={{ marginBottom: 20 }}>
-          <ActionButton
-            title={
-              selecting ? "Cancel verse selection" : "Highlight or add a note"
-            }
-            secondary
-            onPress={() => {
-              setSelecting(!selecting);
-              setSelection(null);
-            }}
-          />
-          {selecting && (
-            <>
-              <Notice text="Tap a verse to select it. For a longer passage, tap the first and last verse within the same chapter." />
-              {selection && (
-                <>
-                  <Notice
-                    text={`Selected ${selection.reference}:${Math.min(selection.first, selection.last)}–${Math.max(selection.first, selection.last)}`}
-                  />
-                  <ActionButton
-                    title="Add highlight or note"
-                    onPress={annotate}
-                  />
-                </>
-              )}
-            </>
-          )}
-        </View>
-      ) : (
-        <Notice text="Sign in from Account to highlight verses and save notes." />
-      )}
+      <View style={s.tools}>
+        <GlassPressable accessibilityRole="button"
+          accessibilityLabel={user ? selecting ? "Cancel verse selection" : "Highlight or add a note" : "Sign in to save highlights and notes"}
+          accessibilityState={{expanded:!!user&&selecting,disabled:!user&&!onAccount}}
+          disabled={!user&&!onAccount}
+          onPress={() => {
+            if (!user) { onAccount?.(); return; }
+            setSelecting(!selecting);setSelection(null);setCopyMessage("");
+          }} style={s.toolButton}>
+          <Icon name={selecting ? "close" : "notes"} size={19}/>
+          <View style={s.toolText}>
+            <Text style={s.toolLabel}>{selecting ? "Cancel selection" : "Highlight & note"}</Text>
+            {!user && <Text style={s.toolHint}>Sign in to save highlights and notes</Text>}
+          </View>
+          {!selecting && <Icon name="chevronRight" size={18} color={c.muted}/>}
+        </GlassPressable>
+        {user && <Text style={s.toolHint}>{selecting
+          ? "Tap a verse, then the last verse for a range in the same chapter."
+          : "Hold a verse to start, or choose Highlight & note."}</Text>}
+      </View>
       {!!notes.error && <Notice text={notes.error} error />}
       {passage.verses.map((verse, index) => (
         <View key={`${verse.book_id}:${verse.chapter}:${verse.verse}`}>
@@ -122,11 +87,8 @@ export function PassageView({ passage }: { passage: Passage }) {
                   n.verseStart <= verse.verse &&
                   n.verseEnd >= verse.verse,
               );
-            const selected =
-              selecting &&
-              selection?.chapterId === chapterId &&
-              verse.verse >= Math.min(selection.first, selection.last) &&
-              verse.verse <= Math.max(selection.first, selection.last);
+            const selected = selecting && selectedVerse(selection, verse);
+            const selectionEnd = selecting && selection?.chapterId === chapterId && selection.last === verse.verse;
             const content = (
               <Text
                 selectable={!selecting}
@@ -152,19 +114,38 @@ export function PassageView({ passage }: { passage: Passage }) {
             );
             return (
               <>
-                {selecting ? (
+                {user ? (
                   <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={`Select verse ${verse.verse}: ${verse.text.trim()}`}
-                    aria-checked={!!selected}
-                    accessibilityState={{ checked: !!selected }}
-                    onPress={() => choose(index)}
+                    accessibilityRole={selecting ? "checkbox" : note ? "button" : "text"}
+                    accessibilityLabel={`${selecting ? "Select verse" : "Verse"} ${verse.verse}: ${verse.text.trim()}`}
+                    accessibilityHint={selecting ? "Select the first and last verse of the passage." : "Hold to select this verse for a highlight or note."}
+                    aria-checked={selecting ? !!selected : undefined}
+                    accessibilityState={selecting ? {checked:!!selected} : undefined}
+                    accessibilityActions={!selecting ? [{name:"annotate",label:"Highlight or add a note"}] : undefined}
+                    onAccessibilityAction={event => {if(event.nativeEvent.actionName === "annotate")choose(index,true);}}
+                    tabIndex={selecting || note ? 0 : -1}
+                    onPress={selecting ? () => choose(index) : note ? () => setEditing(note) : undefined}
+                    onLongPress={() => choose(index,true)} delayLongPress={450}
                   >
                     {content}
                   </Pressable>
                 ) : (
                   content
                 )}
+                {selectionEnd && selection && <View style={s.selectionTools}>
+                  <Text accessibilityLiveRegion="polite" style={s.selectionLabel}>{selectionReference(selection)}</Text>
+                  <View style={s.selectionActions}>
+                    <GlassPressable accessibilityRole="button" accessibilityLabel="Add highlight or note"
+                      tone="primary" onPress={annotate} style={s.selectionAction}>
+                      <Text style={[s.actionLabel,{color:c.onOrange}]}>Highlight & note</Text>
+                    </GlassPressable>
+                    <GlassPressable accessibilityRole="button" accessibilityLabel="Copy verses"
+                      onPress={() => void copySelection()} style={s.selectionAction}>
+                      <Text style={[s.actionLabel,{color:c.ink}]}>Copy verses</Text>
+                    </GlassPressable>
+                  </View>
+                  {!!copyMessage && <Notice text={copyMessage}/>}
+                </View>}
                 {!selecting && note && note.verseStart === verse.verse && (
                   <GlassPressable
                     accessibilityRole="button"
@@ -181,7 +162,7 @@ export function PassageView({ passage }: { passage: Passage }) {
                   >
                     <Text style={{ ...t.meta, color: c.actionText }}>
                       {note.comment || "Highlighted · Add a note"}
-                      {note.pending ? " · Syncing…" : ""}
+                      {note.pending ? " · Saving…" : ""}
                     </Text>
                   </GlassPressable>
                 )}
@@ -190,9 +171,6 @@ export function PassageView({ passage }: { passage: Passage }) {
           })()}
         </View>
       ))}
-      {selecting && selection && (
-        <ActionButton title="Add highlight or note" onPress={annotate} />
-      )}
       {!!editing && user && (
         <AnnotationEditor
           key={
@@ -204,6 +182,7 @@ export function PassageView({ passage }: { passage: Passage }) {
             setEditing(null);
             setSelection(null);
             setSelecting(false);
+            setCopyMessage("");
           }}
         />
       )}
@@ -221,6 +200,16 @@ const styles = (c: Colors) =>
       color: c.ink,
     },
     translation: { ...t.meta, color: c.muted, marginTop: 6, marginBottom: 28 },
+    tools:{marginBottom:20,gap:8},
+    toolButton:{minHeight:48,paddingHorizontal:12,paddingVertical:10,borderRadius:14,flexDirection:"row",alignItems:"center",gap:10},
+    toolText:{flex:1,minWidth:0},
+    toolLabel:{...t.label,color:c.ink},
+    toolHint:{...t.meta,color:c.muted},
+    selectionTools:{marginBottom:20,padding:12,borderRadius:14,backgroundColor:c.surface},
+    selectionLabel:{...t.label,color:c.ink},
+    selectionActions:{flexDirection:"row",gap:8,marginTop:10},
+    selectionAction:{flex:1,minWidth:0,minHeight:44,paddingHorizontal:8,paddingVertical:10,borderRadius:12,alignItems:"center",justifyContent:"center"},
+    actionLabel:{...t.label,textAlign:"center"},
     chapter: { ...t.label, color: c.actionText, marginTop: 16, marginBottom: 16 },
     verse: { color: c.ink, marginBottom: 16 },
     number: { fontSize: 13, fontWeight: "600", color: c.actionText },

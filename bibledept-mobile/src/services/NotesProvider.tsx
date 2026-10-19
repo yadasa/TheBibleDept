@@ -23,6 +23,7 @@ import { Annotation, validAnnotation } from "../../shared/annotations";
 import { useAuth } from "./AuthProvider";
 import { USER_COLLECTION } from "./dataPaths";
 import { getFirebase } from "./firebase";
+import { UserFacingError } from "./userMessage";
 export type { Annotation } from "../../shared/annotations";
 const Context = createContext({
   notes: [] as Annotation[],
@@ -151,7 +152,7 @@ export function usePassageAnnotations(
 }
 function ownerPath(owner: string) {
   if (getFirebase().auth.currentUser?.uid !== owner)
-    throw new Error("Sign in to save your note.");
+    throw new UserFacingError("Sign in again to save your note.");
   return collection(getFirebase().db, USER_COLLECTION, owner, "annotations");
 }
 export async function saveAnnotation(
@@ -160,8 +161,8 @@ export async function saveAnnotation(
   existingId?: string,
 ) {
   if (!validAnnotation(value))
-    throw new Error(
-      "Select verses and choose a highlight or add a comment (up to 3,000 characters).",
+    throw new UserFacingError(
+      "Select verses and choose a highlight or write a note up to 3,000 characters.",
     );
   const { pending, ...clean } = value;
   const ref = doc(ownerPath(owner), existingId || randomUUID());

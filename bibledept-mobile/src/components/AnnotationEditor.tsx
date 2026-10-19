@@ -19,6 +19,7 @@ import { removeAnnotation, saveAnnotation } from "../services/NotesProvider";
 import { useTheme, typography as t } from "../theme";
 import { ActionButton, Field, Notice } from "./ui";
 import { ORANGE_TONES } from "../themeColors";
+import { messageForUser } from "../services/userMessage";
 export const highlightBackground = (color: HighlightColor, dark: boolean) =>
   ({
     gold: dark ? "#443A1B" : "#FFF0B8",
@@ -42,6 +43,10 @@ export function AnnotationEditor({
     [confirmDelete, setConfirmDelete] = useState(false);
   async function save() {
     if (!user || busy) return;
+    if (color === "none" && !comment.trim()) {
+      setError("Choose a highlight color or write a note before saving.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -53,7 +58,7 @@ export function AnnotationEditor({
       );
       onClose();
     } catch (e) {
-      setError((e as Error).message);
+      setError(messageForUser(e,"Your note couldn’t be saved. Check your connection and try again. Your text is still here."));
     } finally {
       setBusy(false);
     }
@@ -156,7 +161,7 @@ export function AnnotationEditor({
               editable={!busy}
               placeholder="Add a note about these verses…"
             />
-            <Notice text="Save your highlight and note together to find them in Notes. Only you can see them. Connect to the internet to finish syncing." />
+            <Notice text="Your highlights and notes appear in Notes automatically. Only you can see them. An internet connection is needed to finish saving." />
             {!!error && <Notice text={error} error />}
             <ActionButton
               title="Save to Notes"

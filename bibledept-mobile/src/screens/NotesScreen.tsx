@@ -40,7 +40,7 @@ export function NotesScreen({
   );
   return (
     <View>
-      <Notice text="Your highlights and notes are saved to your account. Only you can see them." />
+      <Notice text="Highlights and notes from your reading appear here automatically. Only you can see them." />
       <Field
         label="Search these notes"
         value={search}
@@ -53,7 +53,7 @@ export function NotesScreen({
           <Text style={{ ...t.section, color: c.ink }}>
             No notes yet
           </Text>
-          <Notice text="Open a chapter and choose Highlight or add a note. Select a verse or range, then save. You’ll find it here." />
+          <Notice text="Open a chapter and choose Highlight & note, or hold a verse. Select a verse or range, then save a highlight, a note, or both." />
         </View>
       )}
       {!visible.length && !!search && (
@@ -103,7 +103,7 @@ export function NotesScreen({
               {note.comment}
             </Text>
           )}
-          {note.pending && <Notice text="Syncing with your account…" />}
+          {note.pending && <Notice text="Saving to your account…" />}
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             <ActionButton
               title="Open passage"
