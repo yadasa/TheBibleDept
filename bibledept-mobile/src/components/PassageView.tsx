@@ -19,6 +19,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
     { mode } = useTheme(),
     [selecting, setSelecting] = useState(false),
     [selection, setSelection] = useState<VerseSelection | null>(null),
+    [tappedVerse, setTappedVerse] = useState<number | null>(null),
     [copyMessage, setCopyMessage] = useState(""),
     [editing, setEditing] = useState<Annotation | null>(null);
   const chapterIds = [
@@ -27,6 +28,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
   const notes = usePassageAnnotations(chapterIds, passage.translation_id);
   function choose(index: number, restart = false) {
     if (!user) return;
+    setTappedVerse(null);
     setSelecting(true);
     setCopyMessage("");
     setSelection(old => selectPassageVerse(old, passage.verses[index], restart));
@@ -58,7 +60,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
           disabled={!user&&!onAccount}
           onPress={() => {
             if (!user) { onAccount?.(); return; }
-            setSelecting(!selecting);setSelection(null);setCopyMessage("");
+            setSelecting(!selecting);setSelection(null);setCopyMessage("");setTappedVerse(null);
           }} style={s.toolButton}>
           <Icon name={selecting ? "close" : "notes"} size={19}/>
           <View style={s.toolText}>
@@ -69,7 +71,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
         </GlassPressable>
         {user && <Text style={s.toolHint}>{selecting
           ? "Tap a verse, then the last verse for a range in the same chapter."
-          : "Hold a verse to start, or choose Highlight & note."}</Text>}
+          : "Tap a verse for a note, or hold to select a range."}</Text>}
       </View>
       {!!notes.error && <Notice text={notes.error} error />}
       {passage.verses.map((verse, index) => (
@@ -114,24 +116,37 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
             );
             return (
               <>
-                {user ? (
                   <Pressable
                     accessibilityRole={selecting ? "checkbox" : note ? "button" : "text"}
                     accessibilityLabel={`${selecting ? "Select verse" : "Verse"} ${verse.verse}: ${verse.text.trim()}`}
-                    accessibilityHint={selecting ? "Select the first and last verse of the passage." : "Hold to select this verse for a highlight or note."}
+                    accessibilityHint={selecting ? "Select the first and last verse of the passage." : note ? "Edit your highlight and note." : "Tap to show the highlight and note button."}
                     aria-checked={selecting ? !!selected : undefined}
                     accessibilityState={selecting ? {checked:!!selected} : undefined}
-                    accessibilityActions={!selecting ? [{name:"annotate",label:"Highlight or add a note"}] : undefined}
+                    accessibilityActions={user&&!selecting ? [{name:"annotate",label:"Highlight or add a note"}] : undefined}
                     onAccessibilityAction={event => {if(event.nativeEvent.actionName === "annotate")choose(index,true);}}
                     tabIndex={selecting || note ? 0 : -1}
-                    onPress={selecting ? () => choose(index) : note ? () => setEditing(note) : undefined}
-                    onLongPress={() => choose(index,true)} delayLongPress={450}
+                    onPress={() => {
+                      if (selecting) { choose(index); return; }
+                      if (note) { setTappedVerse(null);setEditing(note);return; }
+                      setTappedVerse(value => value === index ? null : index);
+                    }}
+                    onLongPress={user ? () => choose(index,true) : undefined} delayLongPress={450}
                   >
                     {content}
                   </Pressable>
-                ) : (
-                  content
-                )}
+                {!selecting && !note && tappedVerse === index && <View style={s.verseAction}>
+                  <GlassPressable testID={`verse-note-action-${verse.book_id}-${verse.chapter}-${verse.verse}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={user ? `Highlight or add a note on verse ${verse.verse}` : `Sign in to highlight or note verse ${verse.verse}`}
+                    disabled={!user&&!onAccount} accessibilityState={{disabled:!user&&!onAccount}}
+                    onPress={() => {
+                      if (!user) { onAccount?.();return; }
+                      setEditing(annotationForSelection(passage,selectPassageVerse(null,verse,true)));
+                      setTappedVerse(null);
+                    }} style={s.verseActionButton}>
+                    <Icon name="notes" size={18}/>
+                  </GlassPressable>
+                </View>}
                 {selectionEnd && selection && <View style={s.selectionTools}>
                   <Text accessibilityLiveRegion="polite" style={s.selectionLabel}>{selectionReference(selection)}</Text>
                   <View style={s.selectionActions}>
@@ -182,6 +197,7 @@ export function PassageView({ passage, onAccount }: { passage: Passage; onAccoun
             setEditing(null);
             setSelection(null);
             setSelecting(false);
+            setTappedVerse(null);
             setCopyMessage("");
           }}
         />
@@ -211,6 +227,8 @@ const styles = (c: Colors) =>
     selectionAction:{flex:1,minWidth:0,minHeight:44,paddingHorizontal:8,paddingVertical:10,borderRadius:12,alignItems:"center",justifyContent:"center"},
     actionLabel:{...t.label,textAlign:"center"},
     chapter: { ...t.label, color: c.actionText, marginTop: 16, marginBottom: 16 },
-    verse: { color: c.ink, marginBottom: 16 },
+    verse: { color: c.ink, marginBottom: 16, textDecorationLine:"none" },
+    verseAction:{alignItems:"flex-end",marginTop:-8,marginBottom:12},
+    verseActionButton:{width:44,minHeight:44,borderRadius:22,alignItems:"center",justifyContent:"center"},
     number: { fontSize: 13, fontWeight: "600", color: c.actionText },
   });
