@@ -1,6 +1,28 @@
 const RESTING_HEIGHT=.67,PAST_FALLOFF_PITCHES=4,FUTURE_FALLOFF_PITCHES=2;
 const bounded=(value:number)=>Number.isFinite(value)?Math.max(0,Math.min(1,value)):0;
 
+/** Neutral luminance preserves the source brightness without any orange hue. */
+export function desaturatedPodcastColor(hex:string):string {
+  const channels=/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex);
+  const gray=channels?Math.round(parseInt(channels[1],16)*.2126+parseInt(channels[2],16)*.7152+parseInt(channels[3],16)*.0722):128;
+  return `rgb(${gray},${gray},${gray})`;
+}
+
+/** Reduce the previous opacity by one third, including touch/drag feedback. */
+export function podcastFutureOpacity(previous:number):number {
+  'worklet';
+  return Number.isFinite(previous)?Math.max(0,Math.min(1,previous))*.67:0;
+}
+
+/** Complementary clips keep translucent or blurred future bars off played bars. */
+export function podcastWaveformSplit(progress:number,width:number):{playedWidth:number;futureX:number;futureWidth:number} {
+  'worklet';
+  const span=Number.isFinite(width)?Math.max(0,width):0;
+  const fraction=Number.isFinite(progress)?Math.max(0,Math.min(1,progress)):0;
+  const playedWidth=span*fraction;
+  return {playedWidth,futureX:playedWidth,futureWidth:span-playedWidth};
+}
+
 /** Choose once from the complete reference, never from each live PCM update. */
 export function podcastAmplitudePeak(reference:readonly number[]):number {
   let peak=0;

@@ -116,18 +116,26 @@ scale derived from the episode's complete reference peak, making the measured
 shape visible without changing unrelated bar heights as louder PCM arrives.
 Uninfluenced and paused bars preserve their relative
 measured heights at a maximum of 67% of the waveform area. While playing, the actual
-current PCM level also influences neighboring bars with a symmetric smoothstep
-falloff that reaches zero four bar pitches away. The permitted height rises toward
-100% at the current native playback bar. Changed heights ease over 150 ms on the UI
+current PCM level also influences neighboring bars with a smoothstep falloff
+that reaches zero four bar pitches behind playback and two pitches ahead. Its
+minimum height is 67% of the preceding four unmodulated measured/rest bars'
+average, representing a maximum 33% dip below that average; neighboring minima
+blend away with the same falloff. This reference never feeds back through the
+live response. The permitted height rises toward 100% at the current native
+playback bar. Changed heights ease over 150 ms on the UI
 thread; previewing a seek moves the indicator but does not move the live-audio
 response until the transport actually seeks.
 
-Both waveforms use the shared `#F05A00` orange, with opacity and brightness variants
-derived from that pigment. A bright gradient at the listening edge fades backward
+Played bars in both waveforms use the shared `#F05A00` orange, with brightness
+variants derived from that pigment. Future bars are completely desaturated and
+use 67% of their previous opacity, including Mini press/drag feedback. Complementary
+clips keep future bars on their own side of the cursor, so their gray or blurred
+layers cannot tint played bars. A bright gradient at the listening edge fades backward
 over approximately 4.5 bar pitches, painted inside the bars rather than as an
 outside rectangular glow. The 2.5-pixel light indicator takes the average height
 of the preceding four displayed bars and eases height changes over 180 ms. It
-stays vertically centered in the large player. Tap and horizontal drag seek on
+stays vertically centered in the large player. A thin translucent guide behind
+it spans the regular waveform height independently of audio amplitude. Tap and horizontal drag seek on
 release; vertical scrolling remains available. Seeking, press feedback and release
 ease rather than remounting the waveform.
 
@@ -140,7 +148,8 @@ dragging. Stable blurred/sharp layers crossfade to reveal the waveform during a
 drag and soften it again on release. Its current-position indicator is also
 2.5 pixels wide and averages the preceding four displayed bars, keeping its
 bottom edge aligned with the bars while its height eases over 180 ms. Dragging
-commits a seek on release; tapping opens the correct day's full player.
+commits a seek on release; tapping opens the correct day's full player. The Mini
+guide follows only its regular 33%/67% drag height, never the current RMS level.
 
 iPhone sampling uses playback audio and requests no microphone access. Web uses
 an anonymous-CORS audio source and a browser analyser. Android live PCM sampling

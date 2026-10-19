@@ -5,14 +5,15 @@ import type { RendererProps } from 'react-native-waveforms';
 import Animated, { Easing, SharedValue, useAnimatedProps, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
 import { ClipPath, Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { audioTime } from '../services/podcasts';
-import { normalizePodcastAmplitude, previousPodcastBarHeight, renderedPodcastAmplitude } from '../services/podcastWaveform';
+import { desaturatedPodcastColor, normalizePodcastAmplitude, podcastFutureOpacity, podcastWaveformSplit, previousPodcastBarHeight, renderedPodcastAmplitude } from '../services/podcastWaveform';
 import { useTheme } from '../theme';
-import { ORANGE_TONES, orangeAlpha } from '../themeColors';
+import { BRAND_ORANGE, ORANGE_TONES } from '../themeColors';
 
 const BAR=3,GAP=2,HEIGHT=76,INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect);
 const AnimatedGradient=Animated.createAnimatedComponent(LinearGradient);
-type RenderConfig={id:string;orange:string;outline:string;liveLevel:number;referencePeak:number;playing:boolean;progress:number;clock:SharedValue<number>;contact:SharedValue<number>};
+const FUTURE_COLOR=desaturatedPodcastColor(BRAND_ORANGE);
+type RenderConfig={id:string;orange:string;outline:string;futureOpacity:number;liveLevel:number;referencePeak:number;playing:boolean;progress:number;clock:SharedValue<number>;contact:SharedValue<number>};
 const RenderContext=createContext<RenderConfig|null>(null);
 
 const PodcastBar=memo(function PodcastBar({x,width,height,level,fill}:{x:number;width:number;height:number;level:number;fill:string}) {
@@ -50,16 +51,20 @@ const PodcastBars=memo(function PodcastBars({samples:bars,width,height,color}:Re
     return bars.map((amplitude,index)=>renderedPodcastAmplitude(amplitude,config.liveLevel,config.playing,index,bars.length,config.progress,config.referencePeak,recentRestAverage));
   },
     [bars,config.liveLevel,config.playing,config.progress,config.referencePeak]);
-  const clip=useAnimatedProps(()=>({width:Math.max(0,Math.min(width,clock.value*width))}));
+  const clip=useAnimatedProps(()=>({width:podcastWaveformSplit(clock.value,width).playedWidth}));
+  const futureClip=useAnimatedProps(()=>{
+    const split=podcastWaveformSplit(clock.value,width);
+    return {x:split.futureX,width:split.futureWidth};
+  });
   const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-4.5*pitch),x2:Math.max(.001,clock.value*width)}));
   return <G>
-    {filled&&<Defs>
-      <ClipPath id={`${config.id}clip`}><AnimatedRect x={0} y={0} height={height} animatedProps={clip}/></ClipPath>
-      <AnimatedGradient id={config.id} gradientUnits="userSpaceOnUse" y1={0} y2={0} animatedProps={gradient}>
+    <Defs>
+      <ClipPath id={`${config.id}${filled?'clip':'future'}`}><AnimatedRect x={0} y={0} height={height} animatedProps={filled?clip:futureClip}/></ClipPath>
+      {filled&&<AnimatedGradient id={config.id} gradientUnits="userSpaceOnUse" y1={0} y2={0} animatedProps={gradient}>
         <Stop offset={0} stopColor={config.orange}/><Stop offset={.55} stopColor={ORANGE_TONES.light}/><Stop offset={1} stopColor="#FFF3C4"/>
-      </AnimatedGradient>
-    </Defs>}
-    <G clipPath={filled?`url(#${config.id}clip)`:undefined}>
+      </AnimatedGradient>}
+    </Defs>
+    <G clipPath={`url(#${config.id}${filled?'clip':'future'})`} opacity={filled?1:config.futureOpacity}>
       {levels.map((level,index)=><PodcastBar key={index} x={index*pitch} width={barWidth} height={height} level={level}
         fill={filled?`url(#${config.id})`:color}/>)}
     </G>
@@ -87,7 +92,8 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
   // Previewing a seek moves the cursor, while live PCM still belongs to the
   // native audio position until the release actually seeks the transport.
   const outline=mode==='light'?c.action:'none';
-  const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,outline,liveLevel,referencePeak,playing,progress:nativeProgress,clock,contact}),[gradientId,c.orange,outline,liveLevel,referencePeak,playing,nativeProgress,clock,contact]);
+  const futureOpacity=podcastFutureOpacity(mode==='dark'?.42:.36);
+  const config=useMemo<RenderConfig>(()=>({id:gradientId,orange:c.orange,outline,futureOpacity,liveLevel,referencePeak,playing,progress:nativeProgress,clock,contact}),[gradientId,c.orange,outline,futureOpacity,liveLevel,referencePeak,playing,nativeProgress,clock,contact]);
 
   function previewAt(pageX:number) {
     const value=Math.max(0,Math.min(1,(pageX-left.current)/Math.max(1,latest.current.width)));
@@ -150,7 +156,7 @@ export function PodcastWaveform({samples,referencePeak,liveLevel,position,durati
       onPressOut={()=>{if(!dragging.current)setTouching(false);}}
       onPress={event=>{if(!didDrag.current)measureAndPreview(event.nativeEvent.pageX,++gestureVersion.current,true);}}>
       <RenderContext.Provider value={config}>{width>0&&<PlayerWaveform samples={amplitudes} inputRange={INPUT_RANGE} width={width} height={HEIGHT}
-        renderer={renderPodcastBars} barWidth={BAR} gap={GAP} rounded baseline="center" color={orangeAlpha(mode==='dark'?.42:.36)} progressColor={c.orange}
+        renderer={renderPodcastBars} barWidth={BAR} gap={GAP} rounded baseline="center" color={FUTURE_COLOR} progressColor={c.orange}
         // The stable renderer owns the eased clip; no 1x timer or responder
         // competes with the native playback clock or the page's vertical scroll.
         progress={1} isPlaying={false} animationDuration={0}/>}</RenderContext.Provider>

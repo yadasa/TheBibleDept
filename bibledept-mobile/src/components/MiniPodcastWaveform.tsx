@@ -3,12 +3,13 @@ import { View } from 'react-native';
 import { PlayerWaveform, RendererProps } from 'react-native-waveforms';
 import Animated, { Easing, SharedValue, useAnimatedProps, useAnimatedReaction, useSharedValue, withTiming } from 'react-native-reanimated';
 import { ClipPath, Defs, FeGaussianBlur, Filter, G, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { previousPodcastBarHeight } from '../services/podcastWaveform';
-import { BRAND_ORANGE, ORANGE_TONES, orangeAlpha } from '../themeColors';
+import { desaturatedPodcastColor, podcastFutureOpacity, podcastWaveformSplit, previousPodcastBarHeight } from '../services/podcastWaveform';
+import { BRAND_ORANGE, ORANGE_TONES } from '../themeColors';
 
 const INPUT_RANGE:[number,number]=[0,1];
 const AnimatedRect=Animated.createAnimatedComponent(Rect),AnimatedG=Animated.createAnimatedComponent(G);
 const AnimatedGradient=Animated.createAnimatedComponent(LinearGradient);
+const FUTURE_COLOR=desaturatedPodcastColor(BRAND_ORANGE);
 type RenderConfig={id:string;expansion:SharedValue<number>;contact:SharedValue<number>;clock:SharedValue<number>};
 const RenderContext=createContext<RenderConfig|null>(null);
 
@@ -48,21 +49,28 @@ const MiniBars=memo(function MiniBars({samples:bars,width,height,color}:Renderer
   const {id,expansion,contact,clock}=useContext(RenderContext)!;
   const filled=color===BRAND_ORANGE,pitch=(width+2)/Math.max(1,bars.length);
   const fillId=`${id}${filled?'played':'rest'}`,blurId=`${fillId}blur`;
-  const clip=useAnimatedProps(()=>({width:Math.max(0,Math.min(width,clock.value*width))}));
+  const clip=useAnimatedProps(()=>({width:podcastWaveformSplit(clock.value,width).playedWidth}));
+  const futureClip=useAnimatedProps(()=>{
+    const split=podcastWaveformSplit(clock.value,width);
+    return {x:split.futureX,width:split.futureWidth};
+  });
   const gradient=useAnimatedProps(()=>({x1:Math.max(0,clock.value*width-4.5*pitch),x2:Math.max(.001,clock.value*width)}));
-  const overall=useAnimatedProps(()=>({opacity:Math.min(1,(filled?.55:.32)+(1-(filled?.55:.32))*expansion.value+.08*contact.value)}));
+  const overall=useAnimatedProps(()=>{
+    const prior=Math.min(1,(filled?.55:.32)+(1-(filled?.55:.32))*expansion.value+.08*contact.value);
+    return {opacity:filled?prior:podcastFutureOpacity(prior)};
+  });
   const blurred=useAnimatedProps(()=>({opacity:1-expansion.value}));
   const sharp=useAnimatedProps(()=>({opacity:expansion.value}));
-  const elements=bars.map((level,index)=><MiniBar key={index} level={level} index={index} pitch={pitch} height={height} fill={filled?`url(#${fillId})`:orangeAlpha(1)} expansion={expansion}/>);
+  const elements=bars.map((level,index)=><MiniBar key={index} level={level} index={index} pitch={pitch} height={height} fill={filled?`url(#${fillId})`:color} expansion={expansion}/>);
   return <G>
     <Defs>
-      {filled&&<ClipPath id={`${id}clip`}><AnimatedRect x={0} y={0} height={height} animatedProps={clip}/></ClipPath>}
+      <ClipPath id={`${id}${filled?'clip':'future'}`}><AnimatedRect x={0} y={0} height={height} animatedProps={filled?clip:futureClip}/></ClipPath>
       {filled&&<AnimatedGradient id={fillId} gradientUnits="userSpaceOnUse" y1={0} y2={0} animatedProps={gradient}>
         <Stop offset={0} stopColor={BRAND_ORANGE}/><Stop offset={.55} stopColor={ORANGE_TONES.light}/><Stop offset={1} stopColor="#FFF3C4"/>
       </AnimatedGradient>}
       <Filter id={blurId} x="-10%" y="-30%" width="120%" height="160%"><FeGaussianBlur stdDeviation={1.1}/></Filter>
     </Defs>
-    <G clipPath={filled?`url(#${id}clip)`:undefined}>
+    <G clipPath={`url(#${id}${filled?'clip':'future'})`}>
       <AnimatedG animatedProps={overall}>
         <AnimatedG filter={`url(#${blurId})`} animatedProps={blurred}>{elements}</AnimatedG>
         <AnimatedG animatedProps={sharp}>{elements}</AnimatedG>
@@ -91,6 +99,6 @@ export const MiniPodcastWaveform=memo(function MiniPodcastWaveform({samples,widt
   if(width<=0||height<=0)return null;
   return <View pointerEvents="none">
     <RenderContext.Provider value={config}><PlayerWaveform samples={amplitudes} inputRange={INPUT_RANGE} width={width} height={height}
-      barWidth={2} gap={2} baseline="bottom" rounded renderer={renderMiniBars} color={orangeAlpha(1)} progressColor={BRAND_ORANGE} progress={1} isPlaying={false} animationDuration={0}/></RenderContext.Provider>
+      barWidth={2} gap={2} baseline="bottom" rounded renderer={renderMiniBars} color={FUTURE_COLOR} progressColor={BRAND_ORANGE} progress={1} isPlaying={false} animationDuration={0}/></RenderContext.Provider>
   </View>;
 });

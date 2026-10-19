@@ -1,7 +1,35 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { normalizePodcastAmplitude, podcastAmplitudePeak, podcastLiveBarWeight, previousPodcastBarHeight, renderedPodcastAmplitude } from '../src/services/podcastWaveform';
+import { desaturatedPodcastColor, normalizePodcastAmplitude, podcastAmplitudePeak, podcastFutureOpacity, podcastLiveBarWeight, podcastWaveformSplit, previousPodcastBarHeight, renderedPodcastAmplitude } from '../src/services/podcastWaveform';
 import { getPodcastReferenceSamples } from '../src/services/podcastReferenceWaveforms';
+
+test('future waveform tint is completely neutral while preserving canonical orange luminance',()=>{
+  assert.equal(desaturatedPodcastColor('#F05A00'),'rgb(115,115,115)');
+  assert.equal(desaturatedPodcastColor('#000000'),'rgb(0,0,0)');
+  assert.equal(desaturatedPodcastColor('#FFFFFF'),'rgb(255,255,255)');
+  assert.equal(desaturatedPodcastColor('invalid'),'rgb(128,128,128)');
+});
+
+test('future opacity is 33% lower throughout normal, pressed and expanded states',()=>{
+  for(const prior of [.1,.32,.42,.55,.8,1])assert.ok(Math.abs(podcastFutureOpacity(prior)/prior-.67)<1e-12);
+  assert.equal(podcastFutureOpacity(4),.67);
+  for(const value of [0,-1,NaN,Infinity])assert.equal(podcastFutureOpacity(value),0);
+});
+
+test('future and played clips meet exactly without an overlap, including the start and end',()=>{
+  for(const width of [1,185,273,704.5])for(const progress of [0,.17,.5,.95,1]) {
+    const split=podcastWaveformSplit(progress,width);
+    assert.equal(split.futureX,split.playedWidth);
+    assert.ok(split.playedWidth>=0&&split.futureWidth>=0);
+    assert.ok(Math.abs(split.playedWidth+split.futureWidth-width)<1e-10);
+  }
+  assert.deepEqual(podcastWaveformSplit(0,100),{playedWidth:0,futureX:0,futureWidth:100});
+  assert.deepEqual(podcastWaveformSplit(1,100),{playedWidth:100,futureX:100,futureWidth:0});
+  assert.deepEqual(podcastWaveformSplit(3,100),podcastWaveformSplit(1,100));
+  assert.deepEqual(podcastWaveformSplit(-1,100),podcastWaveformSplit(0,100));
+  assert.deepEqual(podcastWaveformSplit(NaN,100),podcastWaveformSplit(0,100));
+  assert.deepEqual(podcastWaveformSplit(.5,-1),{playedWidth:0,futureX:0,futureWidth:0});
+});
 
 test('quiet speech still pulses when a phone-width bar contains an older louder peak',()=>{
   // 96 stored time bins have been reduced to 58 visible bars on a phone.
