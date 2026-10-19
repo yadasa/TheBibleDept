@@ -108,6 +108,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   }:{};
   return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1,minWidth:0,minHeight:0,width:'100%'}}><ScrollView {...props} {...webGestures} ref={ref}
     horizontal={false} directionalLockEnabled alwaysBounceHorizontal={false}
+    showsVerticalScrollIndicator={Platform.OS==='web'?false:props.showsVerticalScrollIndicator}
     style={[props.style,{minWidth:0,width:'100%'}]}
     contentContainerStyle={[props.contentContainerStyle,{minWidth:0,width:'100%'}]}
     scrollEventThrottle={props.scrollEventThrottle ?? 32}
