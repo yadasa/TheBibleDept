@@ -28,7 +28,7 @@ export const PageBackdrop = memo(function PageBackdrop() {
           {/* Each view owns one local paint server and circle. The shared
               track moves these page-sized viewports without stretching them. */}
             <RadialGradient key={`${tab}warm`} id={`${id}warm${index}`}
-              gradientUnits="userSpaceOnUse" cx={pageWidth*.58} cy={Math.max(radius,size.height*.32)} r={radius}>
+              gradientUnits="userSpaceOnUse" cx={pageWidth*.85} cy={Math.max(radius,size.height*.32)} r={radius}>
               <Stop offset={0} stopColor="#F05A00" stopOpacity={dark ? .16 : .1}/>
               <Stop offset={1} stopColor="#F05A00" stopOpacity={0}/>
             </RadialGradient>
