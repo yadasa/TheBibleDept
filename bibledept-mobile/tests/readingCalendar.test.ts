@@ -12,6 +12,7 @@ test('calendar totals unique valid reading dates and resets runs at gaps', () =>
 test('calendar opens around recent activity rather than empty older weeks', () => {
   assert.equal(calendarRecencyOffset('2026-10-19','2026-04-26',350,25),408);
   assert.equal(calendarRecencyOffset('2026-04-27','2026-04-26',350,25),0);
+  assert.equal(calendarRecencyOffset('2026-10-19','2026-04-26',350,25,8,6),512);
   assert.ok(calendarRecencyOffset('2026-09-19','2026-04-26',350,25)<408);
 });
 
@@ -55,5 +56,5 @@ test('square pulses add opaque warm light instead of fading or darkening toward 
     assert.ok(high[0]>=high[1]&&high[1]>=high[2]);
   }
   assert.equal(readingFillColors('#F05A00',1).rest,'rgb(240,90,0)');
-  assert.equal(readingFillColors('#F05A00',21).peak,'rgb(254,245,240)');
+  assert.equal(readingFillColors('#F05A00',21).peak,'rgb(255,255,255)');
 });

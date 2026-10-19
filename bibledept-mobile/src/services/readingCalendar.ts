@@ -31,7 +31,7 @@ function liftOrange(orange:string,lift:number) {
 /** Opaque, warm colors: add light toward white rather than fading through black. */
 export function readingFillColors(orange:string,run:number) {
   const intensity=readingRunIntensity(run);
-  return {rest:liftOrange(orange,.64*intensity),peak:liftOrange(orange,.06+.88*intensity)};
+  return {rest:liftOrange(orange,.4*intensity),peak:liftOrange(orange,.12+.88*intensity)};
 }
 
 /** Full brighten/dim cycle: orange 5.2 s, near-white 3.2 s. */
@@ -45,7 +45,7 @@ export function readingGlowProfile(run: number) {
 }
 
 /** Position recent activity at the right edge rather than opening on empty old weeks. */
-export function calendarRecencyOffset(latest: string, first: string, viewport: number, cellSize: number) {
+export function calendarRecencyOffset(latest: string, first: string, viewport: number, cellSize: number, gap=4, padding=4) {
   const column=Math.max(0,Math.min(25,Math.floor(dateDistance(latest,first)/7)));
-  return Math.max(0,8+(column+1)*(cellSize+4)-4-viewport);
+  return Math.max(0,padding*2+(column+1)*(cellSize+gap)-gap-viewport);
 }

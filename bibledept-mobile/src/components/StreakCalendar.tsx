@@ -7,6 +7,8 @@ import { calendarRecencyOffset, readingCalendar, readingFillColors, readingGlowP
 import { useReducedMotion } from './LiquidBottomNav';
 import { useScreenScrollControls } from './ScreenScrollView';
 
+const CALENDAR_GAP=8,CALENDAR_PADDING=6,GLOW_REACH=3.5;
+
 /** Twenty-six weeks, opening at the reader's most recent activity. */
 export function StreakCalendar({days,today}:{days:readonly string[];today:string}) {
   const {c,s}=useThemedStyles(styles);
@@ -36,7 +38,7 @@ export function StreakCalendar({days,today}:{days:readonly string[];today:string
     return [...groups];
   },[weeks,activity]);
   const latest=[...activity.runs.keys()].at(-1)||today;
-  const snapToRecent=useCallback(()=>scroll.current?.scrollTo({x:calendarRecencyOffset(latest,weeks[0][0],width,cellSize),animated:false}),[latest,weeks,width,cellSize]);
+  const snapToRecent=useCallback(()=>scroll.current?.scrollTo({x:calendarRecencyOffset(latest,weeks[0][0],width,cellSize,CALENDAR_GAP,CALENDAR_PADDING),animated:false}),[latest,weeks,width,cellSize]);
   useEffect(()=>{if(active&&width>0)snapToRecent();},[active,width,snapToRecent]);
   return <View style={s.section}>
     <View style={s.heading}><Text accessibilityRole="header" style={s.title}>Track your reading</Text><Text style={s.meta}>Past 26 weeks</Text></View>
@@ -79,14 +81,14 @@ function StreakHaloGroup({run,positions,cellSize,orange,animate}:{run:number;pos
   const fillStyle=useAnimatedStyle(()=>({opacity:1,backgroundColor:animate?interpolateColor(Math.max(0,Math.min(1,(pulse.value-minOpacity)/(maxOpacity-minOpacity))),[0,1],[rest,peak]):settledColor}));
   return <View style={StyleSheet.absoluteFill}>
     <Animated.View testID={`reading-streak-glow-${run}`} style={[StyleSheet.absoluteFill,glowStyle]}>
-    {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+4)+2.5,top:row*(cellSize+4)+2.5,width:cellSize+3,height:cellSize+3,borderRadius:4.5,overflow:'hidden'}}>
-      {/* Clip the brighter gold ring to 1.5 px beyond the square. */}
-      <View style={{position:'absolute',left:1.5,top:1.5,width:cellSize,height:cellSize,borderRadius:3,
-        backgroundColor:'rgba(255,188,66,0.01)',boxShadow:'0 0 1px .9px rgba(255,211,100,1), 0 0 2px .5px rgba(255,174,38,1)'}}/>
+    {positions.map(({date,column,row})=><View key={date} style={{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden'}}>
+      {/* Visible soft bloom, leaving a 1 px dark separation in the 8 px gap. */}
+      <View style={{position:'absolute',left:GLOW_REACH,top:GLOW_REACH,width:cellSize,height:cellSize,borderRadius:3,
+        backgroundColor:'rgba(255,188,66,0.01)',boxShadow:'0 0 2px 1px rgba(255,224,135,1), 0 0 5px 1px rgba(255,167,32,1)'}}/>
     </View>)}
     </Animated.View>
     <View testID={`reading-streak-fill-${run}`} style={StyleSheet.absoluteFill}>
-      {positions.map(({date,column,row})=><Animated.View key={date} testID={`reading-streak-color-${date}`} style={[{position:'absolute',left:column*(cellSize+4)+4,top:row*(cellSize+4)+4,width:cellSize,height:cellSize,borderRadius:3,opacity:1},fillStyle]}/>)}
+      {positions.map(({date,column,row})=><Animated.View key={date} testID={`reading-streak-color-${date}`} style={[{position:'absolute',left:column*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,top:row*(cellSize+CALENDAR_GAP)+CALENDAR_PADDING,width:cellSize,height:cellSize,borderRadius:3,opacity:1},fillStyle]}/>)}
     </View>
   </View>;
 }
@@ -94,6 +96,6 @@ const styles=(c:Colors)=>StyleSheet.create({
   section:{marginTop:28,paddingVertical:24,borderBottomWidth:1,borderColor:c.border},
   heading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},title:{...t.section,fontSize:20,lineHeight:27,color:c.ink},meta:{...t.meta,fontSize:11,color:c.muted},
   stats:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12,marginBottom:20},streak:{...t.body,color:c.ink},current:{...t.meta,fontSize:12,color:c.ink},number:{fontSize:30,lineHeight:36,fontWeight:'800',color:c.actionText,fontVariant:['tabular-nums']},
-  chart:{alignSelf:'stretch'},weeks:{flexDirection:'row',gap:4,padding:4},week:{gap:4},square:{borderRadius:3,backgroundColor:c.tint,borderWidth:.5,borderColor:c.border},read:{backgroundColor:c.orange,borderWidth:0},today:{borderColor:c.ink,borderWidth:1},future:{opacity:.25},
+  chart:{alignSelf:'stretch'},weeks:{flexDirection:'row',gap:CALENDAR_GAP,padding:CALENDAR_PADDING},week:{gap:CALENDAR_GAP},square:{borderRadius:3,backgroundColor:c.tint,borderWidth:.5,borderColor:c.border},read:{backgroundColor:c.orange,borderWidth:0},today:{borderColor:c.ink,borderWidth:1},future:{opacity:.25},
   legend:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:7,marginTop:16},key:{width:10,height:10,borderRadius:2,backgroundColor:c.tint,borderWidth:1,borderColor:c.border},
 });
