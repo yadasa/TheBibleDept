@@ -4,7 +4,7 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'r
 import { audioTime, getDayPodcast, PODCAST_LINKS } from '../services/podcasts';
 import { getPodcastReferenceSamples } from '../services/podcastReferenceWaveforms';
 import { podcastAmplitudePeak } from '../services/podcastWaveform';
-import { usePodcast } from '../state/PodcastProvider';
+import { usePodcast, usePodcastSamplingDemand } from '../state/PodcastProvider';
 import { useScreenScrollControls } from './ScreenScrollView';
 import { radius, useThemedStyles, Colors, typography as t } from '../theme';
 import { GlassPressable, GlassSurface } from './Glass';
@@ -39,6 +39,7 @@ export function PodcastCard({day,active=true}:{day:number;active?:boolean}) {
     });
   },[controls,day,measure,update]);
   const presenting=active&&visible;
+  usePodcastSamplingDemand(presenting&&audio.episode?.day===day);
   if(presenting||snapshot.current.day!==day)snapshot.current={day,audio};
   return <View testID={presenting?'daily-podcast-live':'daily-podcast-idle'} ref={frame} collapsable={false} onLayout={measure}><PodcastCardContent day={day} active={presenting} audio={snapshot.current.audio}/></View>;
 }

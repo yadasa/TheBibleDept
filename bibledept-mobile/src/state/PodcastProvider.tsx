@@ -7,6 +7,7 @@ import { AppState, Platform } from 'react-native';
 import { getDayPodcast } from '../services/podcasts';
 import { getPodcastReferenceWaveform } from '../services/podcastReferenceWaveforms';
 import { PodcastListeningContext, PodcastListeningState, usePodcastListeningEngine } from './usePodcastListening';
+import { createPodcastSamplingDemand } from '../services/podcastSamplingDemand';
 import {
   canSamplePodcast, clampPodcastPosition, createPodcastSessionQueue, emptyPodcastSamples, PLAYBACK_RATES,
   needsPodcastSessionActivation, podcastDuration, podcastSampleTime, recordPodcastSample,
@@ -38,6 +39,15 @@ export type PodcastState = PodcastListeningState & {
 };
 
 const Context = createContext<PodcastState | null>(null);
+const SamplingContext=createContext<ReturnType<typeof createPodcastSamplingDemand>|null>(null);
+
+export function usePodcastSamplingDemand(visible:boolean) {
+  const demand=useContext(SamplingContext),[consumer]=useState(()=>Symbol('full-player'));
+  useEffect(()=>{
+    demand?.set(consumer,visible);
+    return()=>demand?.set(consumer,false);
+  },[demand,consumer,visible]);
+}
 const streamError = 'We couldn’t play this episode. Check your connection and try again.';
 const audioMode = { playsInSilentMode: true, shouldPlayInBackground: true, allowsRecording: false, interruptionMode: 'doNotMix' } as const;
 // Development isolation only: a fresh run with this flag never installs a PCM
@@ -71,6 +81,8 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
   const [samples, setSamples] = useState(emptyPodcastSamples), [liveLevel, setLiveLevel] = useState(0);
   const [hasSamples, setHasSamples] = useState(false);
   const [hasLiveSamples, setHasLiveSamples] = useState(false);
+  const [needsLiveSamples,setNeedsLiveSamples]=useState(false);
+  const [samplingDemand]=useState(()=>createPodcastSamplingDemand(setNeedsLiveSamples));
   const [appState, setAppState] = useState(AppState.currentState);
   const appActive = useRef(AppState.currentState === 'active');
   const [sessionQueue] = useState(createPodcastSessionQueue);
@@ -422,13 +434,13 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     try { player.clearLockScreenControls(); player.setAudioSamplingEnabled(false); player.replace(null); } catch {}
   }
 
-  return <PodcastListeningContext.Provider value={listening.value}><Context.Provider value={{ ...listening.value, episode, status, error: problem, loading, duration, position, playbackRate,
+  return <SamplingContext.Provider value={samplingDemand}><PodcastListeningContext.Provider value={listening.value}><Context.Provider value={{ ...listening.value, episode, status, error: problem, loading, duration, position, playbackRate,
     samples, liveLevel, hasSamples, hasLiveSamples,
     hasReferenceWaveform: !!episode && !!getPodcastReferenceWaveform(episode.day),
     samplingSupported, play, toggle, pause, seek, setRate, dismiss }}>
-    {episode && canSamplePodcast(appState, Platform.OS, samplingSupported, disableSamplingForPlaybackCheck) && <SampleListener player={player} listener={onSample}/>}
+    {episode && needsLiveSamples && status.playing && canSamplePodcast(appState, Platform.OS, samplingSupported, disableSamplingForPlaybackCheck) && <SampleListener player={player} listener={onSample}/>}
     {children}
-  </Context.Provider></PodcastListeningContext.Provider>;
+  </Context.Provider></PodcastListeningContext.Provider></SamplingContext.Provider>;
 }
 
 export function usePodcast(): PodcastState {
