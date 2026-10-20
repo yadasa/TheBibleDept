@@ -139,7 +139,11 @@ requested plan exists, but its proposed behavior is not activated.
 | Find further optimization opportunities | Complete for this pass | Suspends the full podcast waveform when it is below the viewport, while retaining the global transport and mini-player. Stable memoized passage/player subtrees avoid unrelated work. Adjacent chapters are also warmed while the reader is active. |
 | Refresh Home mockups, add an audio-player GIF and update README | Complete | Replaced Home/player in the banner, added a two-phone Home/activity image and a 9.6-second GIF using 60 real playback captures. Five compressed presentation assets total 1,213,436 bytes; none enter the app bundle. [Media record](images/README.md). |
 
-Latest source validation: TypeScript and **128 unit tests passed**. Fresh web,
+| Follow-up request | Status | Evidence |
+| --- | --- | --- |
+| Investigate remaining Home jitter and list all performance costs | Complete for source/browser checks; physical profiling Verify | [Home scroll audit](HOME_SCROLL_PERFORMANCE.md) records eleven separately pushed fixes: lightweight non-reader scrolling, shared halo textures, bounded native fade, redundant blur removal, visible-only PCM, isolated playback presence, stable plan context, date-only clock updates, idle-budget page preparation, calendar direction locking and an optimized Expo preview. It also lists the preserved costs and unmeasured device factors. |
+
+Latest source validation: TypeScript and **129 unit tests passed**. Fresh web,
 iOS and Android exports passed after the reader/player changes. Prior account-sync
 merged-rules integration remains recorded above. Browser checks do not replace physical
 iPhone verification of the latest glow, glass or touch behavior.

@@ -78,7 +78,7 @@ Firebase configuration belongs in the ignored .env.local. Documented emulator mo
 
 ## Current checks and release boundaries
 
-The latest October 19 review passed **128 unit tests, TypeScript, and fresh web/iOS/Android JavaScript exports**. Checks cover static streak colors and glow, shared/cancelable Scripture requests, chapter preparation, reading-credit safeguards and existing flows. Browser review confirmed preloaded Scripture, isolated chapter switching, offscreen waveform suspension, and Home/calendar layouts. Physical iPhone frame timing remains to be measured. [Complete request checklist](docs/REQUEST_CHECKLIST.md) · [Optimization evidence](docs/REQUEST_AUDIT.md).
+The latest October 19 review passed **129 unit tests, TypeScript, and fresh web/iOS/Android JavaScript exports**. Checks cover static streak colors and glow, visible-player PCM demand, shared/cancelable Scripture requests, chapter preparation, reading-credit safeguards and existing flows. Browser review confirmed reader preparation, chapter switching, scroll restoration, continued audio on Home and the production-mode preview. Physical iPhone frame timing remains to be measured. [Home scrolling audit](docs/HOME_SCROLL_PERFORMANCE.md) · [Complete request checklist](docs/REQUEST_CHECKLIST.md) · [Optimization evidence](docs/REQUEST_AUDIT.md).
 
 | Area | Current state |
 | --- | --- |
