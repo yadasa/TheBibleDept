@@ -20,7 +20,7 @@ const Context = createContext<Controls>(empty);
 export const useScreenScroll = () => useContext(Context).top;
 export const useScreenScrollControls = () => useContext(Context);
 
-export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, ...props }: ComponentProps<typeof ScrollView> & { active?: boolean; resetOnPlanDayChange?: boolean }) {
+export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, trackMotion=true, ...props }: ComponentProps<typeof ScrollView> & { active?: boolean; resetOnPlanDayChange?: boolean; trackMotion?:boolean }) {
   const motionY=useSharedValue(0),motionHeight=useSharedValue(0);
   const motion=useMemo(()=>({offsetY:motionY,viewportHeight:motionHeight}),[motionY,motionHeight]);
   const ref = useRef<ScrollView>(null), viewport = useRef<View>(null), { selectedDay } = usePlan();
@@ -41,13 +41,12 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
   // must never write an older offset back over the latest native frame.
   const notify = useCallback((syncMotion=true) => { const value = getMetrics();if(syncMotion){motionY.value=value.offsetY;motionHeight.value=value.viewportHeight;}listeners.current.forEach(listener => listener(value)); }, [getMetrics,motionY,motionHeight]);
   const receiveScroll=useCallback((event:NativeScrollEvent)=>{
-    if(activeRef.current&&!restorePending.current){offset.current={x:0,y:event.contentOffset.y};notify(false);}
+    if(activeRef.current&&!restorePending.current){offset.current={x:0,y:event.contentOffset.y};if(listeners.current.size)notify(false);}
     props.onScroll?.({nativeEvent:event} as NativeSyntheticEvent<NativeScrollEvent>);
   },[notify,props.onScroll]);
   const lastNotice=useSharedValue(0);
   const scrollHandler=useAnimatedScrollHandler(event=>{
     motionY.value=event.contentOffset.y;
-    motionHeight.value=event.layoutMeasurement.height;
     const now=Date.now();
     if(now-lastNotice.value>=48){lastNotice.value=now;runOnJS(receiveScroll)(event);}
   });
@@ -85,10 +84,11 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     });
   }, [measureContent, positionScroll]);
   const scheduleAnchor = useCallback(() => {
+    if(!pendingAnchor.current)return;
     if (anchorFrame.current !== null) cancelAnimationFrame(anchorFrame.current);
     anchorFrame.current = requestAnimationFrame(() => { anchorFrame.current = null; resolveAnchor(); });
   }, [resolveAnchor]);
-  const controls = useMemo<Controls>(() => ({ motion, top, scrollTo, getMetrics,
+  const controls = useMemo<Controls>(() => ({ motion:trackMotion?motion:null, top, scrollTo, getMetrics,
     subscribe: listener => { listeners.current.add(listener); return () => { listeners.current.delete(listener); }; },
     measureContent,
     registerAnchor: (name, target) => {
@@ -97,7 +97,7 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
       return () => { if (anchors.current.get(name) === target) anchors.current.delete(name); };
     },
     scrollToAnchor: name => { pendingAnchor.current = name; anchorGeneration.current++; scheduleAnchor(); },
-  }), [motion, top, scrollTo, getMetrics, measureContent, scheduleAnchor]);
+  }), [trackMotion,motion, top, scrollTo, getMetrics, measureContent, scheduleAnchor]);
   const restore = useCallback(() => {
     if (!activeRef.current || !restorePending.current) return;
     ref.current?.scrollTo({ x: 0, y: offset.current.y, animated: false });
@@ -123,13 +123,14 @@ export function ScreenScrollView({ active = true, resetOnPlanDayChange = false, 
     onWheel:()=>beginUserScroll('wheel'),
     onKeyDown:(event:{key:string})=>{if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(event.key))beginUserScroll('key');},
   }:{};
-  return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1,minWidth:0,minHeight:0,width:'100%'}}><Animated.ScrollView {...props} {...webGestures} ref={ref}
+  const ScrollComponent=trackMotion?Animated.ScrollView:ScrollView;
+  return <Context.Provider value={controls}><View ref={viewport} collapsable={false} style={{flex:1,minWidth:0,minHeight:0,width:'100%'}}><ScrollComponent {...props} {...webGestures} ref={ref}
     horizontal={false} directionalLockEnabled alwaysBounceHorizontal={false}
     showsVerticalScrollIndicator={Platform.OS==='web'?false:props.showsVerticalScrollIndicator}
     style={[props.style,{minWidth:0,width:'100%'}]}
     contentContainerStyle={[props.contentContainerStyle,{minWidth:0,width:'100%'}]}
-    scrollEventThrottle={16}
-    onScroll={scrollHandler}
+    scrollEventThrottle={trackMotion?16:96}
+    onScroll={trackMotion?scrollHandler:event=>receiveScroll(event.nativeEvent)}
     onScrollBeginDrag={event => { beginUserScroll('drag');props.onScrollBeginDrag?.(event); }}
     onScrollEndDrag={event=>{receiveScroll(event.nativeEvent);scrollIntent.end('drag');props.onScrollEndDrag?.(event);}}
     onMomentumScrollBegin={event=>{beginUserScroll('momentum');props.onMomentumScrollBegin?.(event);}}

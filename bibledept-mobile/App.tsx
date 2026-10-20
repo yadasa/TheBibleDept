@@ -375,6 +375,7 @@ function AppShell() {
                           >
                             <ScreenScrollView
                               active={active}
+                              trackMotion={item === "Bible"}
                               resetOnPlanDayChange={item === "Bible"}
                               contentContainerStyle={{ flexGrow: 1 }}
                               keyboardShouldPersistTaps="handled"
