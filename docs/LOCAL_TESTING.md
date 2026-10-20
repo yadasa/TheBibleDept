@@ -72,6 +72,20 @@ Reserved fictional phone numbers `+16505550100`–`+16505550199` work in emulato
 without real SMS. The test code appears in the app. **Live SMS cannot run in Expo Go**;
 use [the signed iPhone build setup](IPHONE_NATIVE_SETUP.md) for it.
 
+## Optimized local performance preview
+
+Stop the existing Expo server, then run from `bibledept-mobile`:
+
+```powershell
+npm run start:performance -- --port 8082
+```
+
+This serves production-mode, minified JavaScript to Expo Go and the browser,
+using the same environment and account data. Reload the app after changing
+server modes. It removes development JavaScript overhead from scroll testing;
+Expo Go is still the native host, so this is not a signed-release benchmark.
+Use `npm start -- --port 8082` to return to development with Fast Refresh.
+
 ## Checks
 
 ```powershell

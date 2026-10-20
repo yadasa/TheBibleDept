@@ -41,6 +41,7 @@
   },
   "scripts": {
     "start": "expo start --go --lan",
+    "start:performance": "expo start --go --lan --no-dev --minify --max-workers 2",
     "android": "expo start --android",
     "ios": "expo start --go --lan",
     "web": "expo start --web --localhost",
