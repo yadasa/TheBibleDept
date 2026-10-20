@@ -11,6 +11,7 @@ import {
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -85,7 +86,7 @@ function HabitSession({
     locked = useRef(false),
     mounted = useRef(true),
     [queueReady, setQueueReady] = useState(false),
-    [now, setNow] = useState(Date.now());
+    [, setDayClock] = useState(()=>localDate(Date.now(),Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'));
   const confirmedZone=useRef<string|null>(null);
   const key = `bibledept.pendingReading.${owner}`;
   useEffect(() => {
@@ -158,17 +159,20 @@ function HabitSession({
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [owner]);
+  const refreshToday=useCallback(()=>setDayClock(localDate(Date.now(),zone||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC')),[zone]);
   useEffect(() => {
-    const update = () => setNow(Date.now());
-    const timer = setInterval(update, 30000),
+    // Poll for midnight/zone changes without notifying every consumer each
+    // thirty seconds when the calendar date is still exactly the same.
+    refreshToday();
+    const timer = setInterval(refreshToday, 30000),
       subscription = AppState.addEventListener("change", (state) => {
-        if (state === "active") update();
+        if (state === "active") refreshToday();
       });
     return () => {
       clearInterval(timer);
       subscription.remove();
     };
-  }, []);
+  }, [refreshToday]);
   async function run(action: () => Promise<void>,fallback="We couldn’t save your reading. Please try again.") {
     if (locked.current) return;
     locked.current = true;
@@ -194,7 +198,7 @@ function HabitSession({
     if (mounted.current) {
       setPending(null);
       setReceipt(result);
-      setNow(Date.now());
+      refreshToday();
     }
   }
   async function configure(value: string) {
@@ -260,7 +264,7 @@ function HabitSession({
     });
   }
   const today = localDate(
-    now,
+    Date.now(),
     zone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   );
   return (

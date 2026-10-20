@@ -7,7 +7,6 @@ import { Icon, IconName } from "../components/Icon";
 import { StreakCalendar } from '../components/StreakCalendar';
 import { PlanProgressBar } from '../components/PlanProgressBar';
 import { useReadings } from '../services/ReadingProvider';
-import { useAuth } from "../services/AuthProvider";
 import { useHabit } from "../services/HabitProvider";
 import { useNotes } from "../services/NotesProvider";
 import { usePlan } from "../services/PlanProvider";
@@ -28,7 +27,6 @@ export function HomeScreen({
   onNotes: () => void;
 }) {
   const { c, s } = useThemedStyles(styles),
-    { user } = useAuth(),
     habit = useHabit(),
     notes = useNotes(),
     plan = usePlan(),
@@ -40,10 +38,10 @@ export function HomeScreen({
     chapters = getPlanChapters(day.day),
     lastNote = notes.notes.find((n) => !!n.comment);
   const readDates=useMemo(()=>Array.from(new Set([...habit.days,...history.readings.map(reading=>reading.day)])).filter(day=>validDate(day)&&day<=habit.today),[habit.days,history.readings,habit.today]);
-  const date = new Date(habit.today + "T12:00:00Z").toLocaleDateString(
+  const date = useMemo(()=>new Date(habit.today + "T12:00:00Z").toLocaleDateString(
     undefined,
     { month: "long", day: "numeric", weekday: "long", timeZone: "UTC" },
-  );
+  ),[habit.today]);
   return (
     <View>
       <View style={s.dateRow}>
