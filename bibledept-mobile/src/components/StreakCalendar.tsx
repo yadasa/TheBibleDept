@@ -1,11 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { shiftDate } from '../../shared/habits';
-import { Colors, useTheme, useThemedStyles, typography as t } from '../theme';
+import { Colors, ThemeMode, useTheme, useThemedStyles, typography as t } from '../theme';
 import { luminousPalettes } from '../themeColors';
 import { calendarRecencyOffset, readingCalendar, readingGlowOpacity, readingRunColor } from '../services/readingCalendar';
 
 const CALENDAR_GAP=8,CALENDAR_PADDING=6,GLOW_REACH=3.5;
+const glowImages={dark:require('../../assets/streak-glow/dark.png'),light:require('../../assets/streak-glow/light.png')};
+const glowCaps={top:7,left:7,bottom:7,right:7};
 
 /** Twenty-six weeks, opening at the reader's most recent activity. */
 export function StreakCalendar(props:{days:readonly string[];today:string;active?:boolean}) {
@@ -39,11 +41,11 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today,act
           const fill=done?readingRunColor(c.orange,run):undefined;
           return <View key={date} accessible accessibilityLabel={`${new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'})}: ${future?'upcoming':done?'read':'no reading saved'}${done?`, ${run} ${run===1?'day':'days'} in a row`:''}`}
             style={{width:cellSize,height:cellSize}}>
-            {done&&<StaticSquareLight date={date} run={run} cellSize={cellSize} shadow={palette.streakGlow}/>}
+            {done&&<StaticSquareLight date={date} run={run} cellSize={cellSize} mode={mode}/>}
             <View style={[StyleSheet.absoluteFill,s.square,{backgroundColor:palette.empty,borderColor:palette.emptyBorder},date===today&&s.today,done&&{backgroundColor:fill,borderWidth:0},future&&s.future]}/>
           </View>;
         })}
-      </View>),[weeks,activity,c.orange,palette.empty,palette.emptyBorder,palette.streakGlow,cellSize,today,s])}
+      </View>),[weeks,activity,c.orange,palette.empty,palette.emptyBorder,mode,cellSize,today,s])}
     </ScrollView>
     <View style={s.legend}><View style={[s.key,s.read]}/><Text style={s.meta}>Reading saved</Text><View style={[s.key,s.today]}/><Text style={s.meta}>Today</Text></View>
     <Text style={[s.meta,{marginTop:8}]}>Swipe for earlier weeks</Text>
@@ -51,10 +53,10 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today,act
 });
 
 /** Fixed halo: no animation hooks, timers, scroll listeners or visibility work. */
-const StaticSquareLight=memo(function StaticSquareLight({date,run,cellSize,shadow}:{date:string;run:number;cellSize:number;shadow:string}) {
-  return <View testID={`reading-streak-static-${date}`} pointerEvents="none" accessible={false} shouldRasterizeIOS renderToHardwareTextureAndroid
+const StaticSquareLight=memo(function StaticSquareLight({date,run,cellSize,mode}:{date:string;run:number;cellSize:number;mode:ThemeMode}) {
+  return <View testID={`reading-streak-static-${date}`} pointerEvents="none" accessible={false}
     style={{position:'absolute',left:-GLOW_REACH,top:-GLOW_REACH,width:cellSize+GLOW_REACH*2,height:cellSize+GLOW_REACH*2,borderRadius:3+GLOW_REACH,overflow:'hidden',opacity:readingGlowOpacity(run)}}>
-    <View style={{position:'absolute',left:GLOW_REACH,top:GLOW_REACH,width:cellSize,height:cellSize,borderRadius:3,backgroundColor:'rgba(255,188,66,0.01)',boxShadow:shadow}}/>
+    <Image source={glowImages[mode]} resizeMode="stretch" capInsets={glowCaps} fadeDuration={0} accessible={false} style={StyleSheet.absoluteFill}/>
   </View>;
 });
 const styles=(c:Colors)=>StyleSheet.create({
