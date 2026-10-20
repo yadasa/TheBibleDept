@@ -81,7 +81,9 @@ export function GlassBackdrop({
       accessible={false}
       style={[StyleSheet.absoluteFill, { zIndex: behindContent ? -1 : 0 }]}
     >
-      {blur && (Platform.OS === "web" ? (
+      {/* The primary gradient is 96–98% opaque. Sampling a native blur beneath
+          that pigment adds a visual-effect pass with almost no visible input. */}
+      {blur && !primary && (Platform.OS === "web" ? (
         <View
           testID="glass-backdrop"
           style={[
