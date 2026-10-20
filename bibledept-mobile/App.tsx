@@ -17,7 +17,7 @@ import { BrandLogo } from "./src/components/BrandLogo";
 import { GlassProvider } from "./src/components/Glass";
 import { PageMask } from "./src/components/PageMask";
 import { PageBackdrop } from "./src/components/PageBackdrop";
-import { PodcastProvider, usePodcast } from "./src/state/PodcastProvider";
+import { PodcastProvider, usePodcastPresence } from "./src/state/PodcastProvider";
 import { PodcastNowPlaying } from "./src/components/PodcastNowPlaying";
 import {
   pagePosition,
@@ -465,13 +465,13 @@ function AppBackdrop({page,panelWidth,target}:{page:Animated.Value;panelWidth:nu
 
 /** Keep high-frequency player updates outside the retained page components. */
 function PodcastPageContent({ children }: PropsWithChildren) {
-  const { episode } = usePodcast();
+  const hasEpisode=usePodcastPresence();
   return <View style={{
     width: "100%",
     maxWidth: 720,
     alignSelf: "center",
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: episode ? 240 : 168,
+    paddingBottom: hasEpisode ? 240 : 168,
   }}>{children}</View>;
 }

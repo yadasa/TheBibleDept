@@ -39,6 +39,8 @@ export type PodcastState = PodcastListeningState & {
 };
 
 const Context = createContext<PodcastState | null>(null);
+const PresenceContext=createContext(false);
+export const usePodcastPresence=()=>useContext(PresenceContext);
 const SamplingContext=createContext<ReturnType<typeof createPodcastSamplingDemand>|null>(null);
 
 export function usePodcastSamplingDemand(visible:boolean) {
@@ -434,13 +436,13 @@ export function PodcastProvider({ children }: { children: ReactNode }) {
     try { player.clearLockScreenControls(); player.setAudioSamplingEnabled(false); player.replace(null); } catch {}
   }
 
-  return <SamplingContext.Provider value={samplingDemand}><PodcastListeningContext.Provider value={listening.value}><Context.Provider value={{ ...listening.value, episode, status, error: problem, loading, duration, position, playbackRate,
+  return <PresenceContext.Provider value={!!episode}><SamplingContext.Provider value={samplingDemand}><PodcastListeningContext.Provider value={listening.value}><Context.Provider value={{ ...listening.value, episode, status, error: problem, loading, duration, position, playbackRate,
     samples, liveLevel, hasSamples, hasLiveSamples,
     hasReferenceWaveform: !!episode && !!getPodcastReferenceWaveform(episode.day),
     samplingSupported, play, toggle, pause, seek, setRate, dismiss }}>
     {episode && needsLiveSamples && status.playing && canSamplePodcast(appState, Platform.OS, samplingSupported, disableSamplingForPlaybackCheck) && <SampleListener player={player} listener={onSample}/>}
     {children}
-  </Context.Provider></PodcastListeningContext.Provider></SamplingContext.Provider>;
+  </Context.Provider></PodcastListeningContext.Provider></SamplingContext.Provider></PresenceContext.Provider>;
 }
 
 export function usePodcast(): PodcastState {
