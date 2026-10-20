@@ -180,7 +180,12 @@ function AppShell() {
       retry: ReturnType<typeof setTimeout> | undefined;
     const schedule = () => {
       if (typeof requestIdleCallback === "function")
-        idle = requestIdleCallback(warmNext, { timeout: 1000 });
+        idle = requestIdleCallback(deadline=>{
+          idle=undefined;
+          // Optional page preparation must not be forced into a busy frame.
+          if(deadline.timeRemaining()<8){retry=setTimeout(schedule,200);return;}
+          warmNext();
+        });
       else retry = setTimeout(warmNext, 200);
     };
     const warmNext = () => {
