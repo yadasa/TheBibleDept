@@ -33,7 +33,7 @@ const MemoizedStreakCalendar=memo(function StreakCalendarContent({days,today,act
       <Text style={s.streak}><Text style={s.number}>{activity.total}</Text> total {activity.total===1?'day':'days'}</Text>
       <Text style={s.current}>{activity.current} {activity.current===1?'day':'days'} in a row</Text>
     </View>
-    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} testID="reading-contribution-calendar" style={[s.chart,{backgroundColor:palette.calendarWell,boxShadow:palette.calendarInset,borderRadius:10}]} contentContainerStyle={s.weeks}
+    <ScrollView ref={scroll} horizontal directionalLockEnabled alwaysBounceVertical={false} showsHorizontalScrollIndicator={false} testID="reading-contribution-calendar" style={[s.chart,{backgroundColor:palette.calendarWell,boxShadow:palette.calendarInset,borderRadius:10}]} contentContainerStyle={s.weeks}
       onLayout={event=>setWidth(event.nativeEvent.layout.width)} onContentSizeChange={snapToRecent}>
       {useMemo(()=>weeks.map(week=><View key={week[0]} style={s.week}>
         {week.map(date=>{
