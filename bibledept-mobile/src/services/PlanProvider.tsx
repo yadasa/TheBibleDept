@@ -90,16 +90,21 @@ function DevicePlanProvider({children,owner,enabled}:{children:ReactNode;owner:s
       .catch(()=>{if(alive.current)setLessonError('This completion could not be saved. Please try again.');})
       .finally(()=>{if(alive.current)setAcknowledging(false);});
   }
-  async function advance() {
+  const advance=useCallback(async()=>{
     if(!ready||busy||selectedDay!==progress.currentDay)return;
     setBusy(true);setError('');
     try {const value=await store.advance(progress.currentDay);setProgress(value);setSelectedDay(value.currentDay);}
     catch {setError('We couldn’t save your next day. Please try again.');}
     finally {setBusy(false);}
-  }
-  return <Context.Provider value={{...progress,selectedDay,ready,busy,error,syncError:account.syncError,lessons,completedDays,lessonError,rememberPosition,getReadingPosition,markChapterRead,
-    selectDay:day=>{if(getReadingPlanDay(day))setSelectedDay(day);},returnToCurrent:()=>setSelectedDay(progress.currentDay),
-    advance,retry:()=>setAttempt(value=>value+1)}}>{children}<LessonCompleteModal day={completionDay} busy={acknowledging} error={lessonError} onClose={acknowledge}/></Context.Provider>;
+  },[ready,busy,selectedDay,progress.currentDay,store]);
+  const selectDay=useCallback((day:number)=>{if(getReadingPlanDay(day))setSelectedDay(day);},[]);
+  const returnToCurrent=useCallback(()=>setSelectedDay(progress.currentDay),[progress.currentDay]);
+  const retry=useCallback(()=>setAttempt(value=>value+1),[]);
+  // Listening coverage publishes every five seconds. It must not notify every
+  // plan consumer unless plan state actually changed.
+  const value=useMemo<PlanContext>(()=>({...progress,selectedDay,ready,busy,error,syncError:account.syncError,lessons,completedDays,lessonError,rememberPosition,getReadingPosition,markChapterRead,selectDay,returnToCurrent,advance,retry}),
+    [progress,selectedDay,ready,busy,error,account.syncError,lessons,completedDays,lessonError,rememberPosition,getReadingPosition,markChapterRead,selectDay,returnToCurrent,advance,retry]);
+  return <Context.Provider value={value}>{children}<LessonCompleteModal day={completionDay} busy={acknowledging} error={lessonError} onClose={acknowledge}/></Context.Provider>;
 }
 
 export function usePlan() {
