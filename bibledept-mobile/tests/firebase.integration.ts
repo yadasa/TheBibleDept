@@ -65,7 +65,7 @@ test('community consent, server-owned badges, and circle membership are enforced
     connectAuthEmulator(auth,'http://127.0.0.1:19099',{disableWarnings:true});connectFirestoreEmulator(db,'127.0.0.1',18080);connectFunctionsEmulator(functions,'127.0.0.1',15001);
     return {auth,db,functions};
   });
-  const call=(index:number,name:string,data:unknown)=>httpsCallable(clients[index].functions,name)(data);
+  const call=(index:number,name:string,data:Record<string,unknown>)=>httpsCallable(clients[index].functions,name)({...data,expectedUid:clients[index].auth.currentUser!.uid});
   const denied=(error:unknown)=>(error as {code:string}).code==='permission-denied';
   try {
     for(let index=0;index<clients.length;index++)await createUserWithEmailAndPassword(clients[index].auth,`community-${suffix}-${index}@bibledept.test`,'Local-test-2468!');
@@ -78,7 +78,10 @@ test('community consent, server-owned badges, and circle membership are enforced
     await assert.rejects(setDoc(doc(clients[0].db,'bibledeptProfiles',author),{...profile,badgeIds:['six-percent-club']}),denied);
     await assert.rejects(setDoc(doc(clients[0].db,'bibledeptUsers',author,'achievements','six-percent-club'),{earnedAt:serverTimestamp()}),denied);
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptUsers',author,'settings','community')),denied);
-    const created=(await call(0,'createReadingCircle',{name:'Private local circle'})).data as {id:string};
+    const created=(await call(0,'createReadingCircle',{name:'Private local circle',requestId:crypto.randomUUID()})).data as {id:string};
+    await assert.rejects(httpsCallable(clients[1].functions,'createReadingCircle')({name:'Wrong account request',requestId:crypto.randomUUID(),expectedUid:author}),error=>(error as {code:string}).code==='functions/failed-precondition');
+    await assert.rejects(getDoc(doc(clients[0].db,'bibledeptUsers',author,'circleCreations',created.id)),denied);
+    await assert.rejects(setDoc(doc(clients[0].db,'bibledeptUsers',author,'circleCreations','forged'),{circleId:created.id,name:'Forged receipt'}),denied);
     const circle=doc(clients[0].db,'bibledeptCircles',created.id),invite=(await getDoc(circle)).data()!;
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptCircles',created.id)),denied);
     await assert.rejects(call(1,'sendReadingCircleMessage',{circleId:created.id,messageId:'not-a-member',text:'Denied test message.'}),error=>{

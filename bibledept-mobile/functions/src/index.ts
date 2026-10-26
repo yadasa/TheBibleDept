@@ -60,7 +60,11 @@ export const readingReminderOpened = onCall((request) =>
 );
 function communityCall<T>(handler:(uid:string,data:unknown)=>Promise<T>) {
   return onCall(async request=>{
-    try{return await handler(authenticatedUid(request),request.data);}
+    try{
+      const uid=authenticatedUid(request);
+      if(request.data?.expectedUid!==uid)throw new HttpsError('failed-precondition','Your account changed. Reopen this screen and try again.');
+      return await handler(uid,request.data);
+    }
     catch(error){
       // Only deliberate app guidance crosses into product copy; SDK diagnostics stay out.
       if(error instanceof HttpsError)throw new HttpsError(error.code,error.message,{app:'bibledept-community',message:error.message});

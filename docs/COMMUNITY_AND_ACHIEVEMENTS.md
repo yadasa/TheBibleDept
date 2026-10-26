@@ -50,9 +50,11 @@ Members create a circle or join using its 12-character invitation code. Circles 
 
 Every send carries a unique retry ID; the same ID/body returns the existing message. Drafts and pending retry IDs are saved per account/circle on the device, including before a send reaches the network. Reusing an ID with another body is rejected. The server checks community consent and circle membership in the same transaction as sending, and enforces a three-second send interval. Leaving removes future read/send access. If a creator leaves, ownership passes to a remaining member; empty circles and their history are removed.
 
+Circle creation also saves a stable request before HTTP and recovers it after a reload. Retries return the original circle; a server-only creation receipt prevents stale requests from recreating a closed circle. Readers can open other circles while a request finishes or explicitly start a different creation. Community callables compare the initiating account UID with the authenticated UID before handling a request, preventing delayed actions from crossing an account switch.
+
 Circle lists sort by recent conversation. A private per-account marker tracks whether the latest message has been viewed; unread indicators appear in circle rows and the Account shortcut. The marker updates only while the app is in the foreground and the conversation is showing the latest message. Other members cannot see read receipts. Own messages and hidden readers do not create unread indicators. Deleting the most recent message updates the circle’s latest-message metadata atomically.
 
-Encouragement is one per reader per activity, excludes self-encouragement, and counts distinct recipients for the Encourager award. Live encouragement state is queried for the displayed events, so older reactions stay marked after a reader has encouraged more than 200 milestones. Reports are stored in a server-only queue for staff to review in the intended Firebase project; this release does not add a staff moderation dashboard.
+Encouragement is one per reader per activity, excludes self-encouragement, and counts distinct recipients for the Encourager award. Live encouragement state is queried for the displayed events, so older reactions stay marked after a reader has encouraged more than 200 milestones. Reports are stored in a server-only queue for staff to review in the intended Firebase project. Each report retains a bounded copy of the reported activity/message so staff can review it after removal. Retries are deduplicated per reporter/content and preserve an existing staff resolution. Report forms explain that staff receive the content and explanation. This release does not add a staff moderation dashboard.
 
 ## Backend boundaries
 
@@ -62,6 +64,7 @@ Encouragement is one per reader per activity, excludes self-encouragement, and c
 | `bibledeptUsers/{uid}/achievements/{badge}` | Owner-readable immutable earned timestamp; server writes |
 | `bibledeptUsers/{uid}/stats/achievements` | Owner-readable reconciled progress; server writes |
 | `bibledeptUsers/{uid}/circles/{id}` | Owner-readable circle index; server writes |
+| `bibledeptUsers/{uid}/circleCreations/{id}` | Server-only stable creation receipt, retained until account deletion |
 | `bibledeptUsers/{uid}/circleReads/{id}` | Private unread marker; bounded owner writes while a circle member |
 | `bibledeptUsers/{uid}/cheeredMilestones/{id}` | Owner-readable encouragement history; server writes |
 | `bibledeptUsers/{uid}/encouragedReaders/{uid}` | Server-owned distinct encouragement recipients |

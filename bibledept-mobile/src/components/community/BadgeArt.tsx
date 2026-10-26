@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Platform } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import type { Achievement } from '../../../shared/community';
 
@@ -14,7 +15,8 @@ export function BadgeArt({symbol='club',size=72,locked=false,compact=false}:{sym
     people:'M23 72v-7c0-10 7-16 17-16h4c10 0 17 6 17 16v7M52 29a11 11 0 1 1-22 0 11 11 0 0 1 22 0Zm9 13a9 9 0 1 0 1-17m4 25c9 1 13 6 13 14v8',
     heart:'M73 34a15 15 0 0 0-21 0l-2 2-2-2a15 15 0 0 0-21 21l23 22 23-22a15 15 0 0 0 0-21Z',
   };
-  return <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel={symbol==='club'?'Open book, star, and laurel 6% Club emblem':undefined} accessible={false} aria-hidden>
+  const nativeAccessibility=Platform.OS==='web'?{}:{accessible:false};
+  return <Svg {...nativeAccessibility} focusable={false} width={size} height={size} viewBox="0 0 100 100" aria-hidden>
     <Defs><LinearGradient id={id} x1="0" y1="0" x2="1" y2="1"><Stop offset="0" stopColor={light}/><Stop offset=".48" stopColor={gold}/><Stop offset="1" stopColor={locked?'#72685D':'#A86722'}/></LinearGradient></Defs>
     <Circle cx="50" cy="50" r="47" fill={locked?'#27231F':'#241A12'} stroke={`url(#${id})`} strokeWidth="2.4"/>
     {!compact&&<Circle cx="50" cy="50" r="40.5" fill="none" stroke={gold} strokeWidth=".7" opacity=".5"/>}

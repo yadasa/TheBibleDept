@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACHIEVEMENTS, achievedIds, achievementProgress, Circle, circleHasUnread, cleanMessage, CommunityProfile, completedPlanDays, DEFAULT_COMMUNITY, EMPTY_METRICS, validateCommunityProfile, visibleCommunityStreak } from '../shared/community';
+import { ACHIEVEMENTS, achievedIds, achievementProgress, Circle, circleHasUnread, cleanCircleName, cleanMessage, CommunityProfile, completedPlanDays, DEFAULT_COMMUNITY, EMPTY_METRICS, validateCommunityProfile, visibleCommunityStreak } from '../shared/community';
 
 test('6% Club requires 365 distinct completed plan days, never a selected day or a streak',()=>{
   const days=Array.from({length:365},(_,i)=>i+1);
@@ -28,6 +28,10 @@ test('profiles opt out by default and reject unsafe or oversized photo payloads'
 test('chat messages trim whitespace, preserve paragraphs, and reject empty or oversized text',()=>{
   assert.equal(cleanMessage('  A thought.\nA question.  '),'A thought.\nA question.');
   for(const text of ['', '  ', 'A'.repeat(2001), 'a\u0000b'])assert.throws(()=>cleanMessage(text));
+});
+test('circle names preserve ordinary punctuation and reject empty, control, or oversized values',()=>{
+  assert.equal(cleanCircleName('  Sunday readers — together  '),'Sunday readers — together');
+  for(const name of [null,'  ','A'.repeat(61),'Readers\nNext','Readers\u0000'])assert.throws(()=>cleanCircleName(name));
 });
 test('community streaks expire in the reader’s confirmed zone and honor private stats',()=>{
   const profile:CommunityProfile={id:'reader',displayName:'Reader',photoData:null,streak:7,lastReadingDate:'2026-10-25',timeZone:'America/Chicago',badgeIds:[],planDays:null};

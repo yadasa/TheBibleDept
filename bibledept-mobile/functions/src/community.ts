@@ -1,7 +1,7 @@
 import { FieldValue, getFirestore, QueryDocumentSnapshot, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
-import { randomBytes } from 'node:crypto';
-import { ACHIEVEMENTS, achievedIds, cleanMessage, completedPlanDays, EMPTY_METRICS, validateCommunityProfile, validDocumentId } from '../../shared/community';
+import { createHash, randomBytes } from 'node:crypto';
+import { ACHIEVEMENTS, achievedIds, cleanCircleName, cleanMessage, completedPlanDays, EMPTY_METRICS, validateCommunityProfile, validDocumentId } from '../../shared/community';
 import { currentStreak, emptyStreak, localDate, validZone } from '../../shared/habits';
 import { userPath } from './streaks';
 import { normalizeProfilePhoto } from './profilePhoto';
@@ -93,18 +93,28 @@ export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now
 }
 
 export async function createCircle(uid:string,input:unknown,now=Date.now()) {
-  const name=(input as {name?:unknown})?.name;
-  if(typeof name!=='string'||!name.trim()||name.trim().length>60||/[\x00-\x1f\x7f]/.test(name))invalid('Give your circle a name with 1–60 characters.');
-  const ref=circles().doc(),code=randomBytes(6).toString('hex').toUpperCase();
+  const value=input as {name?:unknown;requestId?:unknown};
+  let name:string;try{name=cleanCircleName(value?.name);}catch(e){invalid((e as Error).message);}
+  const requestId=value?.requestId;
+  if(!validDocumentId(requestId))invalid('Reopen circle creation and try again.');
+  const ref=circles().doc(requestId),code=randomBytes(6).toString('hex').toUpperCase(),receipt=userPath(uid).collection('circleCreations').doc(requestId);
   await getFirestore().runTransaction(async tx=>{
-    const [settings,own,deleted]=await Promise.all([tx.get(userPath(uid).collection('settings').doc('community')),tx.get(userPath(uid).collection('circles').limit(20)),tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid))]);
+    const [settings,own,deleted,prior,created]=await Promise.all([tx.get(userPath(uid).collection('settings').doc('community')),tx.get(userPath(uid).collection('circles').limit(20)),tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid)),tx.get(ref),tx.get(receipt)]);
     if(deleted.exists)throw new HttpsError('unauthenticated','This account is no longer available.');
     if(!settings.data()?.joined)memberError();
+    if(created.exists) {
+      if(created.data()?.name!==name)throw new HttpsError('already-exists','This circle request used another name. Open the original circle or start a different one.');
+      if(!prior.exists)throw new HttpsError('failed-precondition','That circle was already created and later closed. Start a new circle.');
+      if(!prior.data()?.memberIds.includes(uid))throw new HttpsError('failed-precondition','That circle was already created. Use its current invitation code to rejoin.');
+      return;
+    }
+    if(prior.exists)throw new HttpsError('already-exists','This circle request is already in use. Start a different circle.');
     if(own.size>=20)throw new HttpsError('resource-exhausted','You can belong to up to 20 circles.');
-    const data={name:name.trim(),code,memberCount:1,createdBy:uid};
+    const data={name,code,memberCount:1,createdBy:uid};
     tx.create(ref,{...data,memberIds:[uid],createdAt:Timestamp.fromMillis(now)});
     tx.create(codes().doc(code),{circleId:ref.id});
     tx.create(userPath(uid).collection('circles').doc(ref.id),data);
+    tx.create(receipt,{circleId:ref.id,name,createdAt:Timestamp.fromMillis(now)});
   });
   await reconcileCommunity(uid,now);
   return {id:ref.id};
@@ -222,18 +232,32 @@ export async function unhideCommunityReaders(uid:string) {
 }
 
 export async function reportCommunityContent(uid:string,input:unknown,now=Date.now()) {
-  await requireCommunity(uid);
   const data=input as {activityId?:unknown;circleId?:unknown;messageId?:unknown;reason?:unknown};
   if(!data||typeof data.reason!=='string'||!data.reason.trim()||data.reason.length>500)invalid('Tell us why you’re reporting this (up to 500 characters).');
-  let path:string;
+  const reason=data.reason.trim();
+  let path:string,circleId:string|undefined;
   if(data.activityId)path=`bibledeptActivity/${documentId(data.activityId)}`;
   else {
-    const id=documentId(data.circleId),group=await circles().doc(id).get();
-    if(!group.data()?.memberIds.includes(uid))throw new HttpsError('permission-denied','You must belong to this circle.');
-    path=`bibledeptCircles/${id}/bibledeptMessages/${documentId(data.messageId)}`;
+    circleId=documentId(data.circleId);
+    path=`bibledeptCircles/${circleId}/bibledeptMessages/${documentId(data.messageId)}`;
   }
-  if(!(await getFirestore().doc(path).get()).exists)throw new HttpsError('not-found','This item is no longer available.');
-  await getFirestore().collection('bibledeptCommunityReports').add({uid,path,reason:data.reason.trim(),createdAt:Timestamp.fromMillis(now),status:'open'});
+  const id=createHash('sha256').update(`${uid}\0${path}`).digest('hex'),ref=getFirestore().collection('bibledeptCommunityReports').doc(id);
+  await getFirestore().runTransaction(async tx=>{
+    const [prior,settings,deleted,item,group]=await Promise.all([
+      tx.get(ref),tx.get(userPath(uid).collection('settings').doc('community')),
+      tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid)),tx.get(getFirestore().doc(path)),
+      circleId?tx.get(circles().doc(circleId)):Promise.resolve(null),
+    ]);
+    if(deleted.exists)throw new HttpsError('unauthenticated','This account is no longer available.');
+    // A lost acknowledgement remains recoverable even if content was later removed.
+    if(prior.exists)return;
+    if(!settings.data()?.joined)memberError();
+    if(circleId&&!group?.data()?.memberIds.includes(uid))throw new HttpsError('permission-denied','You must belong to this circle.');
+    if(!item.exists)throw new HttpsError('not-found','This item is no longer available.');
+    const content=item.data()!;
+    const snapshot=circleId?{uid:content.uid,text:String(content.text||'').slice(0,2000)}:{uid:content.uid,kind:content.kind,badgeId:content.badgeId||null};
+    tx.create(ref,{uid,path,reason,contentSnapshot:snapshot,createdAt:Timestamp.fromMillis(now),status:'open'});
+  });
   return {reported:true};
 }
 

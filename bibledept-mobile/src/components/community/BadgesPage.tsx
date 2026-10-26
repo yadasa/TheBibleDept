@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { ACHIEVEMENTS, Achievement, achievementProgress } from '../../../shared/community';
 import { useCommunity } from '../../services/CommunityProvider';
 import { messageForUser } from '../../services/userMessage';
@@ -7,6 +7,7 @@ import { typography as t, useTheme } from '../../theme';
 import { AccountPage } from '../account/AccountPage';
 import { ActionButton, Notice } from '../ui';
 import { BadgeArt } from './BadgeArt';
+import { CommunityDialog } from './CommunityDialog';
 export function BadgesPage({onBack,onRead,onCommunity}:{onBack:()=>void;onRead?:()=>void;onCommunity?:()=>void}) {
   const community=useCommunity(),{colors:c}=useTheme();
   const [filter,setFilter]=useState<'All'|'Earned'|'To discover'>('All'),[selected,setSelected]=useState<Achievement|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -27,13 +28,11 @@ export function BadgesPage({onBack,onRead,onCommunity}:{onBack:()=>void;onRead?:
     })}</View>
     {!!error&&<Notice error text={error}/>}<ActionButton title="Refresh achievements" secondary icon="refresh" loading={busy} onPress={()=>void refresh()}/>
     <Notice text="Journey badges follow your saved completed plan days. Reading streak badges follow your confirmed reading history. Earned badges stay in your collection."/>
-    <Modal visible={!!selected} transparent animationType="fade" onRequestClose={()=>setSelected(null)}>
-      <View style={{flex:1,backgroundColor:'rgba(0,0,0,.75)',justifyContent:'center',padding:24}}><ScrollView style={{maxHeight:'90%',width:'100%',maxWidth:480,alignSelf:'center'}} contentContainerStyle={{padding:28,borderRadius:24,backgroundColor:c.surface}}>
+    <CommunityDialog visible={!!selected} title="Badge details" closeLabel="Close badge details" onClose={()=>setSelected(null)}>
         {selected&&<><View style={{alignItems:'center'}}><BadgeArt symbol={selected.symbol} size={132} locked={!earned.has(selected.id)}/><Text style={{...t.meta,color:c.muted,marginTop:16}}>{selected.family.toUpperCase()}</Text><Text accessibilityRole="header" style={{...t.title,color:c.ink,textAlign:'center',marginTop:8}}>{selected.name}</Text><Text style={{...t.body,color:c.muted,textAlign:'center',marginVertical:18}}>{selected.description}</Text><Text style={{...t.label,color:c.ink}}>{earned.has(selected.id)?'Earned':`${achievementProgress(selected,community.metrics)} / ${selected.target}`}</Text></View>
         {earned.has(selected.id)&&community.earned.find(a=>a.id===selected.id)?.earnedAt&&<Notice success text={`Earned ${new Date(community.earned.find(a=>a.id===selected.id)!.earnedAt!.toMillis()).toLocaleDateString()}`}/>}
         {!earned.has(selected.id)&&(selected.family==='Community'?onCommunity:onRead)&&<ActionButton title={selected.family==='Community'?'Open community':'Keep reading'} icon="arrowRight" onPress={()=>{const action=selected.family==='Community'?onCommunity:onRead;setSelected(null);action?.();}}/>}
-        <ActionButton title="Close badge details" secondary onPress={()=>setSelected(null)}/></>}
-      </ScrollView></View>
-    </Modal>
+        </>}
+    </CommunityDialog>
   </AccountPage>;
 }

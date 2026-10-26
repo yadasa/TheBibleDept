@@ -47,7 +47,7 @@ test('circles enforce membership, stable retries, send pacing, and ownership of 
   const owner=uid('owner'),reader=uid('reader'),outsider=uid('outsider');
   try {
     await Promise.all([saveCommunityProfile(owner,profile),saveCommunityProfile(reader,{...profile,displayName:'Another reader'}),saveCommunityProfile(outsider,profile)]);
-    const group=await createCircle(owner,{name:'Reading together'});
+    const group=await createCircle(owner,{name:'Reading together',requestId:uid('create')});
     const data=(await db.collection('bibledeptCircles').doc(group.id).get()).data()!;
     assert.equal((await userPath(owner).collection('achievements').doc('in-good-company').get()).exists,true);
     await assert.rejects(sendCircleMessage(outsider,{circleId:group.id,messageId:'first',text:'Not a member'},now),{code:'permission-denied'});
@@ -62,8 +62,12 @@ test('circles enforce membership, stable retries, send pacing, and ownership of 
     await assert.rejects(sendCircleMessage(reader,{...message,text:'Changed body'},now+5000),{code:'already-exists'});
     await assert.rejects(sendCircleMessage(reader,{...message,messageId:'second-message-id'},now+1000),{code:'resource-exhausted'});
     await assert.rejects(deleteCircleMessage(owner,{circleId:group.id,messageId:message.messageId}),{code:'permission-denied'});
+    await reportCommunityContent(owner,{circleId:group.id,messageId:message.messageId,reason:'Disposable chat report fixture.'});
     await sendCircleMessage(reader,{...message,messageId:'latest-message-id'},now+4000);
     await deleteCircleMessage(reader,{circleId:group.id,messageId:message.messageId});
+    await reportCommunityContent(owner,{circleId:group.id,messageId:message.messageId,reason:'Disposable chat report fixture.'});
+    const reports=await db.collection('bibledeptCommunityReports').where('uid','==',owner).get();
+    assert.equal(reports.size,1);assert.equal(reports.docs[0].data().contentSnapshot.text,message.text);
     assert.equal((await db.collection('bibledeptCircles').doc(group.id).get()).data()?.lastMessageId,'latest-message-id');
     await deleteCircleMessage(reader,{circleId:group.id,messageId:'latest-message-id'});
     assert.equal((await db.collection('bibledeptCircles').doc(group.id).get()).data()?.lastMessageId,null);
@@ -78,7 +82,7 @@ test('simultaneous joins cannot exceed 50 readers and account memberships stop a
   let groupId:string|undefined,code:string|undefined;
   try {
     await Promise.all([owner,...readers].map(user=>saveCommunityProfile(user,profile)));
-    const group=await createCircle(owner,{name:'Capacity test'});groupId=group.id;
+    const group=await createCircle(owner,{name:'Capacity test',requestId:uid('create')});groupId=group.id;
     const ref=db.collection('bibledeptCircles').doc(group.id),data=(await ref.get()).data()!;code=data.code;
     await ref.update({memberIds:[owner,...Array.from({length:48},(_,i)=>`fixture-member-${i}`)],memberCount:49});
     const results=await Promise.allSettled(readers.map(reader=>joinCircle(reader,{code})));
@@ -91,7 +95,7 @@ test('simultaneous joins cannot exceed 50 readers and account memberships stop a
     const batch=db.batch();
     for(let i=0;i<19;i++)batch.set(userPath(owner).collection('circles').doc(`fixture-circle-${i}`),{name:'Capacity fixture'});
     await batch.commit();
-    await assert.rejects(createCircle(owner,{name:'One too many'}),{code:'resource-exhausted'});
+    await assert.rejects(createCircle(owner,{name:'One too many',requestId:uid('create')}),{code:'resource-exhausted'});
     assert.equal((await userPath(owner).collection('circles').get()).size,20);
     assert.equal((await db.collection('bibledeptCircles').where('createdBy','==',owner).get()).size,1);
   }finally {
@@ -99,6 +103,23 @@ test('simultaneous joins cannot exceed 50 readers and account memberships stop a
     if(code)await db.collection('bibledeptCircleCodes').doc(code).delete();
     await cleanup(owner,...readers);
   }
+});
+
+test('creation retries return one circle and closed circles cannot be recreated by stale requests',async()=>{
+  const owner=uid('creation-owner'),outsider=uid('creation-outside'),request={name:'A steady circle',requestId:uid('creation-request')};
+  try {
+    await Promise.all([saveCommunityProfile(owner,profile),saveCommunityProfile(outsider,profile)]);
+    const results=await Promise.all(Array.from({length:4},()=>createCircle(owner,request)));
+    assert.ok(results.every(result=>result.id===request.requestId));
+    assert.equal((await db.collection('bibledeptCircles').where('createdBy','==',owner).get()).size,1);
+    assert.equal((await db.collection('bibledeptCircleCodes').where('circleId','==',request.requestId).get()).size,1);
+    assert.equal((await userPath(owner).collection('circles').get()).size,1);
+    await assert.rejects(createCircle(owner,{...request,name:'Another name'}),{code:'already-exists'});
+    await assert.rejects(createCircle(outsider,request),{code:'already-exists'});
+    await leaveCircle(owner,{circleId:request.requestId});
+    await assert.rejects(createCircle(owner,request),{code:'failed-precondition'});
+    assert.equal((await db.collection('bibledeptCircles').doc(request.requestId).get()).exists,false);
+  }finally {await cleanup(owner,outsider);}
 });
 
 test('withdrawing sharing redacts public fields even when the subsequent refresh fails',async()=>{
@@ -124,7 +145,7 @@ test('withdrawing sharing redacts public fields even when the subsequent refresh
 });
 
 test('encouragements are unique, cannot be self-awarded, and report/hide state is private',async()=>{
-  const author=uid('author'),reader=uid('encourager');
+  const author=uid('author'),reader=uid('encourager'),peers=Array.from({length:4},()=>uid('peer'));
   try {
     await saveCommunityProfile(author,profile);await saveCommunityProfile(reader,profile);
     const events=await db.collection('bibledeptActivity').where('uid','==',author).get(),event=events.docs[0];assert.ok(event);
@@ -133,19 +154,60 @@ test('encouragements are unique, cannot be self-awarded, and report/hide state i
     assert.equal((await event.ref.get()).data()?.cheerCount,1);
     assert.equal((await userPath(reader).collection('encouragedReaders').get()).size,1);
     assert.ok((await userPath(reader).collection('achievements').doc('lift-another').get()).exists);
+    await userPath(author).collection('settings').doc('planProgress').set({completedDays:[1]});
+    await reconcileCommunity(author);
+    const another=(await db.collection('bibledeptActivity').where('uid','==',author).get()).docs.find(item=>item.id!==event.id)!;
+    await cheerMilestone(reader,{activityId:another.id});
+    assert.equal((await userPath(reader).collection('stats').doc('achievements').get()).data()?.encouragements,1);
+    await Promise.all(peers.map(peer=>saveCommunityProfile(peer,profile)));
+    await Promise.all(peers.map(async peer=>{
+      const milestone=(await db.collection('bibledeptActivity').where('uid','==',peer).get()).docs[0];
+      await cheerMilestone(reader,{activityId:milestone.id});
+    }));
+    assert.equal((await userPath(reader).collection('stats').doc('achievements').get()).data()?.encouragements,5);
+    assert.ok((await userPath(reader).collection('achievements').doc('encourager').get()).exists);
     await blockCommunityReader(reader,{uid:author});
     assert.deepEqual((await userPath(reader).collection('settings').doc('community').get()).data()?.blockedUids,[author]);
-    await reportCommunityContent(reader,{activityId:event.id,reason:'Test report for local validation.'});
-    assert.equal((await db.collection('bibledeptCommunityReports').where('uid','==',reader).get()).size,1);
+    await Promise.all(Array.from({length:3},()=>reportCommunityContent(reader,{activityId:event.id,reason:'Test report for local validation.'})));
+    const reports=await db.collection('bibledeptCommunityReports').where('uid','==',reader).get();
+    assert.equal(reports.size,1);assert.equal(reports.docs[0].data().contentSnapshot.uid,author);
+    await reports.docs[0].ref.update({status:'resolved'});
+    await reportCommunityContent(reader,{activityId:event.id,reason:'Another retry.'});
+    assert.equal((await reports.docs[0].ref.get()).data()?.status,'resolved');
     await saveCommunityProfile(author,{...profile,joined:false});
     await assert.rejects(cheerMilestone(reader,{activityId:event.id}),{code:'not-found'});
-  }finally{await cleanup(author,reader);}
+  }finally{await cleanup(author,reader,...peers);}
+});
+
+test('highlights and reflections award independently, stay private, and retain earned badges after removal',async()=>{
+  const user=uid('reflections'),marker='Private reflection fixture text';
+  try {
+    await saveCommunityProfile(user,profile);
+    const notes=userPath(user).collection('annotations'),batch=db.batch();
+    const common={chapterId:'LUK.1',reference:'Luke 1',translation:'web',verseStart:1,verseEnd:1,excerpt:'Private excerpt fixture',createdAt:Timestamp.fromMillis(now),updatedAt:Timestamp.fromMillis(now)};
+    for(let i=0;i<20;i++)batch.set(notes.doc(`highlight-${i}`),{...common,color:'gold',comment:''});
+    for(let i=0;i<10;i++)batch.set(notes.doc(`reflection-${i}`),{...common,color:'none',comment:marker});
+    await batch.commit();
+    const result=await reconcileCommunity(user);
+    assert.equal(result.metrics.highlights,20);assert.equal(result.metrics.reflections,10);
+    for(const id of ['a-word-to-keep','well-marked','make-it-personal','thoughtful-reader'])assert.ok(result.badgeIds.includes(id));
+    const published=(await db.collection('bibledeptProfiles').doc(user).get()).data()!;
+    const events=await db.collection('bibledeptActivity').where('uid','==',user).get();
+    assert.equal(JSON.stringify([published,...events.docs.map(event=>event.data())]).includes(marker),false);
+    assert.equal(JSON.stringify(published).includes('Private excerpt fixture'),false);
+    const before=(await userPath(user).collection('achievements').doc('well-marked').get()).data()!.earnedAt.toMillis();
+    const remove=db.batch();(await notes.get()).docs.forEach(note=>remove.delete(note.ref));await remove.commit();
+    const after=await reconcileCommunity(user);
+    assert.equal(after.metrics.highlights,0);assert.equal(after.metrics.reflections,0);
+    assert.ok(after.badgeIds.includes('well-marked'));
+    assert.equal((await userPath(user).collection('achievements').doc('well-marked').get()).data()!.earnedAt.toMillis(),before);
+  }finally{await cleanup(user);}
 });
 
 test('account cleanup removes published data and late triggers cannot recreate achievements',async()=>{
   const user=uid('delete');
   await saveCommunityProfile(user,profile);
-  const group=await createCircle(user,{name:'Disposable circle'});
+  const group=await createCircle(user,{name:'Disposable circle',requestId:uid('create')});
   await sendCircleMessage(user,{circleId:group.id,messageId:'delete-me',text:'Disposable local message.'},now);
   await cleanup(user);
   await reconcileCommunity(user);
@@ -162,7 +224,7 @@ test('account cleanup pages through authored chat history, preserves peers, and 
   let groupId:string|undefined;
   try {
     await saveCommunityProfile(owner,profile);await saveCommunityProfile(peer,profile);
-    const group=await createCircle(owner,{name:'History cleanup'});groupId=group.id;
+    const group=await createCircle(owner,{name:'History cleanup',requestId:uid('create')});groupId=group.id;
     const ref=db.collection('bibledeptCircles').doc(group.id),data=(await ref.get()).data()!;
     await joinCircle(peer,{code:data.code});
     const batch=db.batch();

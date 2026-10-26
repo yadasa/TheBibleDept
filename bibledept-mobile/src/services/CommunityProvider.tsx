@@ -5,12 +5,13 @@ import { useAuth } from './AuthProvider';
 import { callBackend, getFirebase } from './firebase';
 import { USER_COLLECTION } from './dataPaths';
 import { communityErrorForUser } from './communityError';
+import { UserFacingError } from './userMessage';
 
 type CommunityState={settings:CommunitySettings;ready:boolean;metrics:AchievementMetrics;earned:EarnedAchievement[];newlyEarned:string[];dismissNewBadges:()=>void;circles:Circle[];error:string;perform:<T=unknown>(name:string,data:unknown)=>Promise<T>};
 const Context=createContext<CommunityState|null>(null);
 export function CommunityProvider({children}:{children:ReactNode}) {
   const {user}=useAuth();
-  return <CommunitySession owner={user?.uid}>{children}</CommunitySession>;
+  return <CommunitySession key={user?.uid||'guest'} owner={user?.uid}>{children}</CommunitySession>;
 }
 function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
   const [settings,setSettings]=useState<CommunitySettings>(DEFAULT_COMMUNITY),[ready,setReady]=useState(!owner);
@@ -18,16 +19,10 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
   const [circleDetails,setCircleDetails]=useState<Circle[]>([]),[circleReads,setCircleReads]=useState(()=>new Map<string,string>());
   const [newlyEarned,setNewlyEarned]=useState<string[]>([]),knownAwards=useRef<Set<string>|null>(null);
   const dismissNewBadges=useCallback(()=>setNewlyEarned([]),[]);
-  const [sessionOwner,setSessionOwner]=useState(owner);
-  // Reset before rendering children for another account, while preserving the
-  // app shell's navigation without introducing another sign-in/sign-out reset.
-  if(sessionOwner!==owner) {
-    setSessionOwner(owner);setSettings(DEFAULT_COMMUNITY);setReady(!owner);
-    setMetrics(EMPTY_METRICS);setEarned([]);setCircles([]);setCircleDetails([]);setCircleReads(new Map());setError('');
-    setNewlyEarned([]);knownAwards.current=null;
-  }
   const perform=useCallback(async<T,>(name:string,data:unknown):Promise<T>=>{
-    try{return await callBackend<T>(name,data,owner);}
+    if(!owner)throw new UserFacingError('Sign in to continue.');
+    if(!data||typeof data!=='object'||Array.isArray(data))throw new UserFacingError('Reopen this screen and try again.');
+    try{return await callBackend<T>(name,{...data,expectedUid:owner},owner);}
     catch(e){throw communityErrorForUser(e);}
   },[owner]);
   useEffect(()=>{

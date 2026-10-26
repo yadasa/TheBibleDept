@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { ACHIEVEMENTS, CommunityProfile, visibleCommunityStreak } from '../../shared/community';
 import { useAuth } from '../services/AuthProvider';
@@ -16,6 +16,7 @@ import { CommunityProfileEditor } from '../components/community/CommunityProfile
 import { ProfileAvatar } from '../components/community/ProfileAvatar';
 import { ReadingCircles } from '../components/community/ReadingCircles';
 import { ReaderProfileDetails } from '../components/community/ReaderProfileDetails';
+import { CommunityDialog } from '../components/community/CommunityDialog';
 import { useScreenScroll } from '../components/ScreenScrollView';
 
 export type CommunitySection='Activity'|'Readers'|'Circles';
@@ -72,12 +73,11 @@ export function CommunityScreen({active=true,onAccount,onBadges,requestedSection
       </>}
       {count<200&&(directory.profiles.length>=count||directory.events.length>=count)&&<ActionButton title="Load more community activity" secondary onPress={()=>setCount(value=>Math.min(200,value+40))}/>}
     </>}
-    <Modal visible={!!selected} transparent animationType="fade" onRequestClose={()=>setReader(null)}><View style={{flex:1,justifyContent:'center',padding:24,backgroundColor:'rgba(0,0,0,.75)'}}><ScrollView style={{maxHeight:'90%',width:'100%',maxWidth:480,alignSelf:'center'}} contentContainerStyle={{padding:28,backgroundColor:c.surface,borderRadius:24}}>{selected&&<>
+    <CommunityDialog visible={!!selected} title="Reader profile" closeLabel="Close reader profile" onClose={()=>setReader(null)}>{selected&&<>
       <ReaderProfileDetails profile={selected} now={now}/>
       {selected.id!==user.uid&&<ActionButton title="Hide this reader" secondary disabled={!!busy} loading={busy==='hide'} onPress={()=>void run('hide',async()=>{await community.perform('hideCommunityReader',{uid:selected.id});setReader(null);setMessage('This reader’s activity and messages are hidden for you.');})}/>}
-      <ActionButton title="Close reader profile" secondary onPress={()=>setReader(null)}/>
-    </>}</ScrollView></View></Modal>
-    <Modal visible={!!report} transparent animationType="fade" onRequestClose={()=>setReport(null)}><View style={{flex:1,justifyContent:'center',padding:24,backgroundColor:'rgba(0,0,0,.75)'}}><View style={{padding:24,borderRadius:22,backgroundColor:c.surface,width:'100%',maxWidth:480,alignSelf:'center'}}><Text accessibilityRole="header" style={{...t.section,color:c.ink,marginBottom:18}}>Report activity</Text><Field label="What should we know?" value={reason} onChangeText={setReason} multiline maxLength={500}/><ActionButton title="Submit activity report" loading={busy==='report'} disabled={!!busy||!reason.trim()} onPress={()=>void run('report',async()=>{await community.perform('reportReadingCommunityContent',{activityId:report,reason});setReport(null);setMessage('Report received for review. You can also hide this reader from their profile.');})}/>{!!error&&<Notice error text={error}/>}<ActionButton title="Cancel report" secondary disabled={!!busy} onPress={()=>setReport(null)}/></View></View></Modal>
+    </>}</CommunityDialog>
+    <CommunityDialog visible={!!report} title="Report activity" closeLabel="Close activity report" onClose={()=>setReport(null)}><Notice text="App staff will receive this activity and your explanation."/><Field label="What should we know?" value={reason} onChangeText={setReason} multiline maxLength={500} editable={!busy}/><ActionButton title="Submit activity report" loading={busy==='report'} disabled={!!busy||!reason.trim()} onPress={()=>void run('report',async()=>{await community.perform('reportReadingCommunityContent',{activityId:report,reason});setReport(null);setMessage('Report received for review. You can also hide this reader from their profile.');})}/>{!!error&&<Notice error text={error}/>}<ActionButton title="Cancel report" secondary disabled={!!busy} onPress={()=>setReport(null)}/></CommunityDialog>
   </View>;
 }
 function StreakPill({profile,now}:{profile:CommunityProfile;now:number}) {

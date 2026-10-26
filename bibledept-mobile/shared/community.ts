@@ -61,4 +61,8 @@ export function cleanMessage(value:unknown):string {
   if(typeof value!=='string'||!value.trim()||value.trim().length>2000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))throw new Error('Write a message with 1–2,000 characters.');
   return value.trim();
 }
+export function cleanCircleName(value:unknown):string {
+  if(typeof value!=='string'||!value.trim()||value.trim().length>60||/[\x00-\x1f\x7f]/.test(value))throw new Error('Give your circle a name with 1–60 characters.');
+  return value.trim();
+}
 export function validDocumentId(value:unknown):value is string {return typeof value==='string'&&/^[A-Za-z0-9_-]{1,150}$/.test(value);}
