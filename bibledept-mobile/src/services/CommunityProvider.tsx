@@ -15,7 +15,8 @@ export function CommunityProvider({children}:{children:ReactNode}) {
 }
 function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
   const [settings,setSettings]=useState<CommunitySettings>(DEFAULT_COMMUNITY),[ready,setReady]=useState(!owner);
-  const [metrics,setMetrics]=useState(EMPTY_METRICS),[earned,setEarned]=useState<EarnedAchievement[]>([]),[circles,setCircles]=useState<Circle[]>([]),[error,setError]=useState('');
+  const [metrics,setMetrics]=useState(EMPTY_METRICS),[earned,setEarned]=useState<EarnedAchievement[]>([]),[circles,setCircles]=useState<Circle[]>([]);
+  const [resourceErrors,setResourceErrors]=useState<{profile?:string;circles?:string}>({});
   const [metricsReady,setMetricsReady]=useState(!owner),[awardsReady,setAwardsReady]=useState(!owner),[loadAttempt,setLoadAttempt]=useState(0);
   const [achievementErrors,setAchievementErrors]=useState<{metrics?:string;awards?:string}>({});
   const retryCommunity=useCallback(()=>setLoadAttempt(value=>value+1),[]);
@@ -31,9 +32,13 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
   useEffect(()=>{
     if(!owner)return;
     const db=getFirebase().db,root=doc(db,USER_COLLECTION,owner);
-    const failed=()=>{setReady(true);setError('Your community details couldn’t load. Check your connection.');};
     const stops=[
-      onSnapshot(doc(root,'settings','community'),snapshot=>{setSettings({...DEFAULT_COMMUNITY,...snapshot.data()});setReady(true);setError('');},failed),
+      onSnapshot(doc(root,'settings','community'),{includeMetadataChanges:true},snapshot=>{
+        // An empty local cache is not proof that this account has no profile.
+        // Forms capture their initial values once; wait for a real answer first.
+        if(snapshot.metadata.fromCache&&!snapshot.exists())return;
+        setSettings({...DEFAULT_COMMUNITY,...snapshot.data()});setReady(true);setResourceErrors(previous=>({...previous,profile:''}));
+      },()=>{setReady(false);setResourceErrors(previous=>({...previous,profile:'Your community profile couldn’t load. Check your connection and retry.'}));}),
       onSnapshot(doc(root,'stats','achievements'),{includeMetadataChanges:true},snapshot=>{
         setMetrics({...EMPTY_METRICS,...snapshot.data()});
         if(!snapshot.metadata.fromCache){setMetricsReady(true);setAchievementErrors(previous=>({...previous,metrics:''}));}
@@ -48,7 +53,7 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
         }
         knownAwards.current=new Set(awards.map(award=>award.id));setEarned(awards);setAwardsReady(true);setAchievementErrors(previous=>({...previous,awards:''}));
       },()=>setAchievementErrors(previous=>({...previous,awards:'Your saved badges couldn’t load. Check your connection and refresh.'}))),
-      onSnapshot(collection(root,'circles'),snapshot=>setCircles(snapshot.docs.map(d=>({id:d.id,...d.data()} as Circle))),failed),
+      onSnapshot(collection(root,'circles'),snapshot=>{setCircles(snapshot.docs.map(d=>({id:d.id,...d.data()} as Circle)));setResourceErrors(previous=>({...previous,circles:''}));},()=>setResourceErrors(previous=>({...previous,circles:'Your circle list couldn’t load. Check your connection and retry.'}))),
     ];
     return()=>stops.forEach(stop=>stop());
   },[owner,perform,loadAttempt]);
@@ -67,7 +72,7 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
     const latest={...circle,...circleDetails.find(detail=>detail.id===circle.id)};
     return {...latest,unread:!!owner&&settings.joined&&circleHasUnread(latest,circleReads.get(circle.id),owner,settings.blockedUids)};
   }).sort((a,b)=>(b.lastMessageAt?.toMillis()||0)-(a.lastMessageAt?.toMillis()||0)||a.name.localeCompare(b.name)),[circles,circleDetails,circleReads,owner,settings.joined,settings.blockedUids]);
-  const achievementsReady=metricsReady&&awardsReady,achievementError=achievementErrors.metrics||achievementErrors.awards||'';
+  const error=resourceErrors.profile||resourceErrors.circles||'',achievementsReady=metricsReady&&awardsReady,achievementError=achievementErrors.metrics||achievementErrors.awards||'';
   const value=useMemo(()=>({settings,ready,achievementsReady,achievementError,retryCommunity,metrics,earned,newlyEarned,dismissNewBadges,circles:visibleCircles,error,perform}),[settings,ready,achievementsReady,achievementError,retryCommunity,metrics,earned,newlyEarned,dismissNewBadges,visibleCircles,error,perform]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

@@ -48,6 +48,7 @@
     "ios": "expo start --go --lan",
     "web": "expo start --web --localhost",
     "typecheck": "tsc --noEmit",
+    "verify:native-config": "node scripts/verify-native-config.mjs",
     "test": "tsx --test tests/*.test.ts",
     "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-bibledept --only auth,firestore,functions --export-on-exit=.firebase/data",
     "emulators:isolated": "npm --prefix functions run build && firebase emulators:start --config firebase.test.json --project demo-bibledept --only auth,firestore,functions",

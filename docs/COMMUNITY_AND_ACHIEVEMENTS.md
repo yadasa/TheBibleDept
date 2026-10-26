@@ -90,6 +90,7 @@ npm ci
 npm --prefix functions ci
 npm run typecheck
 npm test
+npm run verify:native-config
 npm --prefix functions run build
 npm run test:emulators
 ```
@@ -98,4 +99,4 @@ The Firebase default remains `demo-bibledept`. Live release requires the intende
 
 New routes are `/community`, `/circles`, and `/badges`, with the same host validation as existing app links. No group invitation automatically joins a reader, and no external messages or invitations are sent by this implementation.
 
-The mobile GitHub Actions workflow runs locked client/Functions installs, typechecking, unit tests, real SDK/rules/backend tests in the isolated demo emulators, and iOS/Android bundle exports. The SDK recovery test deliberately loses successful circle/message acknowledgements through a loopback-only proxy, then recovers the persisted retry identities and checks that no duplicate is created. The workflow uses Node 22 and Java 21, has read-only repository permissions, and does not deploy or use production credentials.
+The mobile GitHub Actions workflow runs locked client/Functions installs, typechecking, unit tests, native permission introspection, real SDK/rules/backend tests in the isolated demo emulators, and iOS/Android bundle exports. Native checks verify the profile-photo purpose text, explicit Android camera/microphone merge exclusions, bounded legacy storage permissions, absence of broad modern media-library permissions, and retained background playback. The SDK recovery test deliberately loses successful circle/message acknowledgements through a loopback-only proxy, then recovers the persisted retry identities and checks that no duplicate is created. The workflow uses Node 22 and Java 21, has read-only repository permissions, and does not deploy or use production credentials.

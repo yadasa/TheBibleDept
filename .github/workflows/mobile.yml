@@ -53,6 +53,8 @@ jobs:
         run: |
           npm run typecheck
           npm test
+      - name: Verify native photo and playback permissions
+        run: npm run verify:native-config
       - name: Firebase SDK, rules, and backend integration tests
         run: |
           node -e "require('node:fs').writeFileSync('functions/.secret.local', 'EXPO_PUSH_ACCESS_TOKEN=local-ci-token\n')"

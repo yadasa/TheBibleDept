@@ -44,6 +44,7 @@ export function CommunityProfileEditor({joining=false,onSaved}:{joining?:boolean
     finally{locked.current=false;setBusy('');}
   }
   return <View>
+    {!community.ready&&!community.error&&<Notice text="Loading your saved profile…"/>}
     <View style={{alignItems:'center',gap:12,marginBottom:24}}><ProfileAvatar name={name||'Your profile'} photoData={photo} size={104} club={community.earned.some(a=>a.id==='six-percent-club')}/>
       <ActionButton title={photo?'Change profile photo':'Add profile photo'} icon="camera" secondary loading={busy==='photo'} disabled={!!busy||!community.ready} onPress={()=>void pickPhoto()}/>
       {!!photo&&<ActionButton title="Remove photo" variant="ghost" disabled={!!busy} onPress={()=>{setPhoto(null);setMessage('Photo removed. Save your profile to keep this change.');}}/>}
@@ -51,10 +52,11 @@ export function CommunityProfileEditor({joining=false,onSaved}:{joining?:boolean
     <Field label="Display name" value={name} onChangeText={setName} placeholder="What should we call you?" maxLength={80} autoComplete="name" editable={!busy&&community.ready}/>
     <Text style={{...t.section,color:c.ink,marginTop:12}}>Grow together</Text>
     <Text style={{...t.body,color:c.muted,marginVertical:12}}>Join to share your name and photo, celebrate milestones, and chat in reading circles. Your email, notes, and prayer journal stay private.</Text>
-    <Preference label="Join the community" description="Make your profile visible to other signed-in community members." value={joined} onChange={setJoined} disabled={!!busy}/>
-    <Preference label="Share my reading streak" description="Let others see your current reading rhythm." value={shareStreak} onChange={setShareStreak} disabled={!!busy}/>
-    <Preference label="Share my achievements" description="Show earned badges and journey progress, including the 6% Club emblem." value={shareBadges} onChange={setShareBadges} disabled={!!busy}/>
+    <Preference label="Join the community" description="Make your profile visible to other signed-in community members." value={joined} onChange={setJoined} disabled={!!busy||!community.ready}/>
+    <Preference label="Share my reading streak" description="Let others see your current reading rhythm." value={shareStreak} onChange={setShareStreak} disabled={!!busy||!community.ready}/>
+    <Preference label="Share my achievements" description="Show earned badges and journey progress, including the 6% Club emblem." value={shareBadges} onChange={setShareBadges} disabled={!!busy||!community.ready}/>
     {!!error&&<Notice error text={error}/>}
+    {!community.ready&&!!community.error&&<><Notice error text={community.error}/><ActionButton title="Retry community profile" secondary onPress={community.retryCommunity}/></>}
     {!!message&&<Notice success text={message}/>}
     <ActionButton title={joining&&!community.settings.joined?'Join community':'Save profile'} loading={busy==='save'} disabled={!!busy||!community.ready||!name.trim()} onPress={()=>void save()} icon="check"/>
     {!!community.settings.blockedUids.length&&community.settings.joined&&<View style={{marginTop:24}}><Notice text={`${community.settings.blockedUids.length} hidden ${community.settings.blockedUids.length===1?'reader':'readers'}. Their activity and messages are hidden for you.`}/><ActionButton title="Unhide all readers" secondary disabled={!!busy} onPress={()=>{if(locked.current)return;locked.current=true;setBusy('unhide');setError('');void community.perform('unhideReadingCommunityReaders',{}).then(()=>setMessage('All readers are visible again.')).catch(e=>setError(messageForUser(e,'Readers couldn’t be restored. Please try again.'))).finally(()=>{locked.current=false;setBusy('');});}}/></View>}

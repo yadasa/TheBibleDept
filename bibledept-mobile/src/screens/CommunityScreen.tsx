@@ -40,7 +40,7 @@ export function CommunityScreen({active=true,onAccount,onBadges,requestedSection
   },[active]);
   async function run(action:string,work:()=>Promise<void>){if(locked.current)return;locked.current=true;setBusy(action);setError('');setMessage('');try{await work();}catch(e){setError(messageForUser(e,'That change couldn’t be saved. Please try again.'));}finally{locked.current=false;setBusy('');}}
   if(!user)return <View><Text accessibilityRole="header" style={{...t.title,color:c.ink}}>Better together.</Text><Text style={{...t.body,color:c.muted,marginVertical:16}}>Celebrate someone’s steady week. Find a circle. Keep showing up for the Word, together.</Text><ClubIntro/><ActionButton title="Sign in to join the community" icon="people" onPress={onAccount}/><Notice text="Community is optional. Reading, notes, and your private prayer journal stay available as before."/></View>;
-  if(!community.ready)return <ActivityIndicator color={c.orange}/>;
+  if(!community.ready)return <View><ActivityIndicator accessibilityLabel="Loading community profile" color={c.orange}/>{!!community.error&&<><Notice error text={community.error}/><ActionButton title="Retry community profile" secondary onPress={community.retryCommunity}/></>}</View>;
   if(!community.settings.joined)return <View><Text accessibilityRole="header" style={{...t.title,color:c.ink}}>There’s room for you.</Text><Text style={{...t.body,color:c.muted,marginVertical:16}}>Meet other readers, celebrate their progress, and start a conversation in your own reading circle.</Text><ClubIntro/><CommunityProfileEditor joining/>{!!community.error&&<Notice error text={community.error}/>}</View>;
   if(editing)return <AccountPage title="Community profile" onBack={()=>setEditing(false)} backLabel="Back to community"><CommunityProfileEditor onSaved={()=>setEditing(false)}/></AccountPage>;
   const selected=reader;
@@ -49,7 +49,7 @@ export function CommunityScreen({active=true,onAccount,onBadges,requestedSection
     <Text style={{...t.body,color:c.muted,marginBottom:16}}>Every step is worth celebrating. There’s a reader alongside you.</Text>
     <View style={{flexDirection:'row',gap:10,marginBottom:20}}><View style={{flex:1}}><ActionButton title="My badges" icon="award" secondary onPress={onBadges}/></View><View style={{flex:1}}><ActionButton title="My profile" icon="user" secondary onPress={()=>setEditing(true)}/></View></View>
     <View accessibilityRole="tablist" style={{flexDirection:'row',gap:8,marginBottom:24}}>{(['Activity','Readers','Circles'] as const).map(value=><Pressable key={value} accessibilityRole="tab" aria-selected={section===value} accessibilityState={{selected:section===value}} onPress={()=>{setSection(value);setError('');setMessage('');top();}} style={{flex:1,paddingVertical:13,paddingHorizontal:8,minHeight:46,borderRadius:24,alignItems:'center',backgroundColor:section===value?c.orange:c.surface}}><Text style={{...t.label,color:section===value?c.onOrange:c.ink}}>{value}</Text></Pressable>)}</View>
-    {!!community.error&&<Notice error text={community.error}/>}
+    {!!community.error&&<><Notice error text={community.error}/><ActionButton title="Retry community details" secondary onPress={community.retryCommunity}/></>}
     {!!error&&<Notice error text={error}/>}
     {!!message&&<Notice success text={message}/>}
     {section==='Circles'?<ReadingCircles active={active}/>:<>
