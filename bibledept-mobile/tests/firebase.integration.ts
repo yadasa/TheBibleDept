@@ -57,3 +57,50 @@ test('local phone verification signs the JavaScript SDK in without sending SMS',
     await deleteUser(result.user);
   }finally{await deleteApp(app);}
 });
+
+test('community consent, server-owned badges, and circle membership are enforced by real client rules',async()=>{
+  const suffix=Date.now(),apps=[0,1,2].map(index=>initializeApp({apiKey:'demo-bibledept-api-key',projectId:'demo-bibledept'},`community-rules-${suffix}-${index}`));
+  const clients=apps.map(app=>{
+    const auth=getAuth(app),db=getFirestore(app),functions=getFunctions(app,'us-central1');
+    connectAuthEmulator(auth,'http://127.0.0.1:19099',{disableWarnings:true});connectFirestoreEmulator(db,'127.0.0.1',18080);connectFunctionsEmulator(functions,'127.0.0.1',15001);
+    return {auth,db,functions};
+  });
+  const call=(index:number,name:string,data:unknown)=>httpsCallable(clients[index].functions,name)(data);
+  const denied=(error:unknown)=>(error as {code:string}).code==='permission-denied';
+  try {
+    for(let index=0;index<clients.length;index++)await createUserWithEmailAndPassword(clients[index].auth,`community-${suffix}-${index}@bibledept.test`,'Local-test-2468!');
+    const author=clients[0].auth.currentUser!.uid,reader=clients[1].auth.currentUser!.uid;
+    const profile={displayName:'Local community reader',photoData:null,joined:true,shareStreak:true,shareBadges:true};
+    await call(0,'updateCommunityProfile',profile);
+    await assert.rejects(getDoc(doc(clients[1].db,'bibledeptProfiles',author)),denied);
+    await call(1,'updateCommunityProfile',{...profile,displayName:'Circle member'});
+    assert.equal((await getDoc(doc(clients[1].db,'bibledeptProfiles',author))).data()?.displayName,profile.displayName);
+    await assert.rejects(setDoc(doc(clients[0].db,'bibledeptProfiles',author),{...profile,badgeIds:['six-percent-club']}),denied);
+    await assert.rejects(setDoc(doc(clients[0].db,'bibledeptUsers',author,'achievements','six-percent-club'),{earnedAt:serverTimestamp()}),denied);
+    await assert.rejects(getDoc(doc(clients[1].db,'bibledeptUsers',author,'settings','community')),denied);
+    const created=(await call(0,'createReadingCircle',{name:'Private local circle'})).data as {id:string};
+    const circle=doc(clients[0].db,'bibledeptCircles',created.id),invite=(await getDoc(circle)).data()!;
+    await assert.rejects(getDoc(doc(clients[1].db,'bibledeptCircles',created.id)),denied);
+    await assert.rejects(call(1,'sendReadingCircleMessage',{circleId:created.id,messageId:'not-a-member',text:'Denied test message.'}),error=>{
+      const value=error as {details?:{app?:string;message?:string}};
+      return value.details?.app==='bibledept-community'&&value.details?.message==='You must be a circle member to send messages.';
+    });
+    await call(1,'joinReadingCircle',{code:invite.code});
+    assert.equal((await getDoc(doc(clients[1].db,'bibledeptCircles',created.id))).data()?.memberCount,2);
+    const messageId='client-rules-message';
+    await assert.rejects(setDoc(doc(clients[0].db,'bibledeptCircles',created.id,'bibledeptMessages',messageId),{uid:author,text:'Direct write',createdAt:serverTimestamp()}),denied);
+    await call(0,'sendReadingCircleMessage',{circleId:created.id,messageId,text:'A local circle message.'});
+    assert.equal((await getDoc(doc(clients[1].db,'bibledeptCircles',created.id,'bibledeptMessages',messageId))).data()?.text,'A local circle message.');
+    await call(2,'updateCommunityProfile',{...profile,displayName:'Outside reader'});
+    await assert.rejects(getDoc(doc(clients[2].db,'bibledeptCircles',created.id,'bibledeptMessages',messageId)),denied);
+    await call(1,'leaveReadingCircle',{circleId:created.id});
+    await assert.rejects(getDoc(doc(clients[1].db,'bibledeptCircles',created.id,'bibledeptMessages',messageId)),denied);
+    await call(1,'updateCommunityProfile',{...profile,joined:false});
+    assert.equal((await getDoc(doc(clients[0].db,'bibledeptProfiles',reader))).exists(),false);
+    await assert.rejects(getDoc(doc(clients[1].db,'bibledeptProfiles',author)),denied);
+    await assert.rejects(getDoc(doc(clients[0].db,'bibledeptCommunityReports','anything')),denied);
+  }finally{
+    for(const client of clients){if(client.auth.currentUser)await deleteUser(client.auth.currentUser);await terminate(client.db);}
+    await Promise.all(apps.map(app=>deleteApp(app)));
+  }
+});

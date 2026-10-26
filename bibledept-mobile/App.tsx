@@ -35,7 +35,9 @@ import { NativeScrollFade } from "./src/components/NativeScrollFade";
 import { BibleHub } from "./src/screens/BibleHub";
 import { AccountScreen } from "./src/screens/AccountScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
-import { PrayerScreen } from "./src/screens/PrayerScreen";
+import { CommunityScreen, CommunitySection } from "./src/screens/CommunityScreen";
+import { CommunityProvider } from './src/services/CommunityProvider';
+import { AchievementCelebration } from './src/components/community/AchievementCelebration';
 import { NotesScreen } from "./src/screens/NotesScreen";
 import { AuthProvider, useAuth } from "./src/services/AuthProvider";
 import { ReadingProvider } from "./src/services/ReadingProvider";
@@ -54,17 +56,19 @@ import { usePrepareReading } from './src/services/usePrepareReading';
 // should not rebuild a reading, prayer draft or account form before motion.
 const HomePage = memo(HomeScreen);
 const BiblePage = memo(BibleHub);
-const PrayerPage = memo(PrayerScreen);
+const CommunityPage = memo(CommunityScreen);
 const NotesPage = memo(NotesScreen);
 const AccountPage = memo(AccountScreen);
 const BottomNavigation = memo(LiquidBottomNav);
-const warmOrder: readonly Tab[] = ["Bible", "Prayer", "Account", "Notes"];
+type NavigationMemory={tab:Tab;accountPage:'home'|'badges'|'prayer';communitySection:CommunitySection;returnToCommunity?:boolean;initialLinkHandled:boolean;initialLinkRequest?:Promise<string|null>};
+const warmOrder: readonly Tab[] = ["Bible", "Community", "Account", "Notes"];
 function retainPages(current: Tab[], required: readonly Tab[]): Tab[] {
   const missing = required.filter((item) => !current.includes(item));
   return missing.length ? [...current, ...missing] : current;
 }
 
 export default function App() {
+  const navigation=useRef<NavigationMemory>({tab:'Home',accountPage:'home',communitySection:'Activity',initialLinkHandled:false});
   return (
     <SafeAreaProvider>
       <AuthProvider>
@@ -76,7 +80,7 @@ export default function App() {
                   <ReadingProvider>
                     <ReadingTextProvider>
                       <PlanProvider>
-                        <AppShell />
+                        <CommunityProvider><AppShell navigation={navigation}/></CommunityProvider>
                       </PlanProvider>
                     </ReadingTextProvider>
                   </ReadingProvider>
@@ -89,28 +93,31 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-function AppShell() {
+function AppShell({navigation}:{navigation:RefObject<NavigationMemory>}) {
+  const initialTab=useRef(navigation.current.tab).current,initialIndex=tabOrder.indexOf(initialTab);
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user,ready:authReady } = useAuth();
   const { mode, colors: c } = useTheme(),
     plan = usePlan(),
     notifications = useNotifications();
-  const [tab, setTab] = useState<Tab>("Home"),
-    [visited, setVisited] = useState<Tab[]>(["Home"]),
+  const [tab, setTab] = useState<Tab>(initialTab),
+    [visited, setVisited] = useState<Tab[]>([initialTab]),
     [reference, setReference] = useState<string>(),
     [translation, setTranslation] = useState<Translation>("web"),
     [revision, setRevision] = useState(0),
     [planRequestDay, setPlanRequestDay] = useState<number>(),
     [podcastRequestRevision, setPodcastRequestRevision] = useState(0),
     [podcastRequestDay, setPodcastRequestDay] = useState(1),
-    [preparedReadKey,setPreparedReadKey]=useState('');
+    [preparedReadKey,setPreparedReadKey]=useState(''),
+    [accountRequest,setAccountRequest]=useState<{page:'home'|'badges'|'prayer';revision:number}>({page:navigation.current.accountPage,revision:0}),
+    [communityRequest,setCommunityRequest]=useState<{section:CommunitySection;revision:number}>({section:navigation.current.communitySection,revision:0});
   const {preferredTranslation}=useReadingText();
   const currentReadKey=`${user?.uid||'guest'}:${plan.currentDay}`;
   usePrepareReading(tab==='Home'&&plan.ready,plan.currentDay,plan.getReadingPosition(plan.currentDay).chapter,preferredTranslation);
-  const journeyRef = useRef<PageJourney>({ from: 2, to: 2 }),
-    position = useRef(2),
-    page = useRef(new Animated.Value(2)).current,
-    displayed = useRef<Tab>("Home"),
+  const journeyRef = useRef<PageJourney>({ from: initialIndex, to: initialIndex }),
+    position = useRef(initialIndex),
+    page = useRef(new Animated.Value(initialIndex)).current,
+    displayed = useRef<Tab>(initialTab),
     slide = useRef(new Animated.Value(1)).current,
     blurTarget = useRef<View | null>(null),
     grainTarget = useRef<View | null>(null),
@@ -118,7 +125,7 @@ function AppShell() {
     [screenHeight, setScreenHeight] = useState(800),
     [contentTop, setContentTop] = useState(84);
   const transitionInProgress = useRef(false),
-    requestedTab = useRef<Tab>("Home"),
+    requestedTab = useRef<Tab>(initialTab),
     visitedPages = useRef(visited),
     latestPlan = useRef(plan);
   visitedPages.current = visited;
@@ -126,14 +133,22 @@ function AppShell() {
   const navigate = useCallback((next: Tab) => {
     if (next === requestedTab.current) return;
     requestedTab.current = next;
+    navigation.current.tab=next;
+    if(next!=='Account')navigation.current.returnToCommunity=false;
     transitionInProgress.current = true;
     const required = pagesCrossed(position.current, tabOrder.indexOf(next));
     if (required.some((item) => !visitedPages.current.includes(item)))
       setVisited((current) => retainPages(current, required));
     setTab(next);
-  }, []);
-  const openAccount = useCallback(() => navigate("Account"), [navigate]);
-  const openPrayer = useCallback(() => navigate("Prayer"), [navigate]);
+  }, [navigation]);
+  const openAccount = useCallback(() => {navigation.current.accountPage='home';setAccountRequest(value=>({page:'home',revision:value.revision+1}));navigate("Account");}, [navigate,navigation]);
+  const openPrayer = useCallback(() => {navigation.current.accountPage='prayer';setAccountRequest(value=>({page:'prayer',revision:value.revision+1}));navigate('Account');}, [navigate,navigation]);
+  const openBadges = useCallback(() => {navigation.current.accountPage='badges';setAccountRequest(value=>({page:'badges',revision:value.revision+1}));navigate('Account');}, [navigate,navigation]);
+  const openCommunity = useCallback(() => {navigation.current.communitySection='Activity';setCommunityRequest(value=>({section:'Activity',revision:value.revision+1}));navigate('Community');}, [navigate,navigation]);
+  const openCircles = useCallback(() => {navigation.current.communitySection='Circles';setCommunityRequest(value=>({section:'Circles',revision:value.revision+1}));navigate('Community');}, [navigate,navigation]);
+  const openCommunitySignIn=useCallback(()=>{navigation.current.returnToCommunity=true;openAccount();},[navigation,openAccount]);
+  const rememberAccountPage=useCallback((page:'home'|'badges'|'prayer')=>{navigation.current.accountPage=page;},[navigation]);
+  useEffect(()=>{if(user&&navigation.current.returnToCommunity){navigation.current.returnToCommunity=false;navigate('Community');}},[user?.uid,navigation,navigate]);
   const openNotes = useCallback(() => navigate("Notes"), [navigate]);
   const openPassage = useCallback((ref: string, version: Translation) => {
     setReference(ref);
@@ -215,20 +230,26 @@ function AppShell() {
     }
   }, [notifications.intent]);
   useEffect(() => {
+    if(!authReady)return;
     const open = (url: string | null) => {
       if (!url) return;
       const route = parseAppLink(url, __DEV__);
       if (!route) return;
       if (route.tab === "Bible")
         openPassage(route.reference, route.translation);
+      else if(route.tab==='Prayer')openPrayer();
+      else if(route.tab==='Circles')openCircles();
+      else if(route.tab==='Badges')openBadges();
+      else if(route.tab==='Community')openCommunity();
       else navigate(route.tab === "Today" ? "Home" : route.tab);
     };
     let active = true;
-    Linking.getInitialURL()
-      .then((url) => {
-        if (active) open(url);
-      })
-      .catch(() => {});
+    if(!navigation.current.initialLinkHandled) {
+      navigation.current.initialLinkRequest??=Linking.getInitialURL();
+      void navigation.current.initialLinkRequest.then(url=>{
+        if(active&&!navigation.current.initialLinkHandled){navigation.current.initialLinkHandled=true;open(url);}
+      }).catch(()=>{});
+    }
     const subscription = Linking.addEventListener("url", (event) =>
       open(event.url),
     );
@@ -236,7 +257,7 @@ function AppShell() {
       active = false;
       subscription.remove();
     };
-  }, [openPassage, navigate]);
+  }, [authReady,navigation,openPassage,navigate,openPrayer,openCircles,openBadges,openCommunity]);
   const beginTransition = useCallback(
     (next: Tab, immediate: boolean) => {
       const to = tabOrder.indexOf(next),
@@ -276,7 +297,7 @@ function AppShell() {
   const headings: Record<Tab, string> = {
     Home: "",
     Bible: "Bible",
-    Prayer: "Prayer journal",
+    Community: "",
     Notes: "Your notes",
     Account: "",
   };
@@ -418,9 +439,14 @@ function AppShell() {
                                     initialTranslation={reference ? translation : undefined}
                                     onAccount={openAccount}
                                   />
-                                ) : item === "Prayer" ? (
-                                  <PrayerPage
-                                    onAccount={openAccount}
+                                ) : item === "Community" ? (
+                                  <CommunityPage
+                                    key={user?.uid||'guest'}
+                                    active={active}
+                                    onAccount={openCommunitySignIn}
+                                    onBadges={openBadges}
+                                    requestedSection={communityRequest.section}
+                                    requestRevision={communityRequest.revision}
                                   />
                                 ) : item === "Notes" ? (
                                   <NotesPage
@@ -428,7 +454,7 @@ function AppShell() {
                                     onPassage={openPassage}
                                   />
                                 ) : (
-                                  <AccountPage onOpenPlan={openPlan} onReadPassage={openPassage} onOpenPrayer={openPrayer} onOpenNotes={openNotes}/>
+                                  <AccountPage onOpenPlan={openPlan} onReadPassage={openPassage} onOpenNotes={openNotes} onCommunity={openCommunity} onCircles={openCircles} onRead={read} onRememberPage={rememberAccountPage} requestedPage={accountRequest.page} requestRevision={accountRequest.revision}/>
                                 )}
                               </PodcastPageContent>
                             </ScreenScrollView>
@@ -442,6 +468,7 @@ function AppShell() {
             </View>
           </BlurTargetView>
           <PodcastNowPlaying onOpen={openPodcast} />
+          <AchievementCelebration onOpen={openBadges}/>
           <BottomNavigation
             active={tab}
             onNavigate={navigate}

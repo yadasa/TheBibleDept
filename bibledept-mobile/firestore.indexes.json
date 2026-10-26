@@ -1,1 +1,50 @@
-{"indexes":[{"collectionGroup":"reminderState","queryScope":"COLLECTION_GROUP","fields":[{"fieldPath":"enabled","order":"ASCENDING"},{"fieldPath":"nextEvaluationAt","order":"ASCENDING"}]},{"collectionGroup":"notificationCampaigns","queryScope":"COLLECTION_GROUP","fields":[{"fieldPath":"state","order":"ASCENDING"},{"fieldPath":"receiptCheckAt","order":"ASCENDING"}]}],"fieldOverrides":[{"collectionGroup":"notificationCampaigns","fieldPath":"deleteAfter","ttl":true,"indexes":[]}]}
+{
+  "indexes": [
+    {
+      "collectionGroup": "reminderState",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "enabled",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nextEvaluationAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notificationCampaigns",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receiptCheckAt",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "notificationCampaigns",
+      "fieldPath": "deleteAfter",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "bibledeptMessages",
+      "fieldPath": "uid",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    }
+  ]
+}

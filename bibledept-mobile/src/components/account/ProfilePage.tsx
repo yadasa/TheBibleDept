@@ -1,16 +1,17 @@
-import { reload, sendEmailVerification, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import { reload, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../services/AuthProvider';
 import { getFirebase, usingEmulators } from '../../services/firebase';
 import { messageForUser } from '../../services/userMessage';
 import { Colors, typography as t, useThemedStyles } from '../../theme';
-import { ActionButton, Field, Notice } from '../ui';
+import { ActionButton, Notice } from '../ui';
 import { AccountPage } from './AccountPage';
+import { CommunityProfileEditor } from '../community/CommunityProfileEditor';
 
 export function ProfilePage({onBack}:{onBack:()=>void}) {
   const {user}=useAuth(),{s}=useThemedStyles(styles);
-  const [name,setName]=useState(user?.displayName||''),[verified,setVerified]=useState(!!user?.emailVerified);
+  const [verified,setVerified]=useState(!!user?.emailVerified);
   const [busy,setBusy]=useState(''),[error,setError]=useState(''),[message,setMessage]=useState(''),[positive,setPositive]=useState(false);
   const mounted=useRef(true),locked=useRef(false);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
@@ -23,8 +24,7 @@ export function ProfilePage({onBack}:{onBack:()=>void}) {
     finally{locked.current=false;if(mounted.current)setBusy('');}
   }
   return <AccountPage title="Profile & sign-in" intro="Keep your details up to date and recover access to your account." onBack={onBack}>
-    <Field label="Your name" value={name} onChangeText={value=>{setName(value);setMessage('');}} maxLength={80} autoComplete="name" textContentType="name" editable={!busy} placeholder="Your name"/>
-    <ActionButton title="Save name" icon="check" disabled={!!busy||name.trim()===(owner.displayName||'')} loading={busy==='name'} onPress={()=>void run('name',async()=>{await updateProfile(owner,{displayName:name.trim()||null});return 'Your name is saved.';})}/>
+    <CommunityProfileEditor/>
     {!!owner.email&&<View style={s.section}><Text style={s.label}>Email address</Text><Text selectable style={s.value}>{owner.email}</Text><Notice text={verified?'Email confirmed.':'Confirm this email address belongs to you.'} success={verified}/>
       {!verified&&<><ActionButton title="Send confirmation email" secondary disabled={!!busy} loading={busy==='verify'} onPress={()=>void run('verify',async()=>{await sendEmailVerification(owner);return usingEmulators?'No email was sent in this preview.':'Confirmation email sent. Check your inbox.';})}/>
       <ActionButton title="I’ve confirmed my email" secondary disabled={!!busy} loading={busy==='check'} onPress={()=>void run('check',async()=>{await reload(owner);if(mounted.current)setVerified(owner.emailVerified);return owner.emailVerified?'Your email is confirmed.':'Your email isn’t confirmed yet. Open the link in your inbox, then check again.';})}/></>}

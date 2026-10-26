@@ -1,7 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // BEGIN BIBLEDEPT RULES
+    function bibledeptCommunityMember() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider in ['password','phone']
+        && get(/databases/$(database)/documents/bibledeptUsers/$(request.auth.uid)/settings/community).data.joined == true;
+    }
+    match /bibledeptProfiles/{uid} { allow read: if bibledeptCommunityMember(); }
+    match /bibledeptActivity/{id} { allow read: if bibledeptCommunityMember(); }
+    match /bibledeptCircles/{id} {
+      allow read: if bibledeptCommunityMember() && request.auth.uid in resource.data.memberIds;
+      match /bibledeptMessages/{message} {
+        allow read: if bibledeptCommunityMember()
+          && request.auth.uid in get(/databases/$(database)/documents/bibledeptCircles/$(id)).data.memberIds;
+      }
+    }
     match /bibledeptUsers/{uid} {
+      match /achievements/{id} { allow read: if owner(uid); }
+      match /circles/{id} { allow read: if owner(uid); }
+      match /circleReads/{id} {
+        allow read: if owner(uid);
+        allow create, update: if owner(uid) && bibledeptCommunityMember()
+          && request.auth.uid in get(/databases/$(database)/documents/bibledeptCircles/$(id)).data.memberIds
+          && request.resource.data.keys().hasOnly(['lastReadMessageId','updatedAt'])
+          && request.resource.data.lastReadMessageId is string
+          && request.resource.data.lastReadMessageId.matches('^[A-Za-z0-9_-]{1,150}$')
+          && request.resource.data.updatedAt == request.time;
+      }
+      match /cheeredMilestones/{id} { allow read: if owner(uid); }
       match /settings/{setting} {
         allow read: if owner(uid);
         allow create, update: if setting == 'planProgress' && owner(uid)
@@ -68,5 +95,6 @@ service cloud.firestore {
           && request.resource.data.createdAt is timestamp;
       }
     }
+    // END BIBLEDEPT RULES
   }
 }

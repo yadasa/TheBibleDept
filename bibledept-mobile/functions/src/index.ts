@@ -17,9 +17,11 @@ import { dispatchDueReminders, collectReceipts } from "./reminderWorker";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { logger } from "firebase-functions";
-import { auth } from "firebase-functions/v1";
+import { runWith } from "firebase-functions/v1";
 import { userPath } from "./streaks";
 import { getFirestore } from "firebase-admin/firestore";
+import { onDocumentWritten, onDocumentDeleted } from 'firebase-functions/v2/firestore';
+import { reconcileCommunity, saveCommunityProfile, createCircle, joinCircle, leaveCircle, sendCircleMessage, deleteCircleMessage, cheerMilestone, blockCommunityReader, unhideCommunityReaders, reportCommunityContent, deleteCommunityAccount } from './community';
 initializeApp();
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 export function authenticatedUid(request: CallableRequest) {
@@ -56,6 +58,31 @@ export const readingForeground = onCall((request) =>
 export const readingReminderOpened = onCall((request) =>
   recordOpen(authenticatedUid(request), request.data),
 );
+function communityCall<T>(handler:(uid:string,data:unknown)=>Promise<T>) {
+  return onCall(async request=>{
+    try{return await handler(authenticatedUid(request),request.data);}
+    catch(error){
+      // Only deliberate app guidance crosses into product copy; SDK diagnostics stay out.
+      if(error instanceof HttpsError)throw new HttpsError(error.code,error.message,{app:'bibledept-community',message:error.message});
+      throw error;
+    }
+  });
+}
+export const updateCommunityProfile=communityCall(saveCommunityProfile);
+export const refreshAchievements=communityCall(uid=>reconcileCommunity(uid));
+export const createReadingCircle=communityCall(createCircle);
+export const joinReadingCircle=communityCall(joinCircle);
+export const leaveReadingCircle=communityCall(leaveCircle);
+export const sendReadingCircleMessage=communityCall(sendCircleMessage);
+export const deleteReadingCircleMessage=communityCall(deleteCircleMessage);
+export const encourageCommunityMilestone=communityCall(cheerMilestone);
+export const hideCommunityReader=communityCall(blockCommunityReader);
+export const unhideReadingCommunityReaders=communityCall(uid=>unhideCommunityReaders(uid));
+export const reportReadingCommunityContent=communityCall(reportCommunityContent);
+export const refreshReadingAwards=onDocumentWritten('bibledeptUsers/{uid}/stats/streak',event=>reconcileCommunity(event.params.uid).then(()=>{}));
+export const refreshJourneyAwards=onDocumentWritten('bibledeptUsers/{uid}/settings/planProgress',event=>reconcileCommunity(event.params.uid).then(()=>{}));
+export const refreshReflectionAwards=onDocumentWritten('bibledeptUsers/{uid}/annotations/{id}',event=>reconcileCommunity(event.params.uid).then(()=>{}));
+export const cleanCommunityCelebration=onDocumentDeleted('bibledeptActivity/{id}',event=>getFirestore().recursiveDelete(getFirestore().collection('bibledeptActivity').doc(event.params.id)));
 const expoAccessToken = defineSecret("EXPO_PUSH_ACCESS_TOKEN");
 export const dispatchReadingReminders = onSchedule(
   {
@@ -89,7 +116,8 @@ export const collectReadingReminderReceipts = onSchedule(
       await collectReceipts(expoAccessToken.value());
   },
 );
-export const deleteReadingAccount = auth.user().onDelete(async (user) => {
+export const deleteReadingAccount = runWith({failurePolicy:true,timeoutSeconds:540,memory:'512MB'}).auth.user().onDelete(async (user) => {
+  await deleteCommunityAccount(user.uid);
   for (;;) {
     const bindings = await getFirestore()
       .collection("bibledeptPushBindings")

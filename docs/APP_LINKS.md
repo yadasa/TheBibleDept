@@ -5,9 +5,13 @@ Supported routes:
 - `https://thebibledept.com/read?ref=John%203%3A16&translation=web`
 - `https://www.thebibledept.com/prayer`
 - `https://thebibledept.com/account`
+- `https://thebibledept.com/community`
+- `https://thebibledept.com/circles`
+- `https://thebibledept.com/badges`
 - `bibledept://read?ref=John%203%3A16&translation=kjv`
 
 Links only navigate. Saving data and viewing journals still require Firebase sign-in.
+Community routes require opting into community; `/prayer` opens the private journal inside Account.
 The parser ignores unrelated domains, unsupported translations, invalid references, and unknown actions.
 
 ## Local testing

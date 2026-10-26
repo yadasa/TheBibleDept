@@ -5,6 +5,7 @@ export default ({config}:ConfigContext):ExpoConfig => {
   const nativePhoneAuth=process.env.BIBLEDEPT_NATIVE_PHONE==='1';
   const plugins=[...(config.plugins||[])];
   plugins.push('expo-asset','expo-image',['expo-notifications',{defaultChannel:'reading-reminders'}],['expo-audio',{microphonePermission:false,recordAudioAndroid:false,enableBackgroundRecording:false,enableBackgroundPlayback:true}]);
+  plugins.push(['expo-image-picker',{photosPermission:'Choose a photo for your Bible Dept profile.',cameraPermission:false,microphonePermission:false}]);
   if(nativePhoneAuth){
     const iosFile=process.env.BIBLEDEPT_FIREBASE_IOS_CONFIG;
     const androidFile=process.env.BIBLEDEPT_FIREBASE_ANDROID_CONFIG;

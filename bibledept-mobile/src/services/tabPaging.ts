@@ -1,6 +1,6 @@
 export const tabOrder = [
   "Notes",
-  "Prayer",
+  "Community",
   "Home",
   "Bible",
   "Account",

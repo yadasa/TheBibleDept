@@ -1,6 +1,6 @@
 import type { Translation } from './bible';
 
-export type AppLink = { tab: 'Today' | 'Prayer' | 'Account' } | { tab: 'Bible'; reference: string; translation: Translation };
+export type AppLink = { tab: 'Today' | 'Prayer' | 'Account' | 'Community' | 'Circles' | 'Badges' } | { tab: 'Bible'; reference: string; translation: Translation };
 const domains = new Set(['thebibledept.com', 'www.thebibledept.com']);
 
 export function passageLink(reference: string, translation: Translation): string {
@@ -22,6 +22,9 @@ export function parseAppLink(value: string, allowDevelopment = false): AppLink |
     if (path === '/') return { tab: 'Today' };
     if (path === '/prayer') return { tab: 'Prayer' };
     if (path === '/account') return { tab: 'Account' };
+    if (path === '/community') return { tab: 'Community' };
+    if (path === '/circles') return { tab: 'Circles' };
+    if (path === '/badges') return { tab: 'Badges' };
     if (path !== '/read') return null;
     const reference = url.searchParams.get('ref')?.trim();
     const translation = url.searchParams.get('translation') || 'web';
