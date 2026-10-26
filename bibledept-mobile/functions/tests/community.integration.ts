@@ -205,6 +205,24 @@ test('withdrawing sharing redacts public fields even when the subsequent refresh
   }finally {await cleanup(user);}
 });
 
+test('stale profile edits cannot restore withdrawn sharing and identical lost-ack retries keep the saved revision',async()=>{
+  const user=uid('profile-conflict');
+  try {
+    await saveCommunityProfile(user,{...profile,expectedRevision:null});
+    const prefs=userPath(user).collection('settings').doc('community'),first=(await prefs.get()).data()?.revision??null;
+    const withdrawal={...profile,shareBadges:false,expectedRevision:first};
+    await saveCommunityProfile(user,withdrawal);
+    const second=(await prefs.get()).data()?.revision;
+    await assert.rejects(saveCommunityProfile(user,{...profile,displayName:'An older open form',expectedRevision:first}),{code:'failed-precondition'});
+    assert.equal((await prefs.get()).data()?.shareBadges,false);assert.equal((await prefs.get()).data()?.revision,second);
+    assert.deepEqual((await db.collection('bibledeptProfiles').doc(user).get()).data()?.badgeIds,[]);
+    assert.match(first,/^[a-f0-9]{32}$/);assert.notEqual(first,second);
+    const retried=await saveCommunityProfile(user,withdrawal);
+    assert.equal(retried.revision,second);
+    await assert.rejects(saveCommunityProfile(user,{...profile,expectedRevision:'invalid-version'}),{code:'invalid-argument'});
+  }finally{await cleanup(user);}
+});
+
 test('only current circle owners can rename or replace invitations, and concurrent rotation retries keep one new code',async()=>{
   const owner=uid('manage-owner'),member=uid('manage-member'),outside=uid('manage-outside');
   try {

@@ -23,8 +23,8 @@ export const ACHIEVEMENTS:readonly Achievement[] = [
 export type AchievementMetrics = Record<AchievementMetric,number>;
 export const EMPTY_METRICS:AchievementMetrics = {readingDays:0,longestStreak:0,planDays:0,highlights:0,reflections:0,circles:0,encouragements:0};
 export type EarnedAchievement = {id:string;earnedAt:{toMillis:()=>number}|null};
-export type CommunitySettings = {displayName:string;photoData:string|null;joined:boolean;shareStreak:boolean;shareBadges:boolean;blockedUids:string[]};
-export const DEFAULT_COMMUNITY:CommunitySettings = {displayName:'',photoData:null,joined:false,shareStreak:true,shareBadges:true,blockedUids:[]};
+export type CommunitySettings = {displayName:string;photoData:string|null;joined:boolean;shareStreak:boolean;shareBadges:boolean;blockedUids:string[];revision:string|null};
+export const DEFAULT_COMMUNITY:CommunitySettings = {displayName:'',photoData:null,joined:false,shareStreak:true,shareBadges:true,blockedUids:[],revision:null};
 export type CommunityProfile = {id:string;displayName:string;photoData:string|null;profileVersion?:string;streak:number|null;lastReadingDate:string|null;timeZone:string|null;badgeIds:string[];planDays:number|null};
 export type CommunityActivity = {id:string;uid:string;kind:'joined'|'achievement';badgeId:string|null;cheerCount:number;createdAt:{toMillis:()=>number}|null};
 export type Circle = {id:string;name:string;code:string;memberCount:number;createdBy:string;lastMessageId?:string|null;lastSenderUid?:string|null;lastMessageAt?:{toMillis:()=>number}|null;unread?:boolean};

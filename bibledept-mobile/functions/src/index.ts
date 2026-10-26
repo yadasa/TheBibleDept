@@ -72,7 +72,10 @@ function communityCall<T>(handler:(uid:string,data:unknown)=>Promise<T>) {
     }
   });
 }
-export const updateCommunityProfile=communityCall(saveCommunityProfile);
+export const updateCommunityProfile=communityCall((uid,data)=>{
+  if(!data||typeof data!=='object'||!Object.prototype.hasOwnProperty.call(data,'expectedRevision'))throw new HttpsError('invalid-argument','Reopen your profile before saving changes.');
+  return saveCommunityProfile(uid,data);
+});
 export const refreshAchievements=communityCall(uid=>reconcileCommunity(uid));
 export const createReadingCircle=communityCall(createCircle);
 export const joinReadingCircle=communityCall(joinCircle);

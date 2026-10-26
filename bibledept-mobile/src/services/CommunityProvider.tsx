@@ -133,6 +133,8 @@ function useVisibleEncouragements(ids:string[],active:boolean) {
 export function useCircleMessages(circleId:string|null,active:boolean,count=50) {
   const {settings}=useCommunity();
   const [messages,setMessages]=useState<CircleMessage[]>([]),[circle,setCircle]=useState<(Circle&{memberIds:string[]})|null>(null),[loading,setLoading]=useState(false),[error,setError]=useState('');
+  const [attempt,setAttempt]=useState(0);
+  const retry=useCallback(()=>setAttempt(value=>value+1),[]);
   const lastCircle=useRef<string|null>(null);
   useEffect(()=>{
     if(lastCircle.current!==circleId){setMessages([]);setCircle(null);lastCircle.current=circleId;}
@@ -144,8 +146,8 @@ export function useCircleMessages(circleId:string|null,active:boolean,count=50) 
     const stops=[onSnapshot(ref,snapshot=>{setCircle(snapshot.exists()?{id:snapshot.id,...snapshot.data()} as Circle&{memberIds:string[]}:null);if(!snapshot.exists())failed();},failed),
       onSnapshot(query(collection(ref,'bibledeptMessages'),orderBy('createdAt','desc'),limit(count)),snapshot=>{setMessages(snapshot.docs.map(d=>({id:d.id,...d.data()} as CircleMessage)).reverse());setLoading(false);},failed)];
     return()=>stops.forEach(stop=>stop());
-  },[circleId,active,settings.joined,count]);
-  return {circle,messages:messages.filter(message=>!settings.blockedUids.includes(message.uid)),loadedCount:messages.length,loading,error};
+  },[circleId,active,settings.joined,count,attempt]);
+  return {circle,messages:messages.filter(message=>!settings.blockedUids.includes(message.uid)),loadedCount:messages.length,loading,error,retry};
 }
 
 export function useCommunityProfiles(ids:string[],active:boolean) {

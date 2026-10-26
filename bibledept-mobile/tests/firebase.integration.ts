@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deleteApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, createUserWithEmailAndPassword, deleteUser, getAuth, signOut, PhoneAuthCredential, signInWithCredential } from 'firebase/auth';
-import { connectFirestoreEmulator, deleteDoc, doc, getDoc, getFirestore, serverTimestamp, setDoc, terminate, updateDoc } from 'firebase/firestore';
+import { connectFirestoreEmulator, deleteDoc, doc, getDoc, getDocFromServer, getFirestore, serverTimestamp, setDoc, terminate, updateDoc } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
 import { localDate } from '../shared/habits';
 
@@ -65,13 +65,19 @@ test('community consent, server-owned badges, and circle membership are enforced
     connectAuthEmulator(auth,'http://127.0.0.1:19099',{disableWarnings:true});connectFirestoreEmulator(db,'127.0.0.1',18080);connectFunctionsEmulator(functions,'127.0.0.1',15001);
     return {auth,db,functions};
   });
-  const call=(index:number,name:string,data:Record<string,unknown>)=>httpsCallable(clients[index].functions,name)({...data,expectedUid:clients[index].auth.currentUser!.uid});
+  const call=async(index:number,name:string,data:Record<string,unknown>)=>{
+    const owner=clients[index].auth.currentUser!.uid;
+    if(name==='updateCommunityProfile'&&!Object.prototype.hasOwnProperty.call(data,'expectedRevision'))data={...data,expectedRevision:(await getDocFromServer(doc(clients[index].db,'bibledeptUsers',owner,'settings','community'))).data()?.revision??null};
+    return httpsCallable(clients[index].functions,name)({...data,expectedUid:owner});
+  };
   const denied=(error:unknown)=>(error as {code:string}).code==='permission-denied';
   try {
     for(let index=0;index<clients.length;index++)await createUserWithEmailAndPassword(clients[index].auth,`community-${suffix}-${index}@bibledept.test`,'Local-test-2468!');
     const author=clients[0].auth.currentUser!.uid,reader=clients[1].auth.currentUser!.uid;
     const profile={displayName:'Local community reader',photoData:null,joined:true,shareStreak:true,shareBadges:true};
     await call(0,'updateCommunityProfile',profile);
+    await assert.rejects(httpsCallable(clients[0].functions,'updateCommunityProfile')({...profile,expectedUid:author}),error=>(error as {code:string}).code==='functions/invalid-argument');
+    await assert.rejects(setDoc(doc(clients[0].db,'bibledeptUsers',author,'settings','community'),{...profile,revision:'0'.repeat(32)}),denied);
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptProfiles',author)),denied);
     await call(1,'updateCommunityProfile',{...profile,displayName:'Circle member'});
     assert.equal((await getDoc(doc(clients[1].db,'bibledeptProfiles',author))).data()?.displayName,profile.displayName);

@@ -12,6 +12,8 @@ Streaks expire using each reader’s confirmed reading time zone, including whil
 
 Reader search queries the public directory rather than filtering the first loaded page. Server-generated name prefixes support the beginning of a first or last name, with Unicode normalization and case folding. Queries debounce typing, return up to 200 readers, and ask for a more specific name at that limit. Renaming replaces old prefixes; opting out removes the searchable profile in the same transaction. No email or phone search keys are published.
 
+Profile saves carry the private revision loaded by the editor. If another device changes the photo, name, or sharing preferences, an older form cannot overwrite those changes or restore sharing that was withdrawn. The editor offers an explicit reload of saved values. Identical retries after a lost acknowledgement return the existing revision without duplicating changes.
+
 ## The 6% Club emblem
 
 The emblem is a vector open book beneath a rising star, surrounded by laurel branches. It uses warm gold, parchment, and a dark bronze ground. There is no numeral in its geometry. It appears at the bottom right of a qualifying reader’s round profile photo, in Account, the profile editor, community cards, reader profiles, and circle identities. Public appearances follow achievement-sharing consent.
@@ -53,6 +55,8 @@ New awards earned during the session produce a dismissible notice linking to the
 Members create a circle or join using its 12-character invitation code. Circles support 50 members, with at most 20 memberships per reader. Conversations open full-screen with a fixed composer, keyboard avoidance, a virtualized message list, and a shortcut back to the latest message. Members see real-time messages in chronological order, load up to 200 recent messages, copy an invitation, view member profiles, report content, hide a reader, delete their own messages, and leave. Group names and messages have bounded lengths.
 
 Every send carries a unique retry ID; the same ID/body returns the existing message. Drafts and pending retry IDs are saved per account/circle on the device, including before a send reaches the network. Reusing an ID with another body is rejected. The server checks community consent and circle membership in the same transaction as sending, and enforces a three-second send interval. Leaving removes future read/send access. If a creator leaves, ownership passes to a remaining member; empty circles and their history are removed.
+
+A failed conversation offers Retry conversation without discarding the saved draft. An unavailable circle shows its access/connection error instead of the empty-conversation invitation. Retrying always rechecks current membership through Firestore rules.
 
 Circle creation also saves a stable request before HTTP and recovers it after a reload. Retries return the original circle; a server-only creation receipt prevents stale requests from recreating a closed circle. Readers can open other circles while a request finishes or explicitly start a different creation. Community callables compare the initiating account UID with the authenticated UID before handling a request, preventing delayed actions from crossing an account switch.
 

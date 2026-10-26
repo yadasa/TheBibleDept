@@ -39,7 +39,10 @@ test('durable circle and message retries recover from offline requests and lost 
   const saved=new Map<string,string>(),storage={getItem:async(key:string)=>saved.get(key)||null,setItem:async(key:string,value:string)=>{saved.set(key,value);},removeItem:async(key:string)=>{saved.delete(key);}};
   try {
     const {user}=await createUserWithEmailAndPassword(auth,`recovery-${Date.now()}@bibledept.test`,'Local-test-2468!');
-    const call=async<T,>(name:string,data:Record<string,unknown>)=>(await httpsCallable<unknown,T>(functions,name)({...data,expectedUid:user.uid})).data;
+    const call=async<T,>(name:string,data:Record<string,unknown>)=>{
+      if(name==='updateCommunityProfile'&&!Object.prototype.hasOwnProperty.call(data,'expectedRevision'))data={...data,expectedRevision:(await getDocFromServer(doc(db,'bibledeptUsers',user.uid,'settings','community'))).data()?.revision??null};
+      return(await httpsCallable<unknown,T>(functions,name)({...data,expectedUid:user.uid})).data;
+    };
     await call('updateCommunityProfile',{displayName:'Local recovery reader',photoData:null,joined:true,shareStreak:true,shareBadges:true});
     const request:PendingCircleCreation={id:crypto.randomUUID(),name:'Disposable recovery circle'},key=circleCreationKey(user.uid);
     const create=(value:typeof request)=>call<{id:string}>('createReadingCircle',{requestId:value.id,name:value.name});

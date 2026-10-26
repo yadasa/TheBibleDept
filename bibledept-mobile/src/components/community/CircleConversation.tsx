@@ -128,7 +128,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
             <Notice text="Only shared profiles appear here. Hiding a reader affects what you see; it doesn’t remove them from the circle."/>
             {confirmLeave?<View style={s.invitation}><Text style={s.label}>Leave this circle?</Text><Notice text="You’ll need an invitation code to return. Existing messages remain for other members."/><ActionButton title="Confirm leave circle" secondary loading={busy==='leave'} disabled={!!busy} onPress={()=>void run('leave',async()=>{await community.perform('leaveReadingCircle',{circleId});onClose();})}/><ActionButton title="Stay in circle" variant="ghost" disabled={!!busy} onPress={()=>setConfirmLeave(false)}/></View>:<ActionButton title="Leave circle" variant="ghost" onPress={()=>setConfirmLeave(true)}/>}
           </ScrollView>:<>
-            {!!chat.error&&<View style={s.banner}><Notice error text={chat.error}/></View>}
+            {!!chat.error&&<View style={s.banner}><Notice error text={chat.error}/><ActionButton title="Retry conversation" secondary onPress={chat.retry}/></View>}
             {chat.loading&&<ActivityIndicator color={c.orange} style={{padding:12}}/>}
             <FlatList
               ref={list} data={messages} inverted keyExtractor={message=>message.id} style={{flex:1}}
@@ -136,7 +136,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
               initialNumToRender={16} maxToRenderPerBatch={12} windowSize={7} scrollEventThrottle={64}
               accessibilityLabel="Circle messages" maintainVisibleContentPosition={{minIndexForVisible:0}}
               onScroll={event=>{const bottom=event.nativeEvent.contentOffset.y<80;nearBottom.current=bottom;setAtBottom(value=>value===bottom?value:bottom);}}
-              ListEmptyComponent={!chat.loading?<View style={s.empty}><Icon name="chat" size={36} color={c.orange}/><Text style={s.section}>Start with a hello.</Text><Text style={s.body}>Share a thought from today’s reading or ask your circle a question.</Text></View>:null}
+              ListEmptyComponent={!chat.loading&&!chat.error?<View style={s.empty}><Icon name="chat" size={36} color={c.orange}/><Text style={s.section}>Start with a hello.</Text><Text style={s.body}>Share a thought from today’s reading or ask your circle a question.</Text></View>:null}
               ListFooterComponent={chat.loadedCount>=count?<View style={{paddingVertical:12}}>{count<200?<ActionButton title="Load earlier messages" secondary onPress={()=>setCount(value=>Math.min(value+50,200))}/>:<Text style={s.subtitle}>History is limited to the latest 200 messages.</Text>}</View>:null}
               renderItem={({item:message})=>{
                 const own=message.uid===user?.uid,reader=readers.get(message.uid),name=own?'You':reader?.displayName||'Reader';

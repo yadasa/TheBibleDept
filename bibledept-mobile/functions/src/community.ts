@@ -71,8 +71,10 @@ export async function reconcileCommunity(uid:string,now=Date.now()) {
 export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now()) {
   let value:ReturnType<typeof validateCommunityProfile>;
   try{value=validateCommunityProfile(input);}catch(e){invalid((e as Error).message);}
+  const guarded=Object.prototype.hasOwnProperty.call(input,'expectedRevision'),expected=(input as {expectedRevision?:unknown}).expectedRevision;
+  if(guarded&&expected!==null&&(typeof expected!=='string'||!/^[a-f0-9]{32}$/.test(expected)))invalid('Reopen your profile before saving changes.');
   let photoWork:Promise<string|null>|undefined;
-  await getFirestore().runTransaction(async tx=>{
+  const savedRevision=await getFirestore().runTransaction(async tx=>{
     const ref=userPath(uid).collection('settings').doc('community');
     const prior=await tx.get(ref);
     const events=await tx.get(activity().where('uid','==',uid));
@@ -86,7 +88,11 @@ export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now
     if(photoData!==null&&photoData!==prior.data()?.photoData) {
       try{photoData=await(photoWork??=normalizeProfilePhoto(value.photoData));}catch(e){invalid((e as Error).message);}
     }
-    tx.set(ref,{...value!,photoData,blockedUids:prior.data()?.blockedUids||[],updatedAt:Timestamp.fromMillis(now)});
+    const next={...value!,photoData},current=prior.data(),same=!!current&&Object.entries(next).every(([key,value])=>current[key]===value);
+    const priorRevision=typeof current?.revision==='string'&&/^[a-f0-9]{32}$/.test(current.revision)?current.revision:null;
+    if(guarded&&expected!==priorRevision&&!same)throw new HttpsError('failed-precondition','Your profile changed. Reload the saved profile before saving your changes.');
+    const revision=same&&priorRevision?priorRevision:randomBytes(16).toString('hex');
+    tx.set(ref,{...next,revision,blockedUids:current?.blockedUids||[],updatedAt:Timestamp.fromMillis(now)});
     // Withdrawing sharing removes previous celebrations as well as the profile.
     if(!value.joined||!value.shareBadges)for(const event of events.docs)tx.delete(event.ref);
     if(!value.joined)tx.delete(profiles().doc(uid));
@@ -102,8 +108,9 @@ export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now
         planDays:value.shareBadges?visible?.planDays??null:null,updatedAt:Timestamp.fromMillis(now)});
       if(!prior.data()?.joined)tx.create(activity().doc(),{uid,kind:'joined',badgeId:null,cheerCount:0,createdAt:Timestamp.fromMillis(now)});
     }
+    return revision;
   });
-  return reconcileCommunity(uid,now);
+  return {...await reconcileCommunity(uid,now),revision:savedRevision};
 }
 
 export async function createCircle(uid:string,input:unknown,now=Date.now()) {
