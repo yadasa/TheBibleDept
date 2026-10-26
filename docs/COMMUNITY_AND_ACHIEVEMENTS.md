@@ -10,6 +10,8 @@ The system picker opens only after a photo action. Images are cropped square and
 
 Streaks expire using each reader’s confirmed reading time zone, including while the community page remains open. Readers may hide their streak or badges independently. Preferences and public-field redaction commit in the same transaction, even if a subsequent metrics refresh fails. Leaving community removes their public profile and previous shared milestones. Private achievements and circle memberships remain, so they can rejoin later. Hidden-reader state is private, filters activity and chat, and can be cleared in the profile editor.
 
+Reader search queries the public directory rather than filtering the first loaded page. Server-generated name prefixes support the beginning of a first or last name, with Unicode normalization and case folding. Queries debounce typing, return up to 200 readers, and ask for a more specific name at that limit. Renaming replaces old prefixes; opting out removes the searchable profile in the same transaction. No email or phone search keys are published.
+
 ## The 6% Club emblem
 
 The emblem is a vector open book beneath a rising star, surrounded by laurel branches. It uses warm gold, parchment, and a dark bronze ground. There is no numeral in its geometry. It appears at the bottom right of a qualifying reader’s round profile photo, in Account, the profile editor, community cards, reader profiles, and circle identities. Public appearances follow achievement-sharing consent.
@@ -54,6 +56,8 @@ Circle creation also saves a stable request before HTTP and recovers it after a 
 
 Circle lists sort by recent conversation. A private per-account marker tracks whether the latest message has been viewed; unread indicators appear in circle rows and the Account shortcut. The marker updates only while the app is in the foreground and the conversation is showing the latest message. Other members cannot see read receipts. Own messages and hidden readers do not create unread indicators. Deleting the most recent message updates the circle’s latest-message metadata atomically.
 
+The current owner can rename the circle, replace its invitation, or remove a member from Circle details → Manage circle. Replacing an invitation preserves existing membership. Removing a member also replaces the code, removes their membership/read marker, and preserves their earlier messages; a fresh invitation is required to return. Confirmation appears beside the action. All management permissions and membership-index updates are checked in server transactions. Concurrent invitation retries reuse one replacement, and a stale removal cannot remove a reader who has since received a fresh invitation. Ownership passes to a remaining member when the owner leaves.
+
 Encouragement is one per reader per activity, excludes self-encouragement, and counts distinct recipients for the Encourager award. Live encouragement state is queried for the displayed events, so older reactions stay marked after a reader has encouraged more than 200 milestones. Reports are stored in a server-only queue for staff to review in the intended Firebase project. Each report retains a bounded copy of the reported activity/message so staff can review it after removal. Retries are deduplicated per reporter/content and preserve an existing staff resolution. Report forms explain that staff receive the content and explanation. This release does not add a staff moderation dashboard.
 
 ## Backend boundaries
@@ -94,4 +98,4 @@ The Firebase default remains `demo-bibledept`. Live release requires the intende
 
 New routes are `/community`, `/circles`, and `/badges`, with the same host validation as existing app links. No group invitation automatically joins a reader, and no external messages or invitations are sent by this implementation.
 
-The mobile GitHub Actions workflow runs locked client/Functions installs, typechecking, unit tests, real SDK/rules/backend tests in the isolated demo emulators, and iOS/Android bundle exports. It uses Node 22 and Java 21, has read-only repository permissions, and does not deploy or use production credentials.
+The mobile GitHub Actions workflow runs locked client/Functions installs, typechecking, unit tests, real SDK/rules/backend tests in the isolated demo emulators, and iOS/Android bundle exports. The SDK recovery test deliberately loses successful circle/message acknowledgements through a loopback-only proxy, then recovers the persisted retry identities and checks that no duplicate is created. The workflow uses Node 22 and Java 21, has read-only repository permissions, and does not deploy or use production credentials.

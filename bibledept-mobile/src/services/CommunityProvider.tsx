@@ -1,13 +1,13 @@
 import { collection, doc, documentId, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ACHIEVEMENTS, AchievementMetrics, Circle, circleHasUnread, CircleMessage, CommunityActivity, CommunityProfile, CommunitySettings, DEFAULT_COMMUNITY, EarnedAchievement, EMPTY_METRICS } from '../../shared/community';
+import { ACHIEVEMENTS, AchievementMetrics, Circle, circleHasUnread, CircleMessage, CommunityActivity, communityNameQuery, CommunityProfile, CommunitySettings, DEFAULT_COMMUNITY, EarnedAchievement, EMPTY_METRICS } from '../../shared/community';
 import { useAuth } from './AuthProvider';
 import { callBackend, getFirebase } from './firebase';
 import { USER_COLLECTION } from './dataPaths';
 import { communityErrorForUser } from './communityError';
 import { UserFacingError } from './userMessage';
 
-type CommunityState={settings:CommunitySettings;ready:boolean;metrics:AchievementMetrics;earned:EarnedAchievement[];newlyEarned:string[];dismissNewBadges:()=>void;circles:Circle[];error:string;perform:<T=unknown>(name:string,data:unknown)=>Promise<T>};
+type CommunityState={settings:CommunitySettings;ready:boolean;achievementsReady:boolean;achievementError:string;retryCommunity:()=>void;metrics:AchievementMetrics;earned:EarnedAchievement[];newlyEarned:string[];dismissNewBadges:()=>void;circles:Circle[];error:string;perform:<T=unknown>(name:string,data:unknown)=>Promise<T>};
 const Context=createContext<CommunityState|null>(null);
 export function CommunityProvider({children}:{children:ReactNode}) {
   const {user}=useAuth();
@@ -16,6 +16,9 @@ export function CommunityProvider({children}:{children:ReactNode}) {
 function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
   const [settings,setSettings]=useState<CommunitySettings>(DEFAULT_COMMUNITY),[ready,setReady]=useState(!owner);
   const [metrics,setMetrics]=useState(EMPTY_METRICS),[earned,setEarned]=useState<EarnedAchievement[]>([]),[circles,setCircles]=useState<Circle[]>([]),[error,setError]=useState('');
+  const [metricsReady,setMetricsReady]=useState(!owner),[awardsReady,setAwardsReady]=useState(!owner),[loadAttempt,setLoadAttempt]=useState(0);
+  const [achievementErrors,setAchievementErrors]=useState<{metrics?:string;awards?:string}>({});
+  const retryCommunity=useCallback(()=>setLoadAttempt(value=>value+1),[]);
   const [circleDetails,setCircleDetails]=useState<Circle[]>([]),[circleReads,setCircleReads]=useState(()=>new Map<string,string>());
   const [newlyEarned,setNewlyEarned]=useState<string[]>([]),knownAwards=useRef<Set<string>|null>(null);
   const dismissNewBadges=useCallback(()=>setNewlyEarned([]),[]);
@@ -31,7 +34,10 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
     const failed=()=>{setReady(true);setError('Your community details couldn’t load. Check your connection.');};
     const stops=[
       onSnapshot(doc(root,'settings','community'),snapshot=>{setSettings({...DEFAULT_COMMUNITY,...snapshot.data()});setReady(true);setError('');},failed),
-      onSnapshot(doc(root,'stats','achievements'),snapshot=>setMetrics({...EMPTY_METRICS,...snapshot.data()}),failed),
+      onSnapshot(doc(root,'stats','achievements'),{includeMetadataChanges:true},snapshot=>{
+        setMetrics({...EMPTY_METRICS,...snapshot.data()});
+        if(!snapshot.metadata.fromCache){setMetricsReady(true);setAchievementErrors(previous=>({...previous,metrics:''}));}
+      },()=>setAchievementErrors(previous=>({...previous,metrics:'Your achievement progress couldn’t load. Check your connection and refresh.'}))),
       onSnapshot(collection(root,'achievements'),{includeMetadataChanges:true},snapshot=>{
         const awards=snapshot.docs.map(d=>({id:d.id,...d.data()} as EarnedAchievement));
         // A partial local cache must not turn existing server awards into new ones.
@@ -40,14 +46,14 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
           const additions=awards.filter(award=>!knownAwards.current!.has(award.id)&&ACHIEVEMENTS.some(item=>item.id===award.id)).map(award=>award.id);
           if(additions.length)setNewlyEarned(previous=>[...new Set([...previous,...additions])]);
         }
-        knownAwards.current=new Set(awards.map(award=>award.id));setEarned(awards);
-      },failed),
+        knownAwards.current=new Set(awards.map(award=>award.id));setEarned(awards);setAwardsReady(true);setAchievementErrors(previous=>({...previous,awards:''}));
+      },()=>setAchievementErrors(previous=>({...previous,awards:'Your saved badges couldn’t load. Check your connection and refresh.'}))),
       onSnapshot(collection(root,'circles'),snapshot=>setCircles(snapshot.docs.map(d=>({id:d.id,...d.data()} as Circle))),failed),
     ];
-    // Also covers existing accounts whose progress predates achievement triggers.
-    void perform('refreshAchievements',{}).catch(()=>{});
     return()=>stops.forEach(stop=>stop());
-  },[owner,perform]);
+  },[owner,perform,loadAttempt]);
+  // Also covers existing accounts whose progress predates achievement triggers.
+  useEffect(()=>{if(owner)void perform('refreshAchievements',{}).catch(()=>{});},[owner,perform]);
   const circleIds=circles.map(circle=>circle.id),circleKey=circleIds.join(',');
   useEffect(()=>{
     if(!owner||!settings.joined){setCircleDetails([]);setCircleReads(new Map());return;}
@@ -61,29 +67,40 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
     const latest={...circle,...circleDetails.find(detail=>detail.id===circle.id)};
     return {...latest,unread:!!owner&&settings.joined&&circleHasUnread(latest,circleReads.get(circle.id),owner,settings.blockedUids)};
   }).sort((a,b)=>(b.lastMessageAt?.toMillis()||0)-(a.lastMessageAt?.toMillis()||0)||a.name.localeCompare(b.name)),[circles,circleDetails,circleReads,owner,settings.joined,settings.blockedUids]);
-  const value=useMemo(()=>({settings,ready,metrics,earned,newlyEarned,dismissNewBadges,circles:visibleCircles,error,perform}),[settings,ready,metrics,earned,newlyEarned,dismissNewBadges,visibleCircles,error,perform]);
+  const achievementsReady=metricsReady&&awardsReady,achievementError=achievementErrors.metrics||achievementErrors.awards||'';
+  const value=useMemo(()=>({settings,ready,achievementsReady,achievementError,retryCommunity,metrics,earned,newlyEarned,dismissNewBadges,circles:visibleCircles,error,perform}),[settings,ready,achievementsReady,achievementError,retryCommunity,metrics,earned,newlyEarned,dismissNewBadges,visibleCircles,error,perform]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export function useCommunity(){const value=useContext(Context);if(!value)throw new Error('CommunityProvider is missing.');return value;}
 
-export function useCommunityDirectory(active:boolean,count=40) {
+export function useCommunityDirectory(active:boolean,count=40,readerSearch='',includeActivity=true) {
   const {settings}=useCommunity(),{user}=useAuth();
-  const [profiles,setProfiles]=useState<CommunityProfile[]>([]),[events,setEvents]=useState<CommunityActivity[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(true);
+  const [profiles,setProfiles]=useState<CommunityProfile[]>([]),[events,setEvents]=useState<CommunityActivity[]>([]);
+  const [profileError,setProfileError]=useState(''),[activityError,setActivityError]=useState(''),[profilesLoading,setProfilesLoading]=useState(true),[activityLoading,setActivityLoading]=useState(true);
+  const nameQuery=communityNameQuery(readerSearch);
   useEffect(()=>{
-    if(!user||!settings.joined){setProfiles([]);setEvents([]);setError('');setLoading(false);return;}
+    if(!user||!settings.joined){setProfiles([]);setProfileError('');setProfilesLoading(false);return;}
     if(!active)return; // Keep retained pages stable while the pager travels past them.
-    setLoading(true);const db=getFirebase().db;
-    const failed=()=>{setError('The community couldn’t load. Check your connection and try again.');setLoading(false);};
-    const stops=[
-      onSnapshot(query(collection(db,'bibledeptProfiles'),orderBy('displayName'),limit(count)),snapshot=>{setProfiles(snapshot.docs.map(d=>({id:d.id,...d.data()} as CommunityProfile)));setLoading(false);setError('');},failed),
-      onSnapshot(query(collection(db,'bibledeptActivity'),orderBy('createdAt','desc'),limit(count)),snapshot=>setEvents(snapshot.docs.map(d=>({id:d.id,...d.data()} as CommunityActivity))),failed),
-    ];return()=>stops.forEach(stop=>stop());
-  },[active,settings.joined,user?.uid,count]);
+    setProfilesLoading(true);setProfiles([]);setProfileError('');const ref=collection(getFirebase().db,'bibledeptProfiles');
+    const request=nameQuery?query(ref,where('namePrefixes','array-contains',nameQuery),limit(count)):query(ref,orderBy('displayName'),limit(count));
+    return onSnapshot(request,snapshot=>{
+      setProfiles(snapshot.docs.map(d=>({id:d.id,...d.data()} as CommunityProfile)).sort((a,b)=>a.displayName.localeCompare(b.displayName)));
+      setProfilesLoading(false);setProfileError('');
+    },()=>{setProfileError('Readers couldn’t load. Check your connection and try again.');setProfilesLoading(false);});
+  },[active,settings.joined,user?.uid,count,nameQuery]);
+  useEffect(()=>{
+    if(!user||!settings.joined){setEvents([]);setActivityError('');setActivityLoading(false);return;}
+    if(!active||!includeActivity)return;
+    setActivityLoading(true);setActivityError('');
+    return onSnapshot(query(collection(getFirebase().db,'bibledeptActivity'),orderBy('createdAt','desc'),limit(count)),snapshot=>{
+      setEvents(snapshot.docs.map(d=>({id:d.id,...d.data()} as CommunityActivity)));setActivityLoading(false);setActivityError('');
+    },()=>{setActivityError('Community activity couldn’t load. Check your connection and try again.');setActivityLoading(false);});
+  },[active,includeActivity,settings.joined,user?.uid,count]);
   const missing=useMemo(()=>[...new Set(events.map(event=>event.uid))].filter(id=>!profiles.some(profile=>profile.id===id)),[events,profiles]);
-  const extraProfiles=useCommunityProfiles(missing,active&&settings.joined);
-  const cheers=useVisibleEncouragements(events.map(event=>event.id),active&&settings.joined);
+  const extraProfiles=useCommunityProfiles(missing,active&&includeActivity&&settings.joined);
+  const cheers=useVisibleEncouragements(events.map(event=>event.id),active&&includeActivity&&settings.joined);
   const hidden=settings.blockedUids;
-  return {profiles:profiles.filter(profile=>!hidden.includes(profile.id)),profileMap:new Map([...extraProfiles.values(),...profiles].filter(profile=>!hidden.includes(profile.id)).map(profile=>[profile.id,profile])),events:events.filter(event=>!hidden.includes(event.uid)),error:error||cheers.error,loading,cheeredIds:cheers.ids,encouragementReady:cheers.ready};
+  return {profiles:profiles.filter(profile=>!hidden.includes(profile.id)),profileCount:profiles.length,profileMap:new Map([...extraProfiles.values(),...profiles].filter(profile=>!hidden.includes(profile.id)).map(profile=>[profile.id,profile])),events:events.filter(event=>!hidden.includes(event.uid)),eventCount:events.length,error:includeActivity?activityError||cheers.error:profileError,loading:includeActivity?activityLoading:profilesLoading,cheeredIds:cheers.ids,encouragementReady:cheers.ready};
 }
 
 /** Scope reaction state to visible events, regardless of lifetime reaction count. */

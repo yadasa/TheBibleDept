@@ -26,12 +26,13 @@ test('Firestore rules isolate profiles, awards, invitations, and circle history'
   const paths=[...uids.map(uid=>`bibledeptUsers/${uid}/settings/community`),...uids.map(uid=>`bibledeptUsers/${uid}/circleReads/${group}`),`bibledeptProfiles/${uids[0]}`,`bibledeptUsers/${uids[0]}/achievements/six-percent-club`,`bibledeptCircles/${group}`,`bibledeptCircles/${group}/bibledeptMessages/message`,`bibledeptActivity/${event}`,`bibledeptCircleCodes/ABCDEF123456`];
   try {
     for(const uid of uids)await seed(`bibledeptUsers/${uid}/settings/community`,{displayName:'Local test reader',joined:true});
-    await seed(`bibledeptProfiles/${uids[0]}`,{displayName:'Local test reader',photoData:null});
+    await seed(`bibledeptProfiles/${uids[0]}`,{displayName:'Local test reader',namePrefixes:['local','reader'],photoData:null});
     await seed(`bibledeptCircles/${group}`,{name:'Local test circle',memberIds:uids.slice(0,2),memberCount:2,code:'ABCDEF123456'});
     await seed(`bibledeptCircles/${group}/bibledeptMessages/message`,{uid:uids[0],text:'Only members can read this.'});
     await seed(`bibledeptActivity/${event}`,{uid:uids[0],kind:'joined'});
     await seed(`bibledeptCircleCodes/ABCDEF123456`,{circleId:group});
     assert.equal((await getDocFromServer(doc(dbs[1],'bibledeptProfiles',uids[0]))).data()?.displayName,'Local test reader');
+    assert.ok((await getDocs(query(collection(dbs[1],'bibledeptProfiles'),where('namePrefixes','array-contains','reader'),limit(40)))).docs.some(item=>item.id===uids[0]));
     assert.equal((await getDocFromServer(doc(dbs[1],'bibledeptCircles',group,'bibledeptMessages','message'))).data()?.text,'Only members can read this.');
     assert.equal((await getDocs(query(collection(dbs[1],'bibledeptCircles',group,'bibledeptMessages'),limit(50)))).size,1);
     assert.equal((await getDocs(query(collection(dbs[1],'bibledeptCircles'),where('memberIds','array-contains',uids[1]),limit(20)))).size,1);
@@ -59,6 +60,7 @@ test('Firestore rules isolate profiles, awards, invitations, and circle history'
     await assert.rejects(setDoc(readState(1),marker),denied);
     await seed(`bibledeptUsers/${uids[1]}/settings/community`,{displayName:'Local test reader',joined:false});
     await assert.rejects(getDocFromServer(doc(dbs[1],'bibledeptProfiles',uids[0])),denied);
+    await assert.rejects(getDocs(query(collection(dbs[1],'bibledeptProfiles'),where('namePrefixes','array-contains','reader'),limit(40))),denied);
     await assert.rejects(getDocFromServer(doc(dbs[1],'bibledeptActivity',event)),denied);
   }finally{
     for(const path of paths)await fetch(`${base}/${path}`,{method:'DELETE',headers:{Authorization:'Bearer owner'}});

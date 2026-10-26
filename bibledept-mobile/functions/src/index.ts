@@ -21,7 +21,7 @@ import { runWith } from "firebase-functions/v1";
 import { userPath } from "./streaks";
 import { getFirestore } from "firebase-admin/firestore";
 import { onDocumentWritten, onDocumentDeleted } from 'firebase-functions/v2/firestore';
-import { reconcileCommunity, saveCommunityProfile, createCircle, joinCircle, leaveCircle, sendCircleMessage, deleteCircleMessage, cheerMilestone, blockCommunityReader, unhideCommunityReaders, reportCommunityContent, deleteCommunityAccount } from './community';
+import { reconcileCommunity, saveCommunityProfile, createCircle, joinCircle, leaveCircle, renameCircle, rotateCircleInvitation, removeCircleMember, sendCircleMessage, deleteCircleMessage, cheerMilestone, blockCommunityReader, unhideCommunityReaders, reportCommunityContent, deleteCommunityAccount } from './community';
 initializeApp();
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 export function authenticatedUid(request: CallableRequest) {
@@ -77,6 +77,9 @@ export const refreshAchievements=communityCall(uid=>reconcileCommunity(uid));
 export const createReadingCircle=communityCall(createCircle);
 export const joinReadingCircle=communityCall(joinCircle);
 export const leaveReadingCircle=communityCall(leaveCircle);
+export const renameReadingCircle=communityCall(renameCircle);
+export const replaceReadingCircleInvitation=communityCall(rotateCircleInvitation);
+export const removeReadingCircleMember=communityCall(removeCircleMember);
 export const sendReadingCircleMessage=communityCall(sendCircleMessage);
 export const deleteReadingCircleMessage=communityCall(deleteCircleMessage);
 export const encourageCommunityMilestone=communityCall(cheerMilestone);

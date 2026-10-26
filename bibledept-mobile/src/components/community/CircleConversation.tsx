@@ -18,6 +18,7 @@ import { useReducedMotion } from '../LiquidBottomNav';
 import { ActionButton, Field, IconButton, Notice } from '../ui';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ReaderProfileDetails } from './ReaderProfileDetails';
+import { CircleManagement } from './CircleManagement';
 
 export function CircleConversation({circleId,active,onClose}:{circleId:string;active:boolean;onClose:()=>void}) {
   const {c,s}=useThemedStyles(styles),{user}=useAuth(),community=useCommunity(),reduced=useReducedMotion();
@@ -26,6 +27,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
   const [text,setText]=useState(''),[pending,setPending]=useState<PendingCircleMessage|null>(null),[draftReady,setDraftReady]=useState(false),[draftError,setDraftError]=useState(false),[loadAttempt,setLoadAttempt]=useState(0);
   const [busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[atBottom,setAtBottom]=useState(true);
   const [foreground,setForeground]=useState(AppState.currentState===null||AppState.currentState==='active');
+  const [now,setNow]=useState(Date.now());
   const acknowledged=useRef('');
   const locked=useRef(false),nearBottom=useRef(true),list=useRef<FlatList<CircleMessage>>(null),input=useRef<TextInput>(null),liveActive=useRef(active),loaded=useRef(false),latestDraft=useRef<CircleDraft>({text:'',pending:null});
   liveActive.current=active;
@@ -36,6 +38,10 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
   const selectedMember=memberId?readers.get(memberId):undefined;
 
   useEffect(()=>{const listener=AppState.addEventListener('change',state=>setForeground(state==='active'));return()=>listener.remove();},[]);
+  useEffect(()=>{
+    if(!active||!foreground||!memberId)return;setNow(Date.now());
+    const timer=setInterval(()=>setNow(Date.now()),60000);return()=>clearInterval(timer);
+  },[active,foreground,memberId]);
   useEffect(()=>{
     if(!active||!foreground||!atBottom||details||selectedMessage||chat.loading||!user||!latestId||chat.circle?.lastMessageId!==latestId)return;
     const key=`${circleId}:${latestId}`;
@@ -87,7 +93,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
     setText('');setPending(null);setNotice('Message sent.');nearBottom.current=true;setAtBottom(true);
     requestAnimationFrame(()=>{list.current?.scrollToOffset({offset:0,animated:!reduced});if(liveActive.current)input.current?.focus();});
   }
-  function openMessage(message:CircleMessage){Keyboard.dismiss();setError('');setNotice('');setMenu('options');setSelectedMessage(message);}
+  function openMessage(message:CircleMessage){if(locked.current)return;Keyboard.dismiss();setError('');setNotice('');setMenu('options');setSelectedMessage(message);}
 
   return <Modal visible={active} animationType={reduced?'none':'slide'} onRequestClose={back}>
     <SafeAreaView style={s.screen}>
@@ -100,7 +106,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
           </View>
 
           {memberId?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.detailContent}>
-            {selectedMember?<><ReaderProfileDetails profile={selectedMember}/>{memberId!==user?.uid&&<ActionButton title="Hide this reader" secondary loading={busy==='hide-member'} disabled={!!busy} onPress={()=>void run('hide-member',async()=>{await community.perform('hideCommunityReader',{uid:memberId});setMemberId(null);setNotice('This reader’s activity and messages are hidden for you.');})}/>}</>:<Notice text="This reader isn’t sharing a profile right now."/>}
+            {selectedMember?<><ReaderProfileDetails profile={selectedMember} now={now}/>{memberId!==user?.uid&&<ActionButton title="Hide this reader" secondary loading={busy==='hide-member'} disabled={!!busy} onPress={()=>void run('hide-member',async()=>{await community.perform('hideCommunityReader',{uid:memberId});setMemberId(null);setNotice('This reader’s activity and messages are hidden for you.');})}/>}</>:<Notice text="This reader isn’t sharing a profile right now."/>}
             <ActionButton title="Back to circle members" secondary onPress={()=>setMemberId(null)}/>
           </ScrollView>:details?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.detailContent}>
             <Text accessibilityRole="header" style={s.section}>{chat.circle?.name}</Text>
@@ -110,6 +116,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
               <ActionButton title="Copy invitation code" secondary icon="copy" onPress={()=>void run('copy',async()=>{await Clipboard.setStringAsync(chat.circle!.code.match(/.{1,4}/g)!.join('-'));setNotice('Invitation code copied.');})}/>
               <Notice text="Anyone with this code can join, up to 50 readers. Share it with people you’d like to read with."/>
             </View>}
+            {chat.circle&&<CircleManagement circle={chat.circle} readers={readers} busy={busy} run={run} onNotice={setNotice}/>}
             <Text accessibilityRole="header" style={s.section}>Circle members</Text>
             {[...readers.values()].filter(reader=>!community.settings.blockedUids.includes(reader.id)).map(reader=><Pressable key={reader.id} accessibilityRole="button" accessibilityLabel={`View ${reader.displayName}’s profile`} onPress={()=>setMemberId(reader.id)} style={s.member}><ProfileAvatar name={reader.displayName} photoData={reader.photoData} size={48} club={reader.badgeIds.includes('six-percent-club')}/><View style={{flex:1}}><Text style={s.label}>{reader.displayName}{reader.id===user?.uid?' (you)':''}</Text>{reader.badgeIds.includes('six-percent-club')&&<Text style={s.subtitle}>6% Club member</Text>}</View><Icon name="chevronRight" size={18} color={c.muted}/></Pressable>)}
             <Notice text="Only shared profiles appear here. Hiding a reader affects what you see; it doesn’t remove them from the circle."/>

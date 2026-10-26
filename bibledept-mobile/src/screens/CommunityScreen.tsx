@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, Pressable, Text, View } from 'react-native';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { ACHIEVEMENTS, CommunityProfile, visibleCommunityStreak } from '../../shared/community';
+import { ACHIEVEMENTS, communityNameQuery, CommunityProfile, visibleCommunityStreak } from '../../shared/community';
 import { useAuth } from '../services/AuthProvider';
 import { useCommunity, useCommunityDirectory } from '../services/CommunityProvider';
 import { messageForUser } from '../services/userMessage';
@@ -22,16 +22,22 @@ import { useScreenScroll } from '../components/ScreenScrollView';
 export type CommunitySection='Activity'|'Readers'|'Circles';
 export function CommunityScreen({active=true,onAccount,onBadges,requestedSection='Activity',requestRevision=0}:{active?:boolean;onAccount:()=>void;onBadges:()=>void;requestedSection?:CommunitySection;requestRevision?:number}) {
   const {colors:c}=useTheme(),{user}=useAuth(),community=useCommunity(),top=useScreenScroll();
-  const [section,setSection]=useState<CommunitySection>('Activity'),[editing,setEditing]=useState(false),[count,setCount]=useState(40),[search,setSearch]=useState('');
+  const [section,setSection]=useState<CommunitySection>('Activity'),[editing,setEditing]=useState(false),[count,setCount]=useState(40),[search,setSearch]=useState(''),[debouncedSearch,setDebouncedSearch]=useState('');
   const [reader,setReader]=useState<CommunityProfile|null>(null),[report,setReport]=useState<string|null>(null),[reason,setReason]=useState(''),[busy,setBusy]=useState(''),[error,setError]=useState(''),[message,setMessage]=useState(''),[now,setNow]=useState(Date.now());
-  const locked=useRef(false),directory=useCommunityDirectory(active&&section!=='Circles'&&!editing,count);
+  const locked=useRef(false),directory=useCommunityDirectory(active&&section!=='Circles'&&!editing,count,section==='Readers'?debouncedSearch:'',section==='Activity');
+  const searchPending=section==='Readers'&&communityNameQuery(search)!==debouncedSearch;
+  useEffect(()=>{const timer=setTimeout(()=>{setDebouncedSearch(communityNameQuery(search));setCount(40);},250);return()=>clearTimeout(timer);},[search]);
   useEffect(()=>{setSection(requestedSection);setEditing(false);setReader(null);top();},[requestRevision,requestedSection]);
   useEffect(()=>{if(!active){setReader(null);setReport(null);}},[active]);
   useEffect(()=>{
     if(!reader||!active||!community.settings.joined)return;
     return onSnapshot(doc(getFirebase().db,'bibledeptProfiles',reader.id),snapshot=>setReader(snapshot.exists()?{id:snapshot.id,...snapshot.data()} as CommunityProfile:null),()=>setReader(null));
   },[reader?.id,active,community.settings.joined]);
-  useEffect(()=>{if(!active)return;setNow(Date.now());const timer=setInterval(()=>setNow(Date.now()),60000);return()=>clearInterval(timer);},[active]);
+  useEffect(()=>{
+    if(!active)return;const refresh=()=>setNow(Date.now());refresh();
+    const timer=setInterval(refresh,60000),subscription=AppState.addEventListener('change',state=>{if(state==='active')refresh();});
+    return()=>{clearInterval(timer);subscription.remove();};
+  },[active]);
   async function run(action:string,work:()=>Promise<void>){if(locked.current)return;locked.current=true;setBusy(action);setError('');setMessage('');try{await work();}catch(e){setError(messageForUser(e,'That change couldn’t be saved. Please try again.'));}finally{locked.current=false;setBusy('');}}
   if(!user)return <View><Text accessibilityRole="header" style={{...t.title,color:c.ink}}>Better together.</Text><Text style={{...t.body,color:c.muted,marginVertical:16}}>Celebrate someone’s steady week. Find a circle. Keep showing up for the Word, together.</Text><ClubIntro/><ActionButton title="Sign in to join the community" icon="people" onPress={onAccount}/><Notice text="Community is optional. Reading, notes, and your private prayer journal stay available as before."/></View>;
   if(!community.ready)return <ActivityIndicator color={c.orange}/>;
@@ -48,13 +54,13 @@ export function CommunityScreen({active=true,onAccount,onBadges,requestedSection
     {!!message&&<Notice success text={message}/>}
     {section==='Circles'?<ReadingCircles active={active}/>:<>
       {!!directory.error&&<Notice error text={directory.error}/>}
-      {directory.loading&&<ActivityIndicator color={c.orange}/>}
+      {(directory.loading||searchPending)&&<ActivityIndicator accessibilityLabel="Loading community" color={c.orange}/>}
       {section==='Readers'?<>
-        <Text accessibilityRole="header" style={{...t.section,color:c.ink,marginBottom:12}}>People on the journey</Text><Field label="Find a reader in this list" value={search} onChangeText={setSearch} placeholder="Search by display name" autoCorrect={false}/>
-        {directory.profiles.filter(profile=>profile.displayName.toLowerCase().includes(search.trim().toLowerCase())).map(profile=><Pressable key={profile.id} accessibilityRole="button" accessibilityLabel={`View ${profile.displayName}’s profile`} onPress={()=>setReader(profile)} style={({pressed})=>({flexDirection:'row',alignItems:'center',gap:14,paddingVertical:20,borderBottomWidth:1,borderColor:c.border,opacity:pressed?.65:1})}>
+        <Text accessibilityRole="header" style={{...t.section,color:c.ink,marginBottom:12}}>People on the journey</Text><Field label="Find a reader" value={search} onChangeText={setSearch} placeholder="Start with a first or last name" autoCorrect={false} maxLength={80}/>
+        {!searchPending&&directory.profiles.map(profile=><Pressable key={profile.id} accessibilityRole="button" accessibilityLabel={`View ${profile.displayName}’s profile`} onPress={()=>setReader(profile)} style={({pressed})=>({flexDirection:'row',alignItems:'center',gap:14,paddingVertical:20,borderBottomWidth:1,borderColor:c.border,opacity:pressed?.65:1})}>
           <ProfileAvatar name={profile.displayName} photoData={profile.photoData} size={54} club={profile.badgeIds.includes('six-percent-club')}/><View style={{flex:1,minWidth:0}}><Text style={{...t.label,color:c.ink}}>{profile.displayName}{profile.id===user.uid?' (you)':''}</Text><Text style={{...t.meta,color:c.muted,marginTop:5}}>{profile.badgeIds.includes('six-percent-club')?'6% Club member':`${profile.badgeIds.length} ${profile.badgeIds.length===1?'badge':'badges'} shared`}</Text></View><StreakPill profile={profile} now={now}/>
         </Pressable>)}
-        {!directory.loading&&!directory.profiles.some(profile=>profile.displayName.toLowerCase().includes(search.trim().toLowerCase()))&&<Notice text="No readers match that name in this list."/>}
+        {!directory.loading&&!searchPending&&!directory.error&&!directory.profiles.length&&<Notice text={debouncedSearch?'No readers match that name. Try the beginning of a first or last name.':'Readers who join the community will appear here.'}/>}
       </>:<>
         <Text accessibilityRole="header" style={{...t.section,color:c.ink,marginBottom:16}}>A little encouragement goes a long way.</Text>
         {!directory.loading&&!directory.events.length&&<GlassSurface style={{padding:24,borderRadius:20}}><Icon name="people" color={c.orange} size={30}/><Text style={{...t.section,color:c.ink,marginTop:16}}>The journey starts with us.</Text><Text style={{...t.body,color:c.muted,marginTop:10}}>As readers join and earn badges, their milestones will appear here. Invite a friend into a reading circle to begin together.</Text><ActionButton title="Open reading circles" secondary onPress={()=>setSection('Circles')}/></GlassSurface>}
@@ -66,12 +72,13 @@ export function CommunityScreen({active=true,onAccount,onBadges,requestedSection
             <View style={{flexDirection:'row',alignItems:'center',gap:16,marginVertical:22}}>{badge?<BadgeArt symbol={badge.symbol} size={68}/>:<View style={{width:58,height:58,borderRadius:29,backgroundColor:c.tint,alignItems:'center',justifyContent:'center'}}><Icon name="people" size={28} color={c.orange}/></View>}<View style={{flex:1}}><Text style={{...t.meta,color:c.muted}}>{badge?'A MILESTONE WORTH CELEBRATING':'A NEW READER ON THE JOURNEY'}</Text><Text style={{...t.section,color:c.ink,marginTop:6}}>{badge?badge.name:'Welcome to the community.'}</Text><Text style={{...t.meta,color:c.muted,marginTop:8}}>{badge?badge.description:'Read a little. Ask a question. Grow together.'}</Text></View></View>
             <View style={{borderTopWidth:1,borderColor:c.border,paddingTop:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8}}>
               <Pressable accessibilityRole="button" accessibilityLabel={`${cheered?'Encouraged':'Encourage'} ${author.displayName}. ${event.cheerCount} encouragements`} accessibilityState={{disabled:own||cheered||!!busy||!directory.encouragementReady}} disabled={own||cheered||!!busy||!directory.encouragementReady} onPress={()=>void run(event.id,async()=>{await community.perform('encourageCommunityMilestone',{activityId:event.id});setMessage('A little encouragement, sent.');})} style={{flexDirection:'row',gap:8,minHeight:44,alignItems:'center'}}><Icon name="heart" size={19} color={cheered?c.orange:c.muted}/><Text style={{...t.meta,color:cheered?c.ink:c.muted}}>{own?`${event.cheerCount} encouraged you`:cheered?`Encouraged · ${event.cheerCount}`:`Encourage${event.cheerCount?` · ${event.cheerCount}`:''}`}</Text></Pressable>
-              {!own&&<Pressable accessibilityRole="button" accessibilityLabel="Report community activity" onPress={()=>{setReport(event.id);setReason('');}} style={{minHeight:44,justifyContent:'center',paddingHorizontal:10}}><Text style={{...t.meta,color:c.muted,fontSize:12}}>Report</Text></Pressable>}
+              {!own&&<Pressable accessibilityRole="button" accessibilityLabel="Report community activity" disabled={!!busy} onPress={()=>{setReport(event.id);setReason('');}} style={{minHeight:44,justifyContent:'center',paddingHorizontal:10}}><Text style={{...t.meta,color:c.muted,fontSize:12}}>Report</Text></Pressable>}
             </View>
           </GlassSurface>;
         })}
       </>}
-      {count<200&&(directory.profiles.length>=count||directory.events.length>=count)&&<ActionButton title="Load more community activity" secondary onPress={()=>setCount(value=>Math.min(200,value+40))}/>}
+      {!searchPending&&count<200&&(section==='Readers'?directory.profileCount:directory.eventCount)>=count&&<ActionButton title={section==='Readers'?'Load more readers':'Load more community activity'} secondary onPress={()=>setCount(value=>Math.min(200,value+40))}/>}
+      {section==='Readers'&&!searchPending&&count===200&&directory.profileCount>=200&&<Notice text="Showing up to 200 readers. Add more of their name to narrow the search."/>}
     </>}
     <CommunityDialog visible={!!selected} title="Reader profile" closeLabel="Close reader profile" onClose={()=>setReader(null)}>{selected&&<>
       <ReaderProfileDetails profile={selected} now={now}/>

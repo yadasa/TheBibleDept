@@ -2,7 +2,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { saveCommunityProfile, reconcileCommunity, createCircle, joinCircle, leaveCircle, sendCircleMessage, cheerMilestone, deleteCircleMessage, deleteCommunityAccount, blockCommunityReader, reportCommunityContent } from '../src/community';
+import { saveCommunityProfile, reconcileCommunity, createCircle, joinCircle, leaveCircle, renameCircle, rotateCircleInvitation, removeCircleMember, sendCircleMessage, cheerMilestone, deleteCircleMessage, deleteCommunityAccount, blockCommunityReader, reportCommunityContent } from '../src/community';
 import { userPath } from '../src/streaks';
 import { localDate } from '../../shared/habits';
 
@@ -41,6 +41,23 @@ test('awards are private by default; full completion awards the Club once and pu
     assert.equal((await db.collection('bibledeptProfiles').doc(user).get()).exists,false);
     assert.ok((await userPath(user).collection('achievements').doc('six-percent-club').get()).exists);
   }finally{await cleanup(user);}
+});
+
+test('name search finds readers beyond the first 200, updates after renaming, and removes opted-out readers',async()=>{
+  const user=uid('search'),prefix=uid('directory'),others=Array.from({length:201},(_,index)=>db.collection('bibledeptProfiles').doc(`${prefix}-${index}`));
+  try {
+    const batch=db.batch();for(const [index,ref] of others.entries())batch.set(ref,{displayName:`A local reader ${index}`,namePrefixes:['a']});await batch.commit();
+    await saveCommunityProfile(user,{...profile,displayName:'Zora O’Connor'});
+    const directory=await db.collection('bibledeptProfiles').orderBy('displayName').limit(200).get();
+    assert.ok(!directory.docs.some(item=>item.id===user));
+    const find=(name:string)=>db.collection('bibledeptProfiles').where('namePrefixes','array-contains',name).limit(40).get();
+    assert.ok((await find('o’c')).docs.some(item=>item.id===user));
+    await saveCommunityProfile(user,{...profile,displayName:'Zora Ellis'});
+    assert.ok(!(await find('o’c')).docs.some(item=>item.id===user));
+    assert.ok((await find('ell')).docs.some(item=>item.id===user));
+    await saveCommunityProfile(user,{...profile,displayName:'Zora Ellis',joined:false});
+    assert.ok(!(await find('ell')).docs.some(item=>item.id===user));
+  }finally{await cleanup(user);const batch=db.batch();for(const ref of others)batch.delete(ref);await batch.commit();}
 });
 
 test('circles enforce membership, stable retries, send pacing, and ownership of deletions',async()=>{
@@ -142,6 +159,61 @@ test('withdrawing sharing redacts public fields even when the subsequent refresh
     assert.deepEqual(published.badgeIds,[]);assert.equal(published.planDays,null);
     assert.equal((await db.collection('bibledeptActivity').where('uid','==',user).get()).size,0);
   }finally {await cleanup(user);}
+});
+
+test('only current circle owners can rename or replace invitations, and concurrent rotation retries keep one new code',async()=>{
+  const owner=uid('manage-owner'),member=uid('manage-member'),outside=uid('manage-outside');
+  try {
+    await Promise.all([owner,member,outside].map(user=>saveCommunityProfile(user,profile)));
+    const {id}=await createCircle(owner,{name:'Original name',requestId:uid('managed-circle')}),ref=db.collection('bibledeptCircles').doc(id),oldCode=(await ref.get()).data()!.code;
+    await joinCircle(member,{code:oldCode});
+    for(const user of [member,outside]) {
+      await assert.rejects(renameCircle(user,{circleId:id,name:'Denied name'}),{code:'permission-denied'});
+      await assert.rejects(rotateCircleInvitation(user,{circleId:id,expectedCode:oldCode}),{code:'permission-denied'});
+      await assert.rejects(removeCircleMember(user,{circleId:id,uid:owner,expectedCode:oldCode}),{code:'permission-denied'});
+    }
+    await assert.rejects(renameCircle(owner,{circleId:id,name:'\u0000'}),{code:'invalid-argument'});
+    await renameCircle(owner,{circleId:id,name:'  Our reading circle  '});
+    assert.equal((await ref.get()).data()?.name,'Our reading circle');
+    for(const user of [owner,member])assert.equal((await userPath(user).collection('circles').doc(id).get()).data()?.name,'Our reading circle');
+    const rotated=await Promise.all(Array.from({length:3},()=>rotateCircleInvitation(owner,{circleId:id,expectedCode:oldCode})));
+    assert.ok(rotated.every(value=>value.code===rotated[0].code));assert.notEqual(rotated[0].code,oldCode);
+    assert.equal((await db.collection('bibledeptCircleCodes').where('circleId','==',id).get()).size,1);
+    assert.equal((await db.collection('bibledeptCircleCodes').doc(oldCode).get()).exists,false);
+    for(const user of [owner,member])assert.equal((await userPath(user).collection('circles').doc(id).get()).data()?.code,rotated[0].code);
+    await assert.rejects(joinCircle(outside,{code:oldCode}),{code:'not-found'});
+    await sendCircleMessage(member,{circleId:id,messageId:'still-a-member',text:'Existing members stay in their conversation.'});
+    await leaveCircle(owner,{circleId:id});
+    await assert.rejects(renameCircle(owner,{circleId:id,name:'Former owner'}),{code:'permission-denied'});
+    await renameCircle(member,{circleId:id,name:'A new owner can continue'});
+    assert.equal((await ref.get()).data()?.name,'A new owner can continue');
+  }finally{await cleanup(owner,member,outside);}
+});
+
+test('removal replaces the invitation, keeps history, deduplicates retries, and cannot remove a freshly re-invited reader with a stale request',async()=>{
+  const owner=uid('remove-owner'),member=uid('remove-member'),peer=uid('remove-peer');
+  try {
+    await Promise.all([owner,member,peer].map(user=>saveCommunityProfile(user,profile)));
+    const {id}=await createCircle(owner,{name:'A managed circle',requestId:uid('remove-circle')}),ref=db.collection('bibledeptCircles').doc(id),oldCode=(await ref.get()).data()!.code;
+    await Promise.all([joinCircle(member,{code:oldCode}),joinCircle(peer,{code:oldCode})]);
+    await sendCircleMessage(member,{circleId:id,messageId:'retained-history',text:'A thought remains after membership changes.'});
+    await userPath(member).collection('circleReads').doc(id).set({lastReadMessageId:'retained-history'});
+    await assert.rejects(removeCircleMember(owner,{circleId:id,uid:owner,expectedCode:oldCode}),{code:'invalid-argument'});
+    const request={circleId:id,uid:member,expectedCode:oldCode};
+    const results=await Promise.all([removeCircleMember(owner,request),removeCircleMember(owner,request)]);
+    assert.equal(results[0].code,results[1].code);assert.notEqual(results[0].code,oldCode);
+    const group=(await ref.get()).data()!;
+    assert.equal(group.memberCount,2);assert.ok(!group.memberIds.includes(member));assert.equal(group.code,results[0].code);
+    assert.equal((await userPath(member).collection('circles').doc(id).get()).exists,false);
+    assert.equal((await userPath(member).collection('circleReads').doc(id).get()).exists,false);
+    assert.equal((await ref.collection('bibledeptMessages').doc('retained-history').get()).exists,true);
+    for(const user of [owner,peer]){const index=(await userPath(user).collection('circles').doc(id).get()).data()!;assert.equal(index.code,group.code);assert.equal(index.memberCount,2);}
+    await assert.rejects(joinCircle(member,{code:oldCode}),{code:'not-found'});
+    await assert.rejects(sendCircleMessage(member,{circleId:id,messageId:'removed',text:'No longer a member.'}),{code:'permission-denied'});
+    await joinCircle(member,{code:group.code});
+    await assert.rejects(removeCircleMember(owner,request),{code:'failed-precondition'});
+    assert.ok((await ref.get()).data()?.memberIds.includes(member));
+  }finally{await cleanup(owner,member,peer);}
 });
 
 test('encouragements are unique, cannot be self-awarded, and report/hide state is private',async()=>{

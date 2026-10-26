@@ -50,6 +50,18 @@ export function completedPlanDays(value:unknown):number {
   // Completion awards require actual saved day IDs, never just a day-picker position.
   return Array.isArray(days)?new Set(days.filter(day=>Number.isInteger(day)&&day>=1&&day<=365)).size:0;
 }
+/** Shared, bounded search keys keep names searchable without a third-party index. */
+export function communityNameQuery(value:string):string {
+  return Array.from(value.normalize('NFKC').toLowerCase().trim().replace(/\s+/gu,' ')).slice(0,80).join('');
+}
+export function communityNamePrefixes(value:string):string[] {
+  const name=communityNameQuery(value),prefixes=new Set<string>();
+  for(const part of [name,...name.split(' ')]) {
+    let prefix='';
+    for(const letter of part){prefix+=letter;prefixes.add(prefix);}
+  }
+  return [...prefixes];
+}
 export function validateCommunityProfile(value:unknown):Pick<CommunitySettings,'displayName'|'photoData'|'joined'|'shareStreak'|'shareBadges'> {
   const data=value as CommunitySettings;
   if(!data||typeof data.displayName!=='string'||!data.displayName.trim()||data.displayName.trim().length>80||/[\x00-\x1f\x7f]/.test(data.displayName))throw new Error('Choose a name with 1–80 characters.');

@@ -1,7 +1,7 @@
-import { FieldValue, getFirestore, QueryDocumentSnapshot, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, QueryDocumentSnapshot, Timestamp, Transaction } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { createHash, randomBytes } from 'node:crypto';
-import { ACHIEVEMENTS, achievedIds, cleanCircleName, cleanMessage, completedPlanDays, EMPTY_METRICS, validateCommunityProfile, validDocumentId } from '../../shared/community';
+import { ACHIEVEMENTS, achievedIds, cleanCircleName, cleanMessage, communityNamePrefixes, completedPlanDays, EMPTY_METRICS, validateCommunityProfile, validDocumentId } from '../../shared/community';
 import { currentStreak, emptyStreak, localDate, validZone } from '../../shared/habits';
 import { userPath } from './streaks';
 import { normalizeProfilePhoto } from './profilePhoto';
@@ -47,7 +47,7 @@ export async function reconcileCommunity(uid:string,now=Date.now()) {
     for(const id of newIds)tx.create(root.collection('achievements').doc(id),{earnedAt:stamp});
     if(settings?.joined) {
       const zone=habit.data()?.timeZone;
-      tx.set(profiles().doc(uid),{displayName:settings.displayName,photoData:settings.photoData||null,
+      tx.set(profiles().doc(uid),{displayName:settings.displayName,namePrefixes:communityNamePrefixes(settings.displayName),photoData:settings.photoData||null,
         streak:settings.shareStreak&&validZone(zone)?currentStreak(streak,localDate(now,zone)):null,
         lastReadingDate:settings.shareStreak?streak.lastQualifiedDate:null,timeZone:settings.shareStreak&&validZone(zone)?zone:null,
         badgeIds:settings.shareBadges?badgeIds:[],planDays:settings.shareBadges?metrics.planDays:null,updatedAt:stamp});
@@ -80,7 +80,7 @@ export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now
       // Fence sharing in the preferences transaction. A failed metric refresh must
       // never leave previously shared fields visible after consent is withdrawn.
       const visible=published.data();
-      tx.set(profiles().doc(uid),{displayName:value.displayName,photoData:value.photoData,
+      tx.set(profiles().doc(uid),{displayName:value.displayName,namePrefixes:communityNamePrefixes(value.displayName),photoData:value.photoData,
         streak:value.shareStreak?visible?.streak??null:null,
         lastReadingDate:value.shareStreak?visible?.lastReadingDate??null:null,
         timeZone:value.shareStreak?visible?.timeZone??null:null,
@@ -156,6 +156,62 @@ export async function leaveCircle(uid:string,input:unknown) {
   // Empty circles have no remaining readers; remove their message history.
   if(!(await circles().doc(id).get()).exists)await getFirestore().recursiveDelete(circles().doc(id));
   return {left:true};
+}
+
+async function requireCircleOwner(tx:Transaction,uid:string,id:string) {
+  const [settings,circle,deleted]=await Promise.all([
+    tx.get(userPath(uid).collection('settings').doc('community')),tx.get(circles().doc(id)),
+    tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid)),
+  ]);
+  if(deleted.exists)throw new HttpsError('unauthenticated','This account is no longer available.');
+  const group=circle.data();
+  if(!settings.data()?.joined||!group?.memberIds.includes(uid)||group.createdBy!==uid)throw new HttpsError('permission-denied','Only the circle owner can manage this circle.');
+  return group as {name:string;code:string;memberIds:string[];createdBy:string};
+}
+function invitationVersion(value:unknown):string {
+  if(typeof value!=='string'||!/^[A-F0-9]{12}$/.test(value))invalid('Reopen circle details and try again.');
+  return value;
+}
+
+export async function renameCircle(uid:string,input:unknown) {
+  const data=input as {circleId?:unknown;name?:unknown},id=documentId(data?.circleId);
+  let name:string;try{name=cleanCircleName(data.name);}catch(e){invalid((e as Error).message);}
+  await getFirestore().runTransaction(async tx=>{
+    const group=await requireCircleOwner(tx,uid,id);
+    tx.update(circles().doc(id),{name:name!});
+    for(const member of group.memberIds)tx.set(userPath(member).collection('circles').doc(id),{name:name!},{merge:true});
+  });return {renamed:true};
+}
+
+export async function rotateCircleInvitation(uid:string,input:unknown) {
+  const data=input as {circleId?:unknown;expectedCode?:unknown},id=documentId(data?.circleId),expected=invitationVersion(data?.expectedCode),next=randomBytes(6).toString('hex').toUpperCase();
+  return getFirestore().runTransaction(async tx=>{
+    const group=await requireCircleOwner(tx,uid,id);
+    // A retry of an already-rotated invitation must not invalidate it again.
+    if(group.code!==expected)return {code:group.code};
+    if((await tx.get(codes().doc(next))).exists)throw new HttpsError('aborted','The invitation couldn’t be replaced. Please try again.');
+    tx.create(codes().doc(next),{circleId:id});tx.delete(codes().doc(group.code));
+    tx.update(circles().doc(id),{code:next});
+    for(const member of group.memberIds)tx.set(userPath(member).collection('circles').doc(id),{code:next},{merge:true});
+    return {code:next};
+  });
+}
+
+export async function removeCircleMember(uid:string,input:unknown) {
+  const data=input as {circleId?:unknown;uid?:unknown;expectedCode?:unknown},id=documentId(data?.circleId),target=documentId(data?.uid),expected=invitationVersion(data?.expectedCode),next=randomBytes(6).toString('hex').toUpperCase();
+  if(target===uid)invalid('Use Leave circle to transfer ownership and leave.');
+  return getFirestore().runTransaction(async tx=>{
+    const group=await requireCircleOwner(tx,uid,id);
+    if(!group.memberIds.includes(target))return {removed:true,code:group.code};
+    if(group.code!==expected)throw new HttpsError('failed-precondition','This circle changed. Review the members and try again.');
+    if((await tx.get(codes().doc(next))).exists)throw new HttpsError('aborted','The invitation couldn’t be replaced. Please try again.');
+    const members=group.memberIds.filter(member=>member!==target);
+    tx.create(codes().doc(next),{circleId:id});tx.delete(codes().doc(group.code));
+    tx.update(circles().doc(id),{memberIds:members,memberCount:members.length,code:next});
+    tx.delete(userPath(target).collection('circles').doc(id));tx.delete(userPath(target).collection('circleReads').doc(id));
+    for(const member of members)tx.set(userPath(member).collection('circles').doc(id),{memberCount:members.length,code:next},{merge:true});
+    return {removed:true,code:next};
+  });
 }
 
 export async function sendCircleMessage(uid:string,input:unknown,now=Date.now()) {

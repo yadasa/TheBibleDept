@@ -6,7 +6,7 @@ export function ProfileAvatar({name,photoData,size=56,club=false}:{name:string;p
   const {colors:c}=useTheme();
   const [failed,setFailed]=useState(false);
   useEffect(()=>setFailed(false),[photoData]);
-  const initials=name.trim().split(/\s+/).slice(0,2).map(word=>word[0]).join('').toUpperCase()||'BD';
+  const initials=name.trim().split(/\s+/).slice(0,2).map(word=>Array.from(word)[0]||'').join('').toUpperCase()||'BD';
   const badgeSize=Math.max(18,size*.43);
   return <View accessible accessibilityRole="image" accessibilityLabel={`${name}${club?', 6% Club member':''}`} style={{width:size,height:size,flexShrink:0}}>
     <View style={{width:size,height:size,borderRadius:size/2,backgroundColor:c.tint,overflow:'hidden',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:c.border}}>

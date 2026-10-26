@@ -1,6 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ACHIEVEMENTS, achievedIds, achievementProgress, Circle, circleHasUnread, cleanCircleName, cleanMessage, CommunityProfile, completedPlanDays, DEFAULT_COMMUNITY, EMPTY_METRICS, validateCommunityProfile, visibleCommunityStreak } from '../shared/community';
+import { ACHIEVEMENTS, achievedIds, achievementProgress, Circle, circleHasUnread, cleanCircleName, cleanMessage, communityNamePrefixes, communityNameQuery, CommunityProfile, completedPlanDays, DEFAULT_COMMUNITY, EMPTY_METRICS, validateCommunityProfile, visibleCommunityStreak } from '../shared/community';
+
+test('community name search matches normalized first or last name prefixes without splitting Unicode characters',()=>{
+  const keys=communityNamePrefixes('  Ｍiriam   O’Connor  ');
+  for(const term of ['mi','miriam o’c','o’c'])assert.ok(keys.includes(communityNameQuery(term)));
+  assert.ok(!keys.includes('iriam'));
+  assert.equal(communityNameQuery(' E\u0301LISE  '),'élise');
+  assert.ok(communityNamePrefixes('📖 Reader').includes('📖'));
+  assert.ok(!communityNamePrefixes('📖 Reader').some(key=>key==='\ud83d'));
+  assert.deepEqual(communityNamePrefixes('  '),[]);
+  assert.equal(communityNameQuery('A'.repeat(100)).length,80);
+  assert.ok(communityNamePrefixes('A '.repeat(100)).length<=160);
+});
 
 test('6% Club requires 365 distinct completed plan days, never a selected day or a streak',()=>{
   const days=Array.from({length:365},(_,i)=>i+1);
