@@ -10,7 +10,7 @@ test('saved circle requests are account scoped and reject corrupt or unbounded d
 });
 test('a lost creation acknowledgement retains the same durable request across a reload',async()=>{
   const saved=new Map<string,string>(),circles=new Map<string,string>(),key=circleCreationKey('reader');
-  const storage={setItem:async(k:string,value:string)=>{saved.set(k,value);},removeItem:async(k:string)=>{saved.delete(k);}};
+  const storage={getItem:async(k:string)=>saved.get(k)||null,setItem:async(k:string,value:string)=>{saved.set(k,value);},removeItem:async(k:string)=>{saved.delete(k);}};
   let first=true;
   const send=async(request:typeof pending)=>{
     assert.ok(saved.has(key),'The retry identity must be saved before HTTP.');
@@ -25,8 +25,20 @@ test('a lost creation acknowledgement retains the same durable request across a 
 });
 test('storage failure prevents creation and an invalid receipt keeps the retry identity',async()=>{
   let sent=false,saved='';
-  await assert.rejects(deliverCircleCreation({setItem:async()=>{throw new Error('Storage unavailable');},removeItem:async()=>{}},'key',pending,async()=>{sent=true;return {id:pending.id};}),/Storage unavailable/);
+  await assert.rejects(deliverCircleCreation({getItem:async()=>null,setItem:async()=>{throw new Error('Storage unavailable');},removeItem:async()=>{}},'key',pending,async()=>{sent=true;return {id:pending.id};}),/Storage unavailable/);
   assert.equal(sent,false);
-  await assert.rejects(deliverCircleCreation({setItem:async(_key,value)=>{saved=value;},removeItem:async()=>{saved='';}},'key',pending,async()=>({id:'unexpected-circle'})),/receipt could not be confirmed/);
+  await assert.rejects(deliverCircleCreation({getItem:async()=>saved||null,setItem:async(_key,value)=>{saved=value;},removeItem:async()=>{saved='';}},'key',pending,async()=>({id:'unexpected-circle'})),/receipt could not be confirmed/);
   assert.deepEqual(decodeCircleCreation(saved),pending);
+});
+
+test('a late creation acknowledgement cannot erase a different saved request after reopening circles',async()=>{
+  const stored=new Map<string,string>(),key=circleCreationKey('reopened-reader');
+  const storage={getItem:async(k:string)=>stored.get(k)||null,setItem:async(k:string,value:string)=>{stored.set(k,value);},removeItem:async(k:string)=>{stored.delete(k);}};
+  let started!:()=>void,finish!:()=>void;
+  const sending=new Promise<void>(resolve=>{started=resolve;}),acknowledgement=new Promise<void>(resolve=>{finish=resolve;});
+  const delivery=deliverCircleCreation(storage,key,pending,async()=>{started();await acknowledgement;return {id:pending.id};});
+  await sending;
+  const newer={id:'another-stable-request',name:'A different circle'};stored.set(key,JSON.stringify(newer));
+  finish();await delivery;
+  assert.deepEqual(decodeCircleCreation(stored.get(key)||null),newer);
 });

@@ -4,6 +4,7 @@ import { typography as t, useTheme } from '../../theme';
 import { Icon } from '../Icon';
 import { BadgeArt } from './BadgeArt';
 import { ProfileAvatar } from './ProfileAvatar';
+import { ProfileReport } from './ProfileReport';
 
 export function ReaderProfileDetails({profile,now=Date.now()}:{profile:CommunityProfile;now?:number}) {
   const {colors:c}=useTheme(),streak=visibleCommunityStreak(profile,now);
@@ -19,5 +20,6 @@ export function ReaderProfileDetails({profile,now=Date.now()}:{profile:Community
       {ACHIEVEMENTS.filter(badge=>profile.badgeIds.includes(badge.id)).map(badge=><View key={badge.id} accessible accessibilityLabel={`${badge.name}. ${badge.description}`} style={{alignItems:'center',width:'29%',gap:8}}><BadgeArt symbol={badge.symbol} size={68}/><Text style={{...t.meta,color:c.ink,textAlign:'center'}}>{badge.name}</Text></View>)}
     </View>
     {!profile.badgeIds.length&&<Text style={{...t.body,color:c.muted,marginBottom:16}}>No badges shared yet.</Text>}
+    <ProfileReport key={profile.id} profile={profile}/>
   </View>;
 }

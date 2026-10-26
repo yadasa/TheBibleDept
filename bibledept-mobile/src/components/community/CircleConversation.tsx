@@ -1,14 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { randomUUID } from 'expo-crypto';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { CircleMessage } from '../../../shared/community';
 import { useAuth } from '../../services/AuthProvider';
 import { useCircleMessages, useCommunity, useCommunityProfiles } from '../../services/CommunityProvider';
-import { CircleDraft, circleDraftKey, decodeCircleDraft, deliverCircleMessage, PendingCircleMessage } from '../../services/circleDrafts';
+import { CircleDraft, circleDraftKey, decodeCircleDraft, deliverCircleMessage, PendingCircleMessage, persistCircleDraft } from '../../services/circleDrafts';
+import { readDurableValue } from '../../services/durableStorage';
 import { messageForUser } from '../../services/userMessage';
 import { getFirebase } from '../../services/firebase';
 import { USER_COLLECTION } from '../../services/dataPaths';
@@ -31,13 +32,18 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
   const acknowledged=useRef('');
   const locked=useRef(false),nearBottom=useRef(true),list=useRef<FlatList<CircleMessage>>(null),input=useRef<TextInput>(null),liveActive=useRef(active),loaded=useRef(false),latestDraft=useRef<CircleDraft>({text:'',pending:null});
   liveActive.current=active;
-  latestDraft.current={text,pending};
+  const applyDraft=useCallback((value:CircleDraft)=>{latestDraft.current=value;setText(value.text);setPending(value.pending);},[]);
   const draftKey=user?circleDraftKey(user.uid,circleId):'';
   const chat=useCircleMessages(circleId,active,count),readers=useCommunityProfiles(chat.circle?.memberIds||[],active);
   const messages=useMemo(()=>[...chat.messages].reverse(),[chat.messages]),latestId=messages[0]?.id;
   const selectedMember=memberId?readers.get(memberId):undefined;
 
-  useEffect(()=>{const listener=AppState.addEventListener('change',state=>setForeground(state==='active'));return()=>listener.remove();},[]);
+  useEffect(()=>{
+    const listener=AppState.addEventListener('change',state=>{
+      setForeground(state==='active');
+      if(state!=='active')void saveDraft().catch(()=>setError('Your draft couldn’t be saved on this device.'));
+    });return()=>listener.remove();
+  },[]);
   useEffect(()=>{
     if(!active||!foreground||!memberId)return;setNow(Date.now());
     const timer=setInterval(()=>setNow(Date.now()),60000);return()=>clearInterval(timer);
@@ -53,17 +59,17 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
   function saveDraft() {
     if(!draftKey||!loaded.current)return Promise.resolve();
     const value=latestDraft.current;
-    return value.text||value.pending?AsyncStorage.setItem(draftKey,JSON.stringify(value)):AsyncStorage.removeItem(draftKey);
+    return persistCircleDraft(AsyncStorage,draftKey,value);
   }
   useEffect(()=>{
     if(!draftKey)return;
     let live=true;loaded.current=false;setDraftReady(false);setDraftError(false);
-    void AsyncStorage.getItem(draftKey).then(raw=>{
+    void readDurableValue(AsyncStorage,draftKey).then(raw=>{
       if(!live)return;
-      const value=decodeCircleDraft(raw);setText(value.text);setPending(value.pending);loaded.current=true;setDraftReady(true);
+      const value=decodeCircleDraft(raw);applyDraft(value);loaded.current=true;setDraftReady(true);
     }).catch(()=>{if(live)setDraftError(true);});
     return()=>{live=false;void saveDraft().catch(()=>{});};
-  },[draftKey,loadAttempt]);
+  },[draftKey,loadAttempt,applyDraft]);
   useEffect(()=>{
     if(!draftReady)return;
     const timer=setTimeout(()=>void saveDraft().catch(()=>setError('Your draft couldn’t be saved on this device.')),350);
@@ -78,7 +84,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
     try{await work();}catch(e){setError(messageForUser(e,'That change couldn’t be saved. Please try again.'));}
     finally{locked.current=false;setBusy('');}
   }
-  function close() {if(locked.current)return;void saveDraft().catch(()=>{});Keyboard.dismiss();onClose();}
+  function close() {void saveDraft().catch(()=>{});Keyboard.dismiss();onClose();}
   function back() {
     if(selectedMessage){setSelectedMessage(null);return;}
     if(memberId){setMemberId(null);return;}
@@ -86,11 +92,11 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
     close();
   }
   async function send() {
-    const value=pending||{id:randomUUID(),text:text.trim()};
+    const value=latestDraft.current.pending||{id:randomUUID(),text:latestDraft.current.text.trim()};
     if(!value.text||!chat.circle||!draftReady)return;
-    setPending(value);
+    applyDraft({text:value.text,pending:value});
     await deliverCircleMessage(AsyncStorage,draftKey,value,draft=>community.perform('sendReadingCircleMessage',{circleId,messageId:draft.id,text:draft.text}));
-    setText('');setPending(null);setNotice('Message sent.');nearBottom.current=true;setAtBottom(true);
+    applyDraft({text:'',pending:null});setNotice('Message sent.');nearBottom.current=true;setAtBottom(true);
     requestAnimationFrame(()=>{list.current?.scrollToOffset({offset:0,animated:!reduced});if(liveActive.current)input.current?.focus();});
   }
   function openMessage(message:CircleMessage){if(locked.current)return;Keyboard.dismiss();setError('');setNotice('');setMenu('options');setSelectedMessage(message);}
@@ -100,9 +106,9 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
       <KeyboardAvoidingView style={s.screen} behavior={Platform.OS==='ios'?'padding':undefined}>
         <View style={s.screen} pointerEvents={selectedMessage?'none':'auto'} aria-hidden={!!selectedMessage} accessibilityElementsHidden={!!selectedMessage} importantForAccessibility={selectedMessage?'no-hide-descendants':'auto'} {...(Platform.OS==='web'?{inert:!!selectedMessage}:{})}>
           <View style={s.header}>
-            <IconButton name="chevronLeft" label={memberId?'Back to circle members':details?'Back to conversation':'Back to your circles'} onPress={back} disabled={!!busy}/>
+            <IconButton name="chevronLeft" label={memberId?'Back to circle members':details?'Back to conversation':'Back to your circles'} onPress={back}/>
             <View style={s.headerCopy}><Text accessibilityRole="header" numberOfLines={1} style={s.title}>{memberId?'Reader profile':details?'Circle details':chat.circle?.name||community.circles.find(circle=>circle.id===circleId)?.name||'Reading circle'}</Text><Text style={s.subtitle}>{chat.circle?`${chat.circle.memberCount} ${chat.circle.memberCount===1?'reader':'readers'} · Member-only conversation`:'Opening your circle…'}</Text></View>
-            {!details&&!memberId&&<IconButton name="more" label="Circle details and members" onPress={()=>{Keyboard.dismiss();setDetails(true);setError('');setNotice('');}}/>}
+            {!details&&!memberId&&<IconButton name="more" label="Circle details and members" disabled={!!busy} onPress={()=>{Keyboard.dismiss();setDetails(true);setError('');setNotice('');}}/>}
           </View>
 
           {memberId?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.detailContent}>
@@ -118,7 +124,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
             </View>}
             {chat.circle&&<CircleManagement circle={chat.circle} readers={readers} busy={busy} run={run} onNotice={setNotice}/>}
             <Text accessibilityRole="header" style={s.section}>Circle members</Text>
-            {[...readers.values()].filter(reader=>!community.settings.blockedUids.includes(reader.id)).map(reader=><Pressable key={reader.id} accessibilityRole="button" accessibilityLabel={`View ${reader.displayName}’s profile`} onPress={()=>setMemberId(reader.id)} style={s.member}><ProfileAvatar name={reader.displayName} photoData={reader.photoData} size={48} club={reader.badgeIds.includes('six-percent-club')}/><View style={{flex:1}}><Text style={s.label}>{reader.displayName}{reader.id===user?.uid?' (you)':''}</Text>{reader.badgeIds.includes('six-percent-club')&&<Text style={s.subtitle}>6% Club member</Text>}</View><Icon name="chevronRight" size={18} color={c.muted}/></Pressable>)}
+            {[...readers.values()].filter(reader=>!community.settings.blockedUids.includes(reader.id)).map(reader=><Pressable key={reader.id} accessibilityRole="button" accessibilityLabel={`View ${reader.displayName}’s profile`} disabled={!!busy} onPress={()=>setMemberId(reader.id)} style={s.member}><ProfileAvatar name={reader.displayName} photoData={reader.photoData} size={48} club={reader.badgeIds.includes('six-percent-club')}/><View style={{flex:1}}><Text style={s.label}>{reader.displayName}{reader.id===user?.uid?' (you)':''}</Text>{reader.badgeIds.includes('six-percent-club')&&<Text style={s.subtitle}>6% Club member</Text>}</View><Icon name="chevronRight" size={18} color={c.muted}/></Pressable>)}
             <Notice text="Only shared profiles appear here. Hiding a reader affects what you see; it doesn’t remove them from the circle."/>
             {confirmLeave?<View style={s.invitation}><Text style={s.label}>Leave this circle?</Text><Notice text="You’ll need an invitation code to return. Existing messages remain for other members."/><ActionButton title="Confirm leave circle" secondary loading={busy==='leave'} disabled={!!busy} onPress={()=>void run('leave',async()=>{await community.perform('leaveReadingCircle',{circleId});onClose();})}/><ActionButton title="Stay in circle" variant="ghost" disabled={!!busy} onPress={()=>setConfirmLeave(false)}/></View>:<ActionButton title="Leave circle" variant="ghost" onPress={()=>setConfirmLeave(true)}/>}
           </ScrollView>:<>
@@ -131,11 +137,11 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
               accessibilityLabel="Circle messages" maintainVisibleContentPosition={{minIndexForVisible:0}}
               onScroll={event=>{const bottom=event.nativeEvent.contentOffset.y<80;nearBottom.current=bottom;setAtBottom(value=>value===bottom?value:bottom);}}
               ListEmptyComponent={!chat.loading?<View style={s.empty}><Icon name="chat" size={36} color={c.orange}/><Text style={s.section}>Start with a hello.</Text><Text style={s.body}>Share a thought from today’s reading or ask your circle a question.</Text></View>:null}
-              ListFooterComponent={messages.length>=count?<View style={{paddingVertical:12}}>{count<200?<ActionButton title="Load earlier messages" secondary onPress={()=>setCount(value=>Math.min(value+50,200))}/>:<Text style={s.subtitle}>Showing the most recent 200 messages.</Text>}</View>:null}
+              ListFooterComponent={chat.loadedCount>=count?<View style={{paddingVertical:12}}>{count<200?<ActionButton title="Load earlier messages" secondary onPress={()=>setCount(value=>Math.min(value+50,200))}/>:<Text style={s.subtitle}>History is limited to the latest 200 messages.</Text>}</View>:null}
               renderItem={({item:message})=>{
                 const own=message.uid===user?.uid,reader=readers.get(message.uid),name=own?'You':reader?.displayName||'Reader';
                 return <View style={[s.message,own?s.own:s.peer]}>
-                  <View style={s.messageTop}><ProfileAvatar name={reader?.displayName||'Reader'} photoData={reader?.photoData} size={30} club={reader?.badgeIds.includes('six-percent-club')}/><View style={{flex:1,minWidth:0}}><Text style={s.sender}>{name}</Text><Text style={s.time}>{message.createdAt?new Date(message.createdAt.toMillis()).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Just now'}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Message options for ${name}`} onPress={()=>openMessage(message)} style={s.messageOptions}><Icon name="more" size={20} color={c.muted}/></Pressable></View>
+                  <View style={s.messageTop}><ProfileAvatar name={reader?.displayName||'Reader'} photoData={reader?.photoData} size={30} club={reader?.badgeIds.includes('six-percent-club')}/><View style={{flex:1,minWidth:0}}><Text style={s.sender}>{name}</Text><Text style={s.time}>{message.createdAt?new Date(message.createdAt.toMillis()).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Just now'}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Message options for ${name}`} disabled={!!busy} onPress={()=>openMessage(message)} style={s.messageOptions}><Icon name="more" size={20} color={c.muted}/></Pressable></View>
                   <Text selectable style={s.messageText}>{message.text}</Text>
                 </View>;
               }}
@@ -143,11 +149,11 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
             {!atBottom&&<View style={s.latest}><ActionButton title="Latest messages" secondary icon="chevronDown" onPress={()=>{nearBottom.current=true;setAtBottom(true);list.current?.scrollToOffset({offset:0,animated:!reduced});}}/></View>}
             <View style={s.composer}>
               {draftError?<><Notice error text="Your saved message draft couldn’t load. Retry before sending."/><ActionButton title="Retry saved draft" secondary onPress={()=>setLoadAttempt(value=>value+1)}/></>:<View style={s.composeRow}>
-                <TextInput ref={input} accessibilityLabel="Message your circle" placeholder="Message your circle…" placeholderTextColor={c.muted} value={pending?.text||text} onChangeText={value=>{setText(value);setNotice('');}} multiline maxLength={2000} editable={draftReady&&!busy&&!pending&&!!chat.circle} style={s.input}/>
+                <TextInput ref={input} accessibilityLabel="Message your circle" placeholder="Message your circle…" placeholderTextColor={c.muted} value={pending?.text||text} onChangeText={value=>{if(latestDraft.current.pending)return;applyDraft({text:value,pending:null});setNotice('');}} multiline maxLength={2000} editable={draftReady&&!busy&&!pending&&!!chat.circle} style={s.input}/>
                 <Pressable accessibilityRole="button" accessibilityLabel={pending?'Retry message':'Send message'} accessibilityState={{disabled:!!busy||!draftReady||!chat.circle||!(pending?.text||text).trim(),busy:busy==='send'}} disabled={!!busy||!draftReady||!chat.circle||!(pending?.text||text).trim()} onPress={()=>void run('send',send)} style={[s.send,(!draftReady||!chat.circle||!(pending?.text||text).trim())&&{opacity:.45}]}>{busy==='send'?<ActivityIndicator color={c.onOrange}/>:<Icon name="send" color={c.onOrange} size={22}/>}</Pressable>
               </View>}
               {(pending?.text||text).length>1600&&<Text style={s.time}>{(pending?.text||text).length} / 2,000</Text>}
-              {pending&&!busy&&<><Notice text="This message may already have arrived. Retry keeps the same ID and won’t post it twice."/><ActionButton title="Keep text as a new draft" variant="ghost" onPress={()=>{setText(pending.text);setPending(null);}}/></>}
+              {pending&&!busy&&<><Notice text="This message may already have arrived. Retrying won’t post it twice."/><ActionButton title="Keep text as a new draft" variant="ghost" onPress={()=>applyDraft({text:pending.text,pending:null})}/></>}
               {!!error&&<Notice error text={error}/>}
               {!!notice&&<Notice success text={notice}/>}
             </View>
@@ -163,7 +169,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
             <Text accessibilityRole="header" style={s.section}>{menu==='report'?'Report message':menu==='delete'?'Delete this message?':'Message options'}</Text>
             <Text numberOfLines={4} style={s.quoted}>{selectedMessage.text}</Text>
             {menu==='report'?<><Notice text="App staff will receive this message and your explanation."/><Field label="Why are you reporting this message?" value={reason} onChangeText={setReason} maxLength={500} multiline autoFocus/><ActionButton title="Submit report" disabled={!!busy||!reason.trim()} loading={busy==='report'} onPress={()=>void run('report',async()=>{await community.perform('reportReadingCommunityContent',{circleId,messageId:selectedMessage.id,reason});setSelectedMessage(null);setNotice('Report saved for review. You can also hide this reader.');})}/></>:menu==='delete'?<><Notice text="This removes the message for everyone in this circle."/><ActionButton title="Confirm delete message" secondary disabled={!!busy} loading={busy==='delete'} onPress={()=>void run('delete',async()=>{await community.perform('deleteReadingCircleMessage',{circleId,messageId:selectedMessage.id});setSelectedMessage(null);setNotice('Message deleted.');})}/></>:selectedMessage.uid===user?.uid?<ActionButton title="Delete your message" secondary onPress={()=>setMenu('delete')}/>:<><ActionButton title="Report this message" secondary onPress={()=>{setReason('');setMenu('report');}}/><ActionButton title="Hide this reader" secondary disabled={!!busy} loading={busy==='hide'} onPress={()=>void run('hide',async()=>{await community.perform('hideCommunityReader',{uid:selectedMessage.uid});setSelectedMessage(null);setNotice('This reader’s activity and messages are hidden for you.');})}/></>}
-            {!!error&&<Notice error text={error}/>}<ActionButton title="Close message options" variant="ghost" disabled={!!busy} onPress={()=>setSelectedMessage(null)}/>
+            {!!error&&<Notice error text={error}/>}<ActionButton title="Close message options" variant="ghost" onPress={()=>setSelectedMessage(null)}/>
           </ScrollView>
         </View>}
       </KeyboardAvoidingView>

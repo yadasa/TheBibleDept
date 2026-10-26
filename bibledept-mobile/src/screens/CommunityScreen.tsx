@@ -34,7 +34,7 @@ export function CommunityScreen({active=true,onAccount,onBadges,requestedSection
     return onSnapshot(doc(getFirebase().db,'bibledeptProfiles',reader.id),snapshot=>setReader(snapshot.exists()?{id:snapshot.id,...snapshot.data()} as CommunityProfile:null),()=>setReader(null));
   },[reader?.id,active,community.settings.joined]);
   useEffect(()=>{
-    if(!active)return;const refresh=()=>setNow(Date.now());refresh();
+    if(!active)return;const refresh=()=>{if(AppState.currentState===null||AppState.currentState==='active')setNow(Date.now());};refresh();
     const timer=setInterval(refresh,60000),subscription=AppState.addEventListener('change',state=>{if(state==='active')refresh();});
     return()=>{clearInterval(timer);subscription.remove();};
   },[active]);

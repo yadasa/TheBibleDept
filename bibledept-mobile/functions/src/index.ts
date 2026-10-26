@@ -86,10 +86,10 @@ export const encourageCommunityMilestone=communityCall(cheerMilestone);
 export const hideCommunityReader=communityCall(blockCommunityReader);
 export const unhideReadingCommunityReaders=communityCall(uid=>unhideCommunityReaders(uid));
 export const reportReadingCommunityContent=communityCall(reportCommunityContent);
-export const refreshReadingAwards=onDocumentWritten('bibledeptUsers/{uid}/stats/streak',event=>reconcileCommunity(event.params.uid).then(()=>{}));
-export const refreshJourneyAwards=onDocumentWritten('bibledeptUsers/{uid}/settings/planProgress',event=>reconcileCommunity(event.params.uid).then(()=>{}));
-export const refreshReflectionAwards=onDocumentWritten('bibledeptUsers/{uid}/annotations/{id}',event=>reconcileCommunity(event.params.uid).then(()=>{}));
-export const cleanCommunityCelebration=onDocumentDeleted('bibledeptActivity/{id}',event=>getFirestore().recursiveDelete(getFirestore().collection('bibledeptActivity').doc(event.params.id)));
+export const refreshReadingAwards=onDocumentWritten({document:'bibledeptUsers/{uid}/stats/streak',retry:true},event=>reconcileCommunity(event.params.uid).then(()=>{}));
+export const refreshJourneyAwards=onDocumentWritten({document:'bibledeptUsers/{uid}/settings/planProgress',retry:true},event=>reconcileCommunity(event.params.uid).then(()=>{}));
+export const refreshReflectionAwards=onDocumentWritten({document:'bibledeptUsers/{uid}/annotations/{id}',retry:true},event=>reconcileCommunity(event.params.uid).then(()=>{}));
+export const cleanCommunityCelebration=onDocumentDeleted({document:'bibledeptActivity/{id}',retry:true},event=>getFirestore().recursiveDelete(getFirestore().collection('bibledeptActivity').doc(event.params.id)));
 const expoAccessToken = defineSecret("EXPO_PUSH_ACCESS_TOKEN");
 export const dispatchReadingReminders = onSchedule(
   {

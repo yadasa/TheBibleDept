@@ -10,6 +10,12 @@ const profiles=()=>getFirestore().collection('bibledeptProfiles');
 const activity=()=>getFirestore().collection('bibledeptActivity');
 const circles=()=>getFirestore().collection('bibledeptCircles');
 const codes=()=>getFirestore().collection('bibledeptCircleCodes');
+const circleRegistry=()=>getFirestore().collection('bibledeptCircleRegistry');
+function profileIdentity(prior:Record<string,unknown>|undefined,displayName:string,photoData:string|null) {
+  const same=prior?.displayName===displayName&&(prior?.photoData||null)===photoData;
+  const profileVersion=same&&typeof prior?.profileVersion==='string'&&/^[a-f0-9]{32}$/.test(prior.profileVersion)?prior.profileVersion:randomBytes(16).toString('hex');
+  return {displayName,photoData,profileVersion};
+}
 function invalid(message:string):never {throw new HttpsError('invalid-argument',message);}
 function documentId(value:unknown):string {if(!validDocumentId(value))invalid('This item could not be found.');return value;}
 function memberError():never {throw new HttpsError('permission-denied','Join the community to continue.');}
@@ -23,7 +29,7 @@ async function requireCommunity(uid:string) {
 export async function reconcileCommunity(uid:string,now=Date.now()) {
   const root=userPath(uid);
   return getFirestore().runTransaction(async tx=>{
-    const [prefs,summary,plan,habit,earned,deleted,highlights,reflections,memberships,encouraged]=await Promise.all([
+    const [prefs,summary,plan,habit,earned,deleted,highlights,reflections,memberships,encouraged,published]=await Promise.all([
       tx.get(root.collection('settings').doc('community')),
       tx.get(root.collection('stats').doc('streak')),
       tx.get(root.collection('settings').doc('planProgress')),
@@ -34,6 +40,7 @@ export async function reconcileCommunity(uid:string,now=Date.now()) {
       tx.get(root.collection('annotations').where('comment','!=','').count()),
       tx.get(root.collection('circles').count()),
       tx.get(root.collection('encouragedReaders').count()),
+      tx.get(profiles().doc(uid)),
     ]);
     if(deleted.exists)return {metrics:EMPTY_METRICS,badgeIds:[]};
     const settings=prefs.data(),streak={...emptyStreak,...summary.data()};
@@ -47,7 +54,7 @@ export async function reconcileCommunity(uid:string,now=Date.now()) {
     for(const id of newIds)tx.create(root.collection('achievements').doc(id),{earnedAt:stamp});
     if(settings?.joined) {
       const zone=habit.data()?.timeZone;
-      tx.set(profiles().doc(uid),{displayName:settings.displayName,namePrefixes:communityNamePrefixes(settings.displayName),photoData:settings.photoData||null,
+      tx.set(profiles().doc(uid),{...profileIdentity(published.data(),settings.displayName,settings.photoData||null),namePrefixes:communityNamePrefixes(settings.displayName),
         streak:settings.shareStreak&&validZone(zone)?currentStreak(streak,localDate(now,zone)):null,
         lastReadingDate:settings.shareStreak?streak.lastQualifiedDate:null,timeZone:settings.shareStreak&&validZone(zone)?zone:null,
         badgeIds:settings.shareBadges?badgeIds:[],planDays:settings.shareBadges?metrics.planDays:null,updatedAt:stamp});
@@ -64,7 +71,7 @@ export async function reconcileCommunity(uid:string,now=Date.now()) {
 export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now()) {
   let value:ReturnType<typeof validateCommunityProfile>;
   try{value=validateCommunityProfile(input);}catch(e){invalid((e as Error).message);}
-  try{value.photoData=await normalizeProfilePhoto(value.photoData);}catch(e){invalid((e as Error).message);}
+  let photoWork:Promise<string|null>|undefined;
   await getFirestore().runTransaction(async tx=>{
     const ref=userPath(uid).collection('settings').doc('community');
     const prior=await tx.get(ref);
@@ -72,7 +79,14 @@ export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now
     const deleted=await tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid));
     const published=await tx.get(profiles().doc(uid));
     if(deleted.exists)throw new HttpsError('unauthenticated','This account is no longer available.');
-    tx.set(ref,{...value!,blockedUids:prior.data()?.blockedUids||[],updatedAt:Timestamp.fromMillis(now)});
+    // Existing thumbnails were already decoded and stripped by this server.
+    // Preference edits must not repeatedly recompress the same JPEG, and a
+    // transaction retry must reuse the first normalization result.
+    let photoData=value.photoData;
+    if(photoData!==null&&photoData!==prior.data()?.photoData) {
+      try{photoData=await(photoWork??=normalizeProfilePhoto(value.photoData));}catch(e){invalid((e as Error).message);}
+    }
+    tx.set(ref,{...value!,photoData,blockedUids:prior.data()?.blockedUids||[],updatedAt:Timestamp.fromMillis(now)});
     // Withdrawing sharing removes previous celebrations as well as the profile.
     if(!value.joined||!value.shareBadges)for(const event of events.docs)tx.delete(event.ref);
     if(!value.joined)tx.delete(profiles().doc(uid));
@@ -80,7 +94,7 @@ export async function saveCommunityProfile(uid:string,input:unknown,now=Date.now
       // Fence sharing in the preferences transaction. A failed metric refresh must
       // never leave previously shared fields visible after consent is withdrawn.
       const visible=published.data();
-      tx.set(profiles().doc(uid),{displayName:value.displayName,namePrefixes:communityNamePrefixes(value.displayName),photoData:value.photoData,
+      tx.set(profiles().doc(uid),{...profileIdentity(visible,value.displayName,photoData),namePrefixes:communityNamePrefixes(value.displayName),
         streak:value.shareStreak?visible?.streak??null:null,
         lastReadingDate:value.shareStreak?visible?.lastReadingDate??null:null,
         timeZone:value.shareStreak?visible?.timeZone??null:null,
@@ -97,24 +111,27 @@ export async function createCircle(uid:string,input:unknown,now=Date.now()) {
   let name:string;try{name=cleanCircleName(value?.name);}catch(e){invalid((e as Error).message);}
   const requestId=value?.requestId;
   if(!validDocumentId(requestId))invalid('Reopen circle creation and try again.');
-  const ref=circles().doc(requestId),code=randomBytes(6).toString('hex').toUpperCase(),receipt=userPath(uid).collection('circleCreations').doc(requestId);
+  const ref=circles().doc(requestId),code=randomBytes(6).toString('hex').toUpperCase(),receipt=userPath(uid).collection('circleCreations').doc(requestId),registration=circleRegistry().doc(requestId);
   await getFirestore().runTransaction(async tx=>{
-    const [settings,own,deleted,prior,created]=await Promise.all([tx.get(userPath(uid).collection('settings').doc('community')),tx.get(userPath(uid).collection('circles').limit(20)),tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid)),tx.get(ref),tx.get(receipt)]);
+    const [settings,own,deleted,prior,created,registered]=await Promise.all([tx.get(userPath(uid).collection('settings').doc('community')),tx.get(userPath(uid).collection('circles').limit(20)),tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid)),tx.get(ref),tx.get(receipt),tx.get(registration)]);
     if(deleted.exists)throw new HttpsError('unauthenticated','This account is no longer available.');
     if(!settings.data()?.joined)memberError();
     if(created.exists) {
       if(created.data()?.name!==name)throw new HttpsError('already-exists','This circle request used another name. Open the original circle or start a different one.');
       if(!prior.exists)throw new HttpsError('failed-precondition','That circle was already created and later closed. Start a new circle.');
       if(!prior.data()?.memberIds.includes(uid))throw new HttpsError('failed-precondition','That circle was already created. Use its current invitation code to rejoin.');
+      if(!registered.exists)tx.create(registration,{registeredAt:Timestamp.fromMillis(now)});
       return;
     }
     if(prior.exists)throw new HttpsError('already-exists','This circle request is already in use. Start a different circle.');
+    if(registered.exists)throw new HttpsError('already-exists','This circle is no longer available. Start a different circle.');
     if(own.size>=20)throw new HttpsError('resource-exhausted','You can belong to up to 20 circles.');
     const data={name,code,memberCount:1,createdBy:uid};
     tx.create(ref,{...data,memberIds:[uid],createdAt:Timestamp.fromMillis(now)});
     tx.create(codes().doc(code),{circleId:ref.id});
     tx.create(userPath(uid).collection('circles').doc(ref.id),data);
     tx.create(receipt,{circleId:ref.id,name,createdAt:Timestamp.fromMillis(now)});
+    tx.create(registration,{registeredAt:Timestamp.fromMillis(now)});
   });
   await reconcileCommunity(uid,now);
   return {id:ref.id};
@@ -150,8 +167,12 @@ export async function leaveCircle(uid:string,input:unknown) {
     tx.delete(userPath(uid).collection('circles').doc(id));
     if(!data||!data.memberIds.includes(uid))return;
     const members=(data.memberIds as string[]).filter(member=>member!==uid);
-    if(members.length)tx.update(ref,{memberIds:members,memberCount:members.length,createdBy:data.createdBy===uid?members[0]:data.createdBy});
-    else {tx.delete(ref);tx.delete(codes().doc(data.code));}
+    if(members.length) {
+      const createdBy=data.createdBy===uid?members[0]:data.createdBy;
+      tx.update(ref,{memberIds:members,memberCount:members.length,createdBy});
+      for(const member of members)tx.set(userPath(member).collection('circles').doc(id),{name:data.name,code:data.code,memberCount:members.length,createdBy},{merge:true});
+    }
+    else {tx.delete(ref);tx.delete(codes().doc(data.code));tx.set(circleRegistry().doc(id),{closedAt:Timestamp.now()},{merge:true});}
   });
   // Empty circles have no remaining readers; remove their message history.
   if(!(await circles().doc(id).get()).exists)await getFirestore().recursiveDelete(circles().doc(id));
@@ -179,7 +200,7 @@ export async function renameCircle(uid:string,input:unknown) {
   await getFirestore().runTransaction(async tx=>{
     const group=await requireCircleOwner(tx,uid,id);
     tx.update(circles().doc(id),{name:name!});
-    for(const member of group.memberIds)tx.set(userPath(member).collection('circles').doc(id),{name:name!},{merge:true});
+    for(const member of group.memberIds)tx.set(userPath(member).collection('circles').doc(id),{name:name!,code:group.code,memberCount:group.memberIds.length,createdBy:group.createdBy},{merge:true});
   });return {renamed:true};
 }
 
@@ -192,7 +213,7 @@ export async function rotateCircleInvitation(uid:string,input:unknown) {
     if((await tx.get(codes().doc(next))).exists)throw new HttpsError('aborted','The invitation couldn’t be replaced. Please try again.');
     tx.create(codes().doc(next),{circleId:id});tx.delete(codes().doc(group.code));
     tx.update(circles().doc(id),{code:next});
-    for(const member of group.memberIds)tx.set(userPath(member).collection('circles').doc(id),{code:next},{merge:true});
+    for(const member of group.memberIds)tx.set(userPath(member).collection('circles').doc(id),{name:group.name,code:next,memberCount:group.memberIds.length,createdBy:group.createdBy},{merge:true});
     return {code:next};
   });
 }
@@ -209,7 +230,7 @@ export async function removeCircleMember(uid:string,input:unknown) {
     tx.create(codes().doc(next),{circleId:id});tx.delete(codes().doc(group.code));
     tx.update(circles().doc(id),{memberIds:members,memberCount:members.length,code:next});
     tx.delete(userPath(target).collection('circles').doc(id));tx.delete(userPath(target).collection('circleReads').doc(id));
-    for(const member of members)tx.set(userPath(member).collection('circles').doc(id),{memberCount:members.length,code:next},{merge:true});
+    for(const member of members)tx.set(userPath(member).collection('circles').doc(id),{name:group.name,memberCount:members.length,code:next,createdBy:group.createdBy},{merge:true});
     return {removed:true,code:next};
   });
 }
@@ -219,9 +240,10 @@ export async function sendCircleMessage(uid:string,input:unknown,now=Date.now())
   let text:string;try{text=cleanMessage(data.text);}catch(e){invalid((e as Error).message);}
   return getFirestore().runTransaction(async tx=>{
     const ref=circles().doc(id),message=ref.collection('bibledeptMessages').doc(messageId);
-    const [settings,group,prior,state,deleted]=await Promise.all([tx.get(userPath(uid).collection('settings').doc('community')),tx.get(ref),tx.get(message),tx.get(userPath(uid).collection('settings').doc('communityRate')),tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid))]);
+    const [settings,group,prior,state,deleted,tombstone]=await Promise.all([tx.get(userPath(uid).collection('settings').doc('community')),tx.get(ref),tx.get(message),tx.get(userPath(uid).collection('settings').doc('communityRate')),tx.get(getFirestore().collection('bibledeptDeletedAccounts').doc(uid)),tx.get(ref.collection('bibledeptMessageTombstones').doc(messageId))]);
     if(deleted.exists)throw new HttpsError('unauthenticated','This account is no longer available.');
     if(!settings.data()?.joined||!group.data()?.memberIds.includes(uid))throw new HttpsError('permission-denied','You must be a circle member to send messages.');
+    if(tombstone.exists)throw new HttpsError('failed-precondition','That message was deleted. Keep the text as a new draft if you want to post it again.');
     if(prior.exists) {
       if(prior.data()?.uid!==uid||prior.data()?.text!==text)throw new HttpsError('already-exists','This message ID is already in use.');
       return {id:messageId};
@@ -241,6 +263,7 @@ export async function deleteCircleMessage(uid:string,input:unknown) {
     const [message,circle,latest]=await Promise.all([tx.get(ref),tx.get(group),tx.get(group.collection('bibledeptMessages').orderBy('createdAt','desc').limit(2))]);
     if(message.exists&&message.data()?.uid!==uid)throw new HttpsError('permission-denied','You can only delete your own messages.');
     tx.delete(ref);
+    if(message.exists&&circle.exists)tx.set(group.collection('bibledeptMessageTombstones').doc(messageId),{deletedAt:Timestamp.now()});
     if(circle.exists&&message.exists) {
       const remaining=latest.docs.find(item=>item.id!==messageId);
       tx.update(group,{lastMessageId:remaining?.id||null,lastSenderUid:remaining?.data().uid||null,lastMessageAt:remaining?.data().createdAt||null});
@@ -288,16 +311,20 @@ export async function unhideCommunityReaders(uid:string) {
 }
 
 export async function reportCommunityContent(uid:string,input:unknown,now=Date.now()) {
-  const data=input as {activityId?:unknown;circleId?:unknown;messageId?:unknown;reason?:unknown};
+  const data=input as {profileUid?:unknown;profileVersion?:unknown;activityId?:unknown;circleId?:unknown;messageId?:unknown;reason?:unknown};
   if(!data||typeof data.reason!=='string'||!data.reason.trim()||data.reason.length>500)invalid('Tell us why you’re reporting this (up to 500 characters).');
   const reason=data.reason.trim();
   let path:string,circleId:string|undefined;
-  if(data.activityId)path=`bibledeptActivity/${documentId(data.activityId)}`;
+  if(data.profileUid) {
+    path=`bibledeptProfiles/${documentId(data.profileUid)}`;
+    if(typeof data.profileVersion!=='string'||!/^[a-f0-9]{32}$/.test(data.profileVersion))invalid('Reopen this profile before reporting its name or photo.');
+  }
+  else if(data.activityId)path=`bibledeptActivity/${documentId(data.activityId)}`;
   else {
     circleId=documentId(data.circleId);
     path=`bibledeptCircles/${circleId}/bibledeptMessages/${documentId(data.messageId)}`;
   }
-  const id=createHash('sha256').update(`${uid}\0${path}`).digest('hex'),ref=getFirestore().collection('bibledeptCommunityReports').doc(id);
+  const id=createHash('sha256').update(`${uid}\0${path}${data.profileUid?`\0${data.profileVersion}`:''}`).digest('hex'),ref=getFirestore().collection('bibledeptCommunityReports').doc(id);
   await getFirestore().runTransaction(async tx=>{
     const [prior,settings,deleted,item,group]=await Promise.all([
       tx.get(ref),tx.get(userPath(uid).collection('settings').doc('community')),
@@ -311,7 +338,8 @@ export async function reportCommunityContent(uid:string,input:unknown,now=Date.n
     if(circleId&&!group?.data()?.memberIds.includes(uid))throw new HttpsError('permission-denied','You must belong to this circle.');
     if(!item.exists)throw new HttpsError('not-found','This item is no longer available.');
     const content=item.data()!;
-    const snapshot=circleId?{uid:content.uid,text:String(content.text||'').slice(0,2000)}:{uid:content.uid,kind:content.kind,badgeId:content.badgeId||null};
+    if(data.profileUid&&content.profileVersion!==data.profileVersion)throw new HttpsError('failed-precondition','This profile changed. Review its current name and photo, then try again.');
+    const snapshot=data.profileUid?{uid:data.profileUid,profileVersion:content.profileVersion,displayName:String(content.displayName||'').slice(0,80),photoData:typeof content.photoData==='string'?content.photoData.slice(0,60000):null}:circleId?{uid:content.uid,text:String(content.text||'').slice(0,2000)}:{uid:content.uid,kind:content.kind,badgeId:content.badgeId||null};
     tx.create(ref,{uid,path,reason,contentSnapshot:snapshot,createdAt:Timestamp.fromMillis(now),status:'open'});
   });
   return {reported:true};
@@ -327,7 +355,9 @@ export async function deleteCommunityAccount(uid:string) {
   for(const event of events.docs)await getFirestore().recursiveDelete(event.ref);
   let cursor:QueryDocumentSnapshot|undefined;
   for(;;) {
-    const lookup=getFirestore().collectionGroup('bibledeptMessages').where('uid','==',uid).limit(400);
+    // A live-room deletion also writes one content-free tombstone. Keep both
+    // writes plus the metadata update within a 500-write transaction.
+    const lookup=getFirestore().collectionGroup('bibledeptMessages').where('uid','==',uid).limit(200);
     const messages=await (cursor?lookup.startAfter(cursor):lookup).get();
     if(messages.empty)break;
     cursor=messages.docs[messages.size-1];
@@ -339,9 +369,13 @@ export async function deleteCommunityAccount(uid:string) {
       groups.set(id,[...(groups.get(id)||[]),message]);
     }
     for(const [id,owned] of groups)await getFirestore().runTransaction(async tx=>{
-      const group=circles().doc(id),removed=new Set(owned.map(message=>message.id));
-      const [circle,latest]=await Promise.all([tx.get(group),tx.get(group.collection('bibledeptMessages').orderBy('createdAt','desc').limit(owned.length+1))]);
-      for(const message of owned)tx.delete(message.ref);
+      const group=circles().doc(id);
+      const [circle,latest,current]=await Promise.all([tx.get(group),tx.get(group.collection('bibledeptMessages').orderBy('createdAt','desc').limit(owned.length+1)),tx.getAll(...owned.map(message=>message.ref))]);
+      const confirmed=current.filter(message=>message.exists&&message.data()?.uid===uid),removed=new Set(confirmed.map(message=>message.id));
+      for(const message of confirmed) {
+        tx.delete(message.ref);
+        if(circle.exists)tx.set(group.collection('bibledeptMessageTombstones').doc(message.id),{deletedAt:Timestamp.now()});
+      }
       if(circle.exists) {
         const remaining=latest.docs.find(message=>!removed.has(message.id));
         tx.update(group,{lastMessageId:remaining?.id||null,lastSenderUid:remaining?.data().uid||null,lastMessageAt:remaining?.data().createdAt||null});

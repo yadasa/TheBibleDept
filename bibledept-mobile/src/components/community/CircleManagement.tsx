@@ -21,7 +21,7 @@ export function CircleManagement({circle,readers,busy,run,onNotice}:{
     <ActionButton title={confirmation.kind==='invitation'?'Confirm replace invitation':'Confirm remove reader'} secondary loading={busy==='manage'} disabled={!!busy} onPress={()=>void run('manage',async()=>{
       if(confirmation.kind==='invitation')await community.perform('replaceReadingCircleInvitation',{circleId:circle.id,expectedCode:circle.code});
       else await community.perform('removeReadingCircleMember',{circleId:circle.id,uid:confirmation.uid,expectedCode:circle.code});
-      onNotice(confirmation.kind==='invitation'?'Invitation replaced. The new code is shown above.':'Reader removed. Share the new invitation only with people you want to join.');setConfirmation(null);
+      onNotice(confirmation.kind==='invitation'?'Invitation replaced. Find the new code in Circle details.':'Reader removed. Share the new invitation only with people you want to join.');setConfirmation(null);
     })}/>
     <ActionButton title="Cancel owner action" variant="ghost" disabled={!!busy} onPress={()=>setConfirmation(null)}/>
   </View>;

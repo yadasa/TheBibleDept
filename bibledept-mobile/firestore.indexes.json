@@ -31,6 +31,26 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "bibledeptCircleRegistry",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "bibledeptMessageTombstones",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "bibledeptProfiles",
+      "fieldPath": "photoData",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "bibledeptCommunityReports",
+      "fieldPath": "contentSnapshot",
+      "indexes": []
+    },
+    {
       "collectionGroup": "notificationCampaigns",
       "fieldPath": "deleteAfter",
       "ttl": true,

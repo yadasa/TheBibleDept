@@ -36,7 +36,7 @@ test('durable circle and message retries recover from offline requests and lost 
   connectAuthEmulator(auth,'http://127.0.0.1:19099',{disableWarnings:true});
   connectFirestoreEmulator(db,'127.0.0.1',18080);
   connectFunctionsEmulator(functions,'127.0.0.1',(proxy.address() as AddressInfo).port);
-  const saved=new Map<string,string>(),storage={setItem:async(key:string,value:string)=>{saved.set(key,value);},removeItem:async(key:string)=>{saved.delete(key);}};
+  const saved=new Map<string,string>(),storage={getItem:async(key:string)=>saved.get(key)||null,setItem:async(key:string,value:string)=>{saved.set(key,value);},removeItem:async(key:string)=>{saved.delete(key);}};
   try {
     const {user}=await createUserWithEmailAndPassword(auth,`recovery-${Date.now()}@bibledept.test`,'Local-test-2468!');
     const call=async<T,>(name:string,data:Record<string,unknown>)=>(await httpsCallable<unknown,T>(functions,name)({...data,expectedUid:user.uid})).data;

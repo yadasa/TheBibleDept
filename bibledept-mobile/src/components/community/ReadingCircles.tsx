@@ -5,7 +5,8 @@ import { Text, View } from 'react-native';
 import { cleanCircleName } from '../../../shared/community';
 import { useAuth } from '../../services/AuthProvider';
 import { useCommunity } from '../../services/CommunityProvider';
-import { circleCreationKey, decodeCircleCreation, deliverCircleCreation, PendingCircleCreation } from '../../services/circleCreation';
+import { circleCreationKey, clearCircleCreation, decodeCircleCreation, deliverCircleCreation, PendingCircleCreation } from '../../services/circleCreation';
+import { readDurableValue, writeDurableValue } from '../../services/durableStorage';
 import { messageForUser } from '../../services/userMessage';
 import { typography as t, useTheme } from '../../theme';
 import { AccountLink } from '../account/AccountPage';
@@ -23,12 +24,12 @@ export function ReadingCircles({active}:{active:boolean}) {
   useEffect(()=>{
     if(!storageKey)return;
     let live=true;setCreationReady(false);setLoadError(false);
-    void AsyncStorage.getItem(storageKey).then(raw=>{if(live){setCreation(decodeCircleCreation(raw));setCreationReady(true);}}).catch(()=>{if(live)setLoadError(true);});
+    void readDurableValue(AsyncStorage,storageKey).then(raw=>{if(live){setCreation(decodeCircleCreation(raw));setCreationReady(true);}}).catch(()=>{if(live)setLoadError(true);});
     return()=>{live=false;};
   },[storageKey,loadRevision]);
   async function startDifferent() {
     if(locked.current)return;locked.current=true;setBusy(true);setError('');
-    try{await AsyncStorage.removeItem(storageKey);setCreation(null);setName('');setMode('create');}
+    try{await writeDurableValue(AsyncStorage,storageKey,null);setCreation(null);setName('');setMode('create');}
     catch{setError('The saved circle request couldn’t be cleared. Please try again.');}
     finally{locked.current=false;setBusy(false);}
   }
@@ -36,7 +37,7 @@ export function ReadingCircles({active}:{active:boolean}) {
     wantsResult.current=false;setSelected(id);
     if(creation?.id===id&&!locked.current) {
       locked.current=true;setBusy(true);
-      void AsyncStorage.removeItem(storageKey).then(()=>setCreation(previous=>previous?.id===id?null:previous)).catch(()=>{}).finally(()=>{locked.current=false;setBusy(false);});
+      void clearCircleCreation(AsyncStorage,storageKey,creation).then(()=>setCreation(previous=>previous?.id===id?null:previous)).catch(()=>{}).finally(()=>{locked.current=false;setBusy(false);});
     }
   }
   async function enter(action:'create'|'join') {
@@ -59,7 +60,7 @@ export function ReadingCircles({active}:{active:boolean}) {
     }catch(e){
       // A server-owned membership is also proof of a completed creation.
       if(request&&knownCircles.current.some(circle=>circle.id===request!.id)) {
-        await AsyncStorage.removeItem(storageKey).then(()=>setCreation(null)).catch(()=>{});
+        await clearCircleCreation(AsyncStorage,storageKey,request).then(()=>setCreation(null)).catch(()=>{});
         if(wantsResult.current){setMode('list');if(activeNow.current)setSelected(request.id);}
       }else setError(messageForUser(e,'Your circle couldn’t be opened. Please try again.'));
     }
@@ -82,6 +83,6 @@ export function ReadingCircles({active}:{active:boolean}) {
     {loadError&&<><Notice error text="Your saved circle request couldn’t load. Retry before creating another circle."/><ActionButton title="Retry saved circle request" secondary onPress={()=>setLoadRevision(value=>value+1)}/></>}
     {!!error&&<Notice error text={error}/>}
     <Notice text="Circles support up to 50 members. Their messages are only visible to members who have joined the community."/>
-    {selected&&<CircleConversation key={selected} circleId={selected} active={active} onClose={()=>setSelected(null)}/>}
+    {selected&&<CircleConversation key={selected} circleId={selected} active={active} onClose={()=>setSelected(current=>current===selected?null:current)}/>}
   </View>;
 }

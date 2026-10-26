@@ -75,12 +75,15 @@ test('community consent, server-owned badges, and circle membership are enforced
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptProfiles',author)),denied);
     await call(1,'updateCommunityProfile',{...profile,displayName:'Circle member'});
     assert.equal((await getDoc(doc(clients[1].db,'bibledeptProfiles',author))).data()?.displayName,profile.displayName);
+    await call(1,'reportReadingCommunityContent',{profileUid:author,profileVersion:(await getDoc(doc(clients[1].db,'bibledeptProfiles',author))).data()!.profileVersion,reason:'Disposable local profile report.'});
     await assert.rejects(setDoc(doc(clients[0].db,'bibledeptProfiles',author),{...profile,badgeIds:['six-percent-club']}),denied);
     await assert.rejects(setDoc(doc(clients[0].db,'bibledeptUsers',author,'achievements','six-percent-club'),{earnedAt:serverTimestamp()}),denied);
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptUsers',author,'settings','community')),denied);
     const created=(await call(0,'createReadingCircle',{name:'Private local circle',requestId:crypto.randomUUID()})).data as {id:string};
     await assert.rejects(httpsCallable(clients[1].functions,'createReadingCircle')({name:'Wrong account request',requestId:crypto.randomUUID(),expectedUid:author}),error=>(error as {code:string}).code==='functions/failed-precondition');
     await assert.rejects(getDoc(doc(clients[0].db,'bibledeptUsers',author,'circleCreations',created.id)),denied);
+    await assert.rejects(getDoc(doc(clients[0].db,'bibledeptCircleRegistry',created.id)),denied);
+    await assert.rejects(setDoc(doc(clients[0].db,'bibledeptCircleRegistry',created.id),{closedAt:serverTimestamp()}),denied);
     await assert.rejects(setDoc(doc(clients[0].db,'bibledeptUsers',author,'circleCreations','forged'),{circleId:created.id,name:'Forged receipt'}),denied);
     const circle=doc(clients[0].db,'bibledeptCircles',created.id),invite=(await getDoc(circle)).data()!;
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptCircles',created.id)),denied);
@@ -108,6 +111,9 @@ test('community consent, server-owned badges, and circle membership are enforced
     await call(1,'joinReadingCircle',{code:(await getDoc(circle)).data()!.code});
     await call(1,'leaveReadingCircle',{circleId:created.id});
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptCircles',created.id,'bibledeptMessages',messageId)),denied);
+    await call(0,'deleteReadingCircleMessage',{circleId:created.id,messageId});
+    await assert.rejects(call(0,'sendReadingCircleMessage',{circleId:created.id,messageId,text:'A local circle message.'}),error=>(error as {code:string}).code==='functions/failed-precondition');
+    await assert.rejects(getDoc(doc(clients[0].db,'bibledeptCircles',created.id,'bibledeptMessageTombstones',messageId)),denied);
     await call(1,'updateCommunityProfile',{...profile,joined:false});
     assert.equal((await getDoc(doc(clients[0].db,'bibledeptProfiles',reader))).exists(),false);
     await assert.rejects(getDoc(doc(clients[1].db,'bibledeptProfiles',author)),denied);

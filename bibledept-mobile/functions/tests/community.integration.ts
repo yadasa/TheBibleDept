@@ -135,8 +135,52 @@ test('creation retries return one circle and closed circles cannot be recreated 
     await assert.rejects(createCircle(outsider,request),{code:'already-exists'});
     await leaveCircle(owner,{circleId:request.requestId});
     await assert.rejects(createCircle(owner,request),{code:'failed-precondition'});
+    await assert.rejects(createCircle(outsider,request),{code:'already-exists'});
     assert.equal((await db.collection('bibledeptCircles').doc(request.requestId).get()).exists,false);
   }finally {await cleanup(owner,outsider);}
+});
+
+test('deleted messages cannot be resurrected by retries or reused by another member, while unknown IDs are not reserved',async()=>{
+  const owner=uid('deleted-message-owner'),peer=uid('deleted-message-peer');
+  try {
+    await Promise.all([owner,peer].map(user=>saveCommunityProfile(user,profile)));
+    const {id}=await createCircle(owner,{name:'Deletion retry circle',requestId:uid('deleted-message-circle')}),ref=db.collection('bibledeptCircles').doc(id);
+    await joinCircle(peer,{code:(await ref.get()).data()!.code});
+    const message={circleId:id,messageId:'must-stay-deleted',text:'A disposable thought to remove.'};
+    await sendCircleMessage(owner,message,now);await deleteCircleMessage(owner,message);
+    await assert.rejects(sendCircleMessage(owner,message,now+4000),{code:'failed-precondition'});
+    await assert.rejects(sendCircleMessage(peer,{...message,text:'A different member reuses an old ID.'},now+4000),{code:'failed-precondition'});
+    assert.equal((await ref.collection('bibledeptMessages').doc(message.messageId).get()).exists,false);
+    await deleteCircleMessage(peer,{circleId:id,messageId:'unused-id'});
+    await sendCircleMessage(owner,{circleId:id,messageId:'unused-id',text:'Unknown IDs were never reserved.'},now+8000);
+    assert.equal((await ref.collection('bibledeptMessages').doc('unused-id').get()).exists,true);
+  }finally{await cleanup(owner,peer);}
+});
+
+test('account cleanup rechecks message ownership inside the transaction before deleting an ID that was reused',async()=>{
+  const owner=uid('cleanup-race-owner'),peer=uid('cleanup-race-peer');let restore:undefined|(()=>void);
+  try {
+    await Promise.all([owner,peer].map(user=>saveCommunityProfile(user,profile)));
+    const {id}=await createCircle(peer,{name:'Cleanup race circle',requestId:uid('cleanup-race-circle')}),ref=db.collection('bibledeptCircles').doc(id);
+    await joinCircle(owner,{code:(await ref.get()).data()!.code});
+    const messageId='legacy-reused-id';
+    await sendCircleMessage(owner,{circleId:id,messageId,text:'The original departing reader’s thought.'},now-10000);
+    await leaveCircle(owner,{circleId:id});
+    const original=db.runTransaction;let interposed=false;
+    const stub=mock.method(db,'runTransaction',async(...args:Parameters<typeof original>)=>{
+      if(!interposed) {
+        interposed=true;
+        // Reproduce a legacy deletion/recreation after the cleanup query read.
+        await ref.collection('bibledeptMessages').doc(messageId).delete();
+        await sendCircleMessage(peer,{circleId:id,messageId,text:'The remaining reader’s new thought.'},now+4000);
+      }
+      return original.apply(db,args);
+    });restore=()=>stub.mock.restore();
+    await deleteCommunityAccount(owner);restore();restore=undefined;
+    const retained=(await ref.collection('bibledeptMessages').doc(messageId).get()).data();
+    assert.equal(retained?.uid,peer);assert.equal(retained?.text,'The remaining reader’s new thought.');
+    assert.equal((await ref.get()).data()?.lastSenderUid,peer);assert.equal((await ref.get()).data()?.lastMessageId,messageId);
+  }finally{restore?.();await cleanup(owner,peer);}
 });
 
 test('withdrawing sharing redacts public fields even when the subsequent refresh fails',async()=>{
@@ -184,6 +228,8 @@ test('only current circle owners can rename or replace invitations, and concurre
     await assert.rejects(joinCircle(outside,{code:oldCode}),{code:'not-found'});
     await sendCircleMessage(member,{circleId:id,messageId:'still-a-member',text:'Existing members stay in their conversation.'});
     await leaveCircle(owner,{circleId:id});
+    assert.equal((await userPath(member).collection('circles').doc(id).get()).data()?.createdBy,member);
+    assert.equal((await userPath(member).collection('circles').doc(id).get()).data()?.memberCount,1);
     await assert.rejects(renameCircle(owner,{circleId:id,name:'Former owner'}),{code:'permission-denied'});
     await renameCircle(member,{circleId:id,name:'A new owner can continue'});
     assert.equal((await ref.get()).data()?.name,'A new owner can continue');
@@ -274,6 +320,62 @@ test('highlights and reflections award independently, stay private, and retain e
     assert.ok(after.badgeIds.includes('well-marked'));
     assert.equal((await userPath(user).collection('achievements').doc('well-marked').get()).data()!.earnedAt.toMillis(),before);
   }finally{await cleanup(user);}
+});
+
+test('profile identity changes only with name/photo edits and unchanged photos are not recompressed during preference saves',async()=>{
+  const user=uid('profile-identity');
+  try {
+    const {default:sharp}=await import('sharp'),pixels=Buffer.from(Array.from({length:40*40*3},(_,index)=>(index*37)%256));
+    const photoData=`data:image/jpeg;base64,${(await sharp(pixels,{raw:{width:40,height:40,channels:3}}).jpeg({quality:90}).toBuffer()).toString('base64')}`;
+    await saveCommunityProfile(user,{...profile,photoData});
+    const ref=db.collection('bibledeptProfiles').doc(user),original=(await ref.get()).data()!;
+    assert.match(original.profileVersion,/^[a-f0-9]{32}$/);
+    await saveCommunityProfile(user,{...profile,photoData:original.photoData,shareStreak:false});
+    let current=(await ref.get()).data()!;
+    assert.equal(current.photoData,original.photoData);assert.equal(current.profileVersion,original.profileVersion);
+    await reconcileCommunity(user);assert.equal((await ref.get()).data()?.profileVersion,original.profileVersion);
+    await saveCommunityProfile(user,{...profile,displayName:'A different name',photoData:original.photoData});
+    current=(await ref.get()).data()!;assert.notEqual(current.profileVersion,original.profileVersion);
+    await saveCommunityProfile(user,{...profile,photoData:original.photoData});
+    const reverted=(await ref.get()).data()!;
+    assert.notEqual(reverted.profileVersion,current.profileVersion);assert.notEqual(reverted.profileVersion,original.profileVersion);
+    assert.equal(reverted.photoData,original.photoData);
+  }finally{await cleanup(user);}
+});
+
+test('profile reports retain the version shown, allow fresh reviews after edits, and preserve staff decisions on lost-ack retries',async()=>{
+  const author=uid('profile-report-author'),reader=uid('profile-report-reader'),outside=uid('profile-report-outside');
+  try {
+    const {default:sharp}=await import('sharp');
+    const photoData=`data:image/jpeg;base64,${(await sharp({create:{width:16,height:16,channels:3,background:'#F77A1C'}}).jpeg().toBuffer()).toString('base64')}`;
+    await saveCommunityProfile(author,{...profile,displayName:'A reported profile',photoData});
+    await saveCommunityProfile(author,{...profile,displayName:'A reported profile',photoData,shareBadges:false});
+    await saveCommunityProfile(reader,profile);await saveCommunityProfile(outside,{...profile,joined:false});
+    assert.equal((await db.collection('bibledeptActivity').where('uid','==',author).get()).size,0);
+    const published=(await db.collection('bibledeptProfiles').doc(author).get()).data()!,target={profileUid:author,profileVersion:published.profileVersion};
+    await assert.rejects(reportCommunityContent(outside,{...target,reason:'Not a community member.'}),{code:'permission-denied'});
+    await assert.rejects(reportCommunityContent(reader,{...target,profileVersion:'bad-version',reason:'Invalid version.'}),{code:'invalid-argument'});
+    await Promise.all([0,1].map(()=>reportCommunityContent(reader,{...target,reason:'Disposable profile name/photo report.'})));
+    const reports=await db.collection('bibledeptCommunityReports').where('uid','==',reader).get();assert.equal(reports.size,1);
+    const report=reports.docs[0],snapshot=report.data().contentSnapshot;
+    assert.equal(report.data().path,`bibledeptProfiles/${author}`);assert.equal(snapshot.uid,author);assert.equal(snapshot.displayName,published.displayName);assert.equal(snapshot.photoData,published.photoData);
+    assert.equal(snapshot.profileVersion,target.profileVersion);assert.deepEqual(Object.keys(snapshot).sort(),['displayName','photoData','profileVersion','uid']);
+    await report.ref.update({status:'resolved',resolution:'Local staff-review fixture.'});
+    await saveCommunityProfile(author,{...profile,displayName:'A changed profile',photoData:published.photoData,shareBadges:false});
+    const changed=(await db.collection('bibledeptProfiles').doc(author).get()).data()!;
+    assert.notEqual(changed.profileVersion,target.profileVersion);
+    await assert.rejects(reportCommunityContent(reader,{profileUid:author,profileVersion:'a'.repeat(32),reason:'An unreported stale version.'}),{code:'failed-precondition'});
+    await reportCommunityContent(reader,{profileUid:author,profileVersion:changed.profileVersion,reason:'A fresh report for the changed profile.'});
+    assert.equal((await db.collection('bibledeptCommunityReports').where('uid','==',reader).get()).size,2);
+    await saveCommunityProfile(author,{...profile,joined:false});
+    await reportCommunityContent(reader,{...target,reason:'Lost acknowledgement retry after removal.'});
+    await reportCommunityContent(reader,{profileUid:author,profileVersion:changed.profileVersion,reason:'Second version retry after removal.'});
+    const retained=(await report.ref.get()).data()!;
+    assert.equal(retained.status,'resolved');assert.equal(retained.resolution,'Local staff-review fixture.');assert.deepEqual(retained.contentSnapshot,snapshot);
+  }finally{
+    const reports=await db.collection('bibledeptCommunityReports').where('uid','==',reader).get();for(const report of reports.docs)await report.ref.delete();
+    await cleanup(author,reader,outside);
+  }
 });
 
 test('account cleanup removes published data and late triggers cannot recreate achievements',async()=>{

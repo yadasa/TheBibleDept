@@ -145,7 +145,7 @@ export function useCircleMessages(circleId:string|null,active:boolean,count=50) 
       onSnapshot(query(collection(ref,'bibledeptMessages'),orderBy('createdAt','desc'),limit(count)),snapshot=>{setMessages(snapshot.docs.map(d=>({id:d.id,...d.data()} as CircleMessage)).reverse());setLoading(false);},failed)];
     return()=>stops.forEach(stop=>stop());
   },[circleId,active,settings.joined,count]);
-  return {circle,messages:messages.filter(message=>!settings.blockedUids.includes(message.uid)),loading,error};
+  return {circle,messages:messages.filter(message=>!settings.blockedUids.includes(message.uid)),loadedCount:messages.length,loading,error};
 }
 
 export function useCommunityProfiles(ids:string[],active:boolean) {
