@@ -49,6 +49,10 @@ All 365 readings have their corresponding official podcast episode, alongside th
 
 ## Your account and preferences
 
+**Community** replaces the Prayer tab with reader milestones, shared streaks, encouragements, and member-only reading-circle chats. Joining is optional, with separate controls for sharing streaks and badges. Account has shortcuts to Community, circle chat, and the private prayer journal.
+
+Add a profile photo under **Profile & sign-in** and explore **Badges & achievements** to see every earned and locked badge, its requirements, and your progress. Complete all 365 journey days to earn the **6% Club** emblem: an open book, rising star, and laurel, displayed at the bottom right of your profile photo. The collection includes 17 achievements for reading, journey progress, highlights, reflections, and community participation. [Community behavior, artwork, data boundaries, and setup](docs/COMMUNITY_AND_ACHIEVEMENTS.md).
+
 Email/password accounts support registration, sign-in, recovery, profile-name changes, and email confirmation. Account has styled profile, reading-progress, appearance, reading-preference, and reminder pages with eased transitions and usable back navigation.
 
 ![Dark reading preferences and light appearance choices in realistic angled iPhones](docs/images/bibledept-account-preferences.webp)
@@ -99,6 +103,7 @@ The latest October 19 review passed **129 unit tests, TypeScript, and fresh web/
 | [Style and taste guide](docs/style-guide/README.md) | Bible Dept/ARMA visual and copy references, including the illustrated PDF. |
 | [Design implementation](docs/APP_DESIGN_IMPLEMENTATION.md) | App-specific design, navigation, glass, motion, and voice decisions. |
 | [Backend setup](docs/HABIT_FEATURES_SETUP.md) | Owner records, reading-day ledger, reminders, migration, and deployment. |
+| [Community and achievements](docs/COMMUNITY_AND_ACHIEVEMENTS.md) | Opt-in profiles, photos, the 6% Club, badge requirements, reading circles, chat, and access rules. |
 | [Signed iPhone setup](docs/IPHONE_NATIVE_SETUP.md) | Native builds, phone verification, and device prerequisites. |
 | [App links](docs/APP_LINKS.md) | Passage routes and website association requirements. |
 
@@ -107,7 +112,7 @@ The latest October 19 review passed **129 unit tests, TypeScript, and fresh web/
 | Directory | Role |
 | --- | --- |
 | bibledept-mobile | Active free Expo client. |
-| bibledept-mobile/functions | Reading-day, migration, reminder, device-binding, and account-cleanup backend. |
+| bibledept-mobile/functions | Reading-day, community, achievement, circle/chat, reminder, device-binding, and account-cleanup backend. |
 | bibledept-app | Retained older native app for migration reference. |
 | bibledept-dashboard | Retained administration dashboard. |
 | bibledept-functions | Retained older backend. |

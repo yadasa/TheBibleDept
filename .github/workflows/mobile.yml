@@ -1,0 +1,63 @@
+name: BibleDept mobile
+
+on:
+  pull_request:
+    paths:
+      - 'bibledept-mobile/**'
+      - '.github/workflows/mobile.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bibledept-mobile/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bibledept-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: bibledept-mobile
+    env:
+      CI: 'true'
+      HABIT_PUSH_ENABLED: 'false'
+      FUNCTIONS_DISCOVERY_TIMEOUT: '120'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            bibledept-mobile/package-lock.json
+            bibledept-mobile/functions/package-lock.json
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install locked dependencies
+        run: |
+          npm ci
+          npm --prefix functions ci
+      - name: Typecheck and unit tests
+        run: |
+          npm run typecheck
+          npm test
+      - name: Verify native photo and playback permissions
+        run: npm run verify:native-config
+      - name: Firebase SDK, rules, and backend integration tests
+        run: |
+          node -e "require('node:fs').writeFileSync('functions/.secret.local', 'EXPO_PUSH_ACCESS_TOKEN=local-ci-token\n')"
+          npm run test:emulators
+      - name: Export iOS and Android bundles
+        run: npx --no-install expo export --platform ios --platform android --output-dir dist/native --max-workers 2

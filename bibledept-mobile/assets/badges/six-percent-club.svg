@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">6% Club</title>
+  <desc id="desc">An open book illuminated by a rising star and held by laurel branches. Awarded for completing the 365-day reading journey.</desc>
+  <defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF0CB"/><stop offset=".48" stop-color="#E7BB69"/><stop offset="1" stop-color="#A86722"/></linearGradient></defs>
+  <circle cx="50" cy="50" r="47" fill="#241A12" stroke="url(#gold)" stroke-width="2.4"/>
+  <circle cx="50" cy="50" r="40.5" fill="none" stroke="#E7BB69" stroke-width=".7" opacity=".5"/>
+  <path d="M49 79C30 76 20 63 23 45M51 79c19-3 29-16 26-34" fill="none" stroke="#E7BB69" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M24 57c-8-1-10-7-9-12 7 1 10 6 9 12Zm2 10c-9 1-13-3-14-9 8-1 13 2 14 9Zm7 8c-9 3-14 0-17-5 7-3 14-1 17 5Zm43-18c8-1 10-7 9-12-7 1-10 6-9 12Zm-2 10c9 1 13-3 14-9-8-1-13 2-14 9Zm-7 8c9 3 14 0 17-5-7-3-14-1-17 5Z" fill="#E7BB69"/>
+  <path d="M50 43v26m0-24c-6-4-12-5-19-3v22c7-1 13 0 19 5 6-5 12-6 19-5V42c-7-2-13-1-19 3Z" fill="none" stroke="#FFF0CB" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="m50 18 2.7 8.3L61 29l-8.3 2.7L50 40l-2.7-8.3L39 29l8.3-2.7Z" fill="url(#gold)"/>
+  <path d="M37 48l7 2m-7 5 7 2m12-7 7-2m-7 9 7-2" stroke="#E7BB69" stroke-width="1.4" stroke-linecap="round"/>
+</svg>

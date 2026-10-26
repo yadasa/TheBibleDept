@@ -6,6 +6,9 @@ test('passage links preserve reference and translation across supported routes',
   assert.deepEqual(parseAppLink(passageLink('John 3:16–18', 'kjv')), {tab:'Bible',reference:'John 3:16–18',translation:'kjv'});
   assert.deepEqual(parseAppLink('bibledept://read?ref=Luke%201'), {tab:'Bible',reference:'Luke 1',translation:'web'});
   assert.deepEqual(parseAppLink('https://www.thebibledept.com/prayer'), {tab:'Prayer'});
+  assert.deepEqual(parseAppLink('bibledept://community'), {tab:'Community'});
+  assert.deepEqual(parseAppLink('bibledept://circles'), {tab:'Circles'});
+  assert.deepEqual(parseAppLink('https://thebibledept.com/badges'), {tab:'Badges'});
   assert.deepEqual(parseAppLink('exp://10.0.0.35:8081/--/read?ref=John%203', true), {tab:'Bible',reference:'John 3',translation:'web'});
 });
 

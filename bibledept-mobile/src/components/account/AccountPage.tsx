@@ -10,10 +10,10 @@ export function AccountPage({title,intro,onBack,backLabel='Back to account',chil
     <Text accessibilityRole="header" style={s.title}>{title}</Text>{!!intro&&<Text style={s.intro}>{intro}</Text>}<View style={s.content}>{children}</View>
   </View>;
 }
-export function AccountLink({icon,title,detail,onPress,disabled=false}:{icon:IconName;title:string;detail:string;onPress?:()=>void;disabled?:boolean}) {
+export function AccountLink({icon,title,detail,onPress,disabled=false,unread=false}:{icon:IconName;title:string;detail:string;onPress?:()=>void;disabled?:boolean;unread?:boolean}) {
   const {c,s}=useThemedStyles(styles),unavailable=disabled||!onPress;
-  return <GlassPressable accessibilityRole="button" accessibilityLabel={title} accessibilityHint={detail} disabled={unavailable} accessibilityState={{disabled:unavailable}} onPress={onPress}
-    style={({pressed})=>[s.link,pressed&&s.pressed,unavailable&&s.disabled]}><Icon name={icon} color={c.orange} size={22}/><View style={s.linkCopy}><Text style={s.linkTitle}>{title}</Text><Text style={s.linkDetail}>{detail}</Text></View><Icon name="chevronRight" size={18} color={c.muted}/></GlassPressable>;
+  return <GlassPressable accessibilityRole="button" accessibilityLabel={`${title}${unread?', new messages':''}`} accessibilityHint={detail} disabled={unavailable} accessibilityState={{disabled:unavailable}} onPress={onPress}
+    style={({pressed})=>[s.link,pressed&&s.pressed,unavailable&&s.disabled]}><Icon name={icon} color={c.orange} size={22}/><View style={s.linkCopy}><Text style={s.linkTitle}>{title}</Text><Text style={s.linkDetail}>{detail}</Text></View>{unread&&<View style={s.unread}><Text style={s.unreadText}>New</Text></View>}<Icon name="chevronRight" size={18} color={c.muted}/></GlassPressable>;
 }
 export function AccountMetric({value,label}:{value:number;label:string}) {
   const {s}=useThemedStyles(styles);
@@ -23,5 +23,6 @@ const styles=(c:Colors)=>StyleSheet.create({
   back:{minHeight:44,flexDirection:'row',alignItems:'center',gap:6,alignSelf:'flex-start',paddingRight:12,marginBottom:12},backText:{...t.label,color:c.ink},
   title:{...t.title,color:c.ink},intro:{...t.body,color:c.muted,marginTop:12},content:{marginTop:24},
   link:{flexDirection:'row',alignItems:'center',gap:14,padding:18,borderRadius:16,marginBottom:10,minHeight:80},linkCopy:{flex:1,minWidth:0},linkTitle:{...t.body,fontWeight:'700',color:c.ink},linkDetail:{...t.meta,color:c.muted,marginTop:4},
+  unread:{backgroundColor:c.orange,paddingHorizontal:8,paddingVertical:4,borderRadius:12},unreadText:{...t.meta,fontSize:11,lineHeight:14,fontWeight:'700',color:c.onOrange},
   metric:{flex:1,minWidth:84,paddingVertical:16},metricValue:{fontSize:28,lineHeight:34,fontWeight:'800',fontVariant:['tabular-nums'],color:c.ink},metricLabel:{...t.meta,color:c.muted,marginTop:4},pressed:{opacity:.65},disabled:{opacity:.45},
 });

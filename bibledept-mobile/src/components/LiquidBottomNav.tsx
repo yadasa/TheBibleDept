@@ -18,7 +18,7 @@ import { indicatorJourney, indicatorPosition, navigationMetrics, NAV_GAP, NAV_PA
 export { tabOrder, Tab } from "../services/tabPaging";
 const icons: Record<Tab, IconName> = {
   Notes: "notes",
-  Prayer: "heart",
+  Community: "people",
   Home: "home",
   Bible: "book",
   Account: "user",

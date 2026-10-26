@@ -18,7 +18,7 @@ test("an interrupted swipe resumes at its fractional page without dropping eithe
   assert.equal(current, 2.5);
   assert.deepEqual(pagesCrossed(current, 0), [
     "Notes",
-    "Prayer",
+    "Community",
     "Home",
     "Bible",
   ]);

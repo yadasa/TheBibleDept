@@ -19,13 +19,24 @@ function namespaceBounds(source) {
   throw new Error('Unbalanced BibleDept namespace.');
 }
 function mergeBibleDeptRules(existing, canonical) {
-  const old = namespaceBounds(existing), current = namespaceBounds(canonical);
+  const current = managedBounds(canonical);
+  if(!current)throw new Error('Canonical rules must contain one marked BibleDept rule set.');
+  namespaceBounds(canonical.slice(current.start,current.end));
+  const marked = managedBounds(existing), old = marked || namespaceBounds(existing);
+  if(!marked&&['bibledeptProfiles','bibledeptActivity','bibledeptCircles'].some(name=>existing.includes(`match /${name}/`)))throw new Error('Unmarked community namespaces need review before merging.');
   return existing.slice(0, old.start) + canonical.slice(current.start, current.end) + existing.slice(old.end);
 }
-module.exports = { mergeBibleDeptRules, namespaceBounds };
+function managedBounds(source) {
+  const begin='// BEGIN BIBLEDEPT RULES',end='// END BIBLEDEPT RULES';
+  const start=source.indexOf(begin),last=source.indexOf(end);
+  if(start<0&&last<0)return null;
+  if(start<0||last<start||source.indexOf(begin,start+begin.length)>=0||source.indexOf(end,last+end.length)>=0)throw new Error('Expected one complete marked BibleDept rule set.');
+  return {start,end:last+end.length};
+}
+module.exports = { mergeBibleDeptRules, namespaceBounds, managedBounds };
 if (require.main === module) {
   const [existing, canonical, output] = process.argv.slice(2);
   if (!existing || !canonical || !output) throw new Error('Usage: node scripts/merge-firestore-rules.cjs EXISTING CANONICAL OUTPUT');
   fs.writeFileSync(output, mergeBibleDeptRules(fs.readFileSync(existing, 'utf8'), fs.readFileSync(canonical, 'utf8')));
-  console.log('Merged only the BibleDept namespace; unrelated rules preserved byte-for-byte.');
+  console.log('Merged the BibleDept private and community rules; unrelated rules preserved byte-for-byte.');
 }

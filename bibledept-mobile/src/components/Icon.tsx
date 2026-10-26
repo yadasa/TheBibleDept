@@ -33,6 +33,13 @@ const paths = {
   flame: 'M13 2c1 5-4 6-3 10 2-1 3-3 3-3 4 3 6 5 6 8a7 7 0 0 1-14 0c0-4 3-7 8-15Z',
   bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM9 21h6',
   notes: 'M5 3h14v18H5ZM8 7h8M8 11h8M8 15h5',
+  people: 'M16 21v-2a5 5 0 0 0-5-5H8a5 5 0 0 0-5 5v2M14 6a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM17 3a4 4 0 0 1 0 8m2 4c2 1 3 2 3 5v1',
+  chat: 'M21 11a9 9 0 0 1-9 9H4l-3 3V11a10 10 0 0 1 20 0ZM6 9h10M6 13h7',
+  award: 'M12 3 15 6l4 1 1 4-2 3-1 4-5 1-5-1-1-4-2-3 1-4 4-1ZM8 19l-1 4 5-2 5 2-1-4',
+  camera: 'M3 7h4l2-3h6l2 3h4v14H3ZM16 14a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
+  copy: 'M8 8h13v13H8ZM4 16H2V2h14v2',
+  send: 'm3 3 19 9-19 9 4-9-4-9Zm4 9h15',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {

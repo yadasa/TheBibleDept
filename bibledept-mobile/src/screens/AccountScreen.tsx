@@ -1,5 +1,5 @@
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../components/Icon';
 import { AccountHome } from '../components/account/AccountHome';
@@ -15,8 +15,11 @@ import { radius, spacing, useThemedStyles, Colors, typography } from '../theme';
 import { PhoneSignIn } from './PhoneSignIn';
 import { SettingsScreen, SettingsSection } from './SettingsScreen';
 import { detachPushDevice } from '../services/NotificationProvider';
+import { BadgesPage } from '../components/community/BadgesPage';
+import { PrayerScreen } from './PrayerScreen';
+import { AccountPage } from '../components/account/AccountPage';
 
-export function AccountScreen({onOpenPlan,onReadPassage,onOpenPrayer,onOpenNotes}:{onOpenPlan?:(day:number)=>void;onReadPassage?:(reference:string,translation:Translation)=>void;onOpenPrayer?:()=>void;onOpenNotes?:()=>void}) {
+export function AccountScreen({onOpenPlan,onReadPassage,onOpenNotes,onCommunity,onCircles,onRead,onRememberPage,requestedPage='home',requestRevision=0}:{onOpenPlan?:(day:number)=>void;onReadPassage?:(reference:string,translation:Translation)=>void;onOpenNotes?:()=>void;onCommunity?:()=>void;onCircles?:()=>void;onRead?:()=>void;onRememberPage?:(page:'home'|'badges'|'prayer')=>void;requestedPage?:'home'|'badges'|'prayer';requestRevision?:number}) {
   const {c,s}=useThemedStyles(styles);
   const { user, ready, error: setupError } = useAuth();
   const [email, setEmail] = useState('');
@@ -26,9 +29,10 @@ export function AccountScreen({onOpenPlan,onReadPassage,onOpenPrayer,onOpenNotes
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [phone, setPhone] = useState(false);
-  const [page,setPage]=useState<'home'|'profile'|'progress'|'settings'>('home');
+  const [page,setPage]=useState<'home'|'profile'|'progress'|'settings'|'badges'|'prayer'>('home');
   const [settingsSection,setSettingsSection]=useState<SettingsSection>('home'),top=useScreenScroll();
-  function open(next:'home'|'profile'|'progress'|'settings'){setPage(next);top();}
+  function open(next:typeof page){setPage(next);onRememberPage?.(next==='badges'||next==='prayer'?next:'home');top();}
+  useEffect(()=>{open(requestedPage);},[requestedPage,requestRevision]);
   function openSettings(section:SettingsSection='home'){setSettingsSection(section);open('settings');}
 
   async function submit() {
@@ -79,8 +83,8 @@ export function AccountScreen({onOpenPlan,onReadPassage,onOpenPrayer,onOpenNotes
   if (setupError) return <Notice text={setupError} error />;
   if(user)return <AccountTransition pageKey={page}>
     {usingEmulators&&<View style={s.mode}><Text style={s.modeTitle}>Practice account</Text><Text style={s.modeText}>Changes made here won’t appear in your usual account.</Text></View>}
-    {page==='settings'?<SettingsScreen onBack={()=>open('home')} initialSection={settingsSection}/>:page==='profile'?<ProfilePage onBack={()=>open('home')}/>:page==='progress'?<ReadingProgressPage onBack={()=>open('home')} onOpenPlan={onOpenPlan} onReadPassage={onReadPassage} onReadingSettings={()=>openSettings('reading')}/>:<View>
-      <AccountHome onProfile={()=>open('profile')} onProgress={()=>open('progress')} onSettings={()=>openSettings()} onNotes={onOpenNotes} onPrayer={onOpenPrayer}/>
+    {page==='badges'?<BadgesPage onBack={()=>open('home')} onRead={onRead} onCommunity={onCommunity}/>:page==='prayer'?<AccountPage title="Your prayer journal" intro="A private place to pray and reflect." onBack={()=>open('home')}><PrayerScreen onAccount={()=>open('home')}/></AccountPage>:page==='settings'?<SettingsScreen onBack={()=>open('home')} initialSection={settingsSection}/>:page==='profile'?<ProfilePage onBack={()=>open('home')}/>:page==='progress'?<ReadingProgressPage onBack={()=>open('home')} onOpenPlan={onOpenPlan} onReadPassage={onReadPassage} onReadingSettings={()=>openSettings('reading')}/>:<View>
+      <AccountHome onProfile={()=>open('profile')} onProgress={()=>open('progress')} onSettings={()=>openSettings()} onNotes={onOpenNotes} onPrayer={()=>open('prayer')} onBadges={()=>open('badges')} onCommunity={onCommunity} onCircles={onCircles}/>
       {!!error&&<Notice text={error} error/>}<ActionButton title="Sign out" onPress={leave} loading={busy} variant="secondary" icon="logout"/>
     </View>}
   </AccountTransition>;

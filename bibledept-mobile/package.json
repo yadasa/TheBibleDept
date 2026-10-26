@@ -18,6 +18,8 @@
     "expo-dev-client": "~57.0.20",
     "expo-device": "~57.0.2",
     "expo-image": "~57.0.5",
+    "expo-image-manipulator": "~57.0.21",
+    "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.13",
     "expo-notifications": "~57.0.23",
     "expo-status-bar": "~57.0.1",
@@ -46,11 +48,12 @@
     "ios": "expo start --go --lan",
     "web": "expo start --web --localhost",
     "typecheck": "tsc --noEmit",
+    "verify:native-config": "node scripts/verify-native-config.mjs",
     "test": "tsx --test tests/*.test.ts",
     "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-bibledept --only auth,firestore,functions --export-on-exit=.firebase/data",
     "emulators:isolated": "npm --prefix functions run build && firebase emulators:start --config firebase.test.json --project demo-bibledept --only auth,firestore,functions",
     "test:emulators": "npm --prefix functions run build && firebase emulators:exec --config firebase.test.json --project demo-bibledept --only auth,firestore,functions \"npm run test:firebase && npm --prefix functions run test:integration\"",
-    "test:firebase": "tsx --test tests/firebase.integration.ts",
+    "test:firebase": "tsx --test tests/firebase.integration.ts tests/community.rules.integration.ts tests/communityRecovery.integration.ts tests/firestoreAccess.integration.ts",
     "start:development-build": "expo start --dev-client --lan"
   },
   "private": true
