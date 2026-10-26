@@ -23,9 +23,13 @@ service cloud.firestore {
         allow read: if owner(uid);
         allow create, update: if owner(uid) && bibledeptCommunityMember()
           && request.auth.uid in get(/databases/$(database)/documents/bibledeptCircles/$(id)).data.memberIds
-          && request.resource.data.keys().hasOnly(['lastReadMessageId','updatedAt'])
+          && request.resource.data.keys().hasOnly(['lastReadMessageId','lastReadMessageAt','updatedAt'])
           && request.resource.data.lastReadMessageId is string
           && request.resource.data.lastReadMessageId.matches('^[A-Za-z0-9_-]{1,150}$')
+          && request.resource.data.lastReadMessageId == get(/databases/$(database)/documents/bibledeptCircles/$(id)).data.lastMessageId
+          && (!request.resource.data.keys().hasAny(['lastReadMessageAt'])
+            || (request.resource.data.lastReadMessageAt is timestamp
+              && request.resource.data.lastReadMessageAt == get(/databases/$(database)/documents/bibledeptCircles/$(id)).data.lastMessageAt))
           && request.resource.data.updatedAt == request.time;
       }
       match /cheeredMilestones/{id} { allow read: if owner(uid); }

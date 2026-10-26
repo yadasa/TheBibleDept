@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { connectFirestoreEmulator, collection, doc, getDocFromServer, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, terminate, where } from 'firebase/firestore';
+import { connectFirestoreEmulator, collection, doc, getDocFromServer, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, terminate, Timestamp, where } from 'firebase/firestore';
 
 const emulator=process.env.FIRESTORE_EMULATOR_HOST||'127.0.0.1:18080';
 assert.match(emulator,/^(127\.0\.0\.1|localhost):\d+$/,'Rules tests only use a local Firestore emulator.');
 const [host,port]=emulator.split(':'),base=`http://${emulator}/v1/projects/demo-bibledept/databases/(default)/documents`;
 function field(value:unknown):unknown {
+  if(value instanceof Date)return {timestampValue:value.toISOString()};
   if(typeof value==='boolean')return {booleanValue:value};
   if(typeof value==='number')return {integerValue:String(value)};
   if(value===null)return {nullValue:null};
@@ -27,7 +28,7 @@ test('Firestore rules isolate profiles, awards, invitations, and circle history'
   try {
     for(const uid of uids)await seed(`bibledeptUsers/${uid}/settings/community`,{displayName:'Local test reader',joined:true});
     await seed(`bibledeptProfiles/${uids[0]}`,{displayName:'Local test reader',namePrefixes:['local','reader'],photoData:null});
-    await seed(`bibledeptCircles/${group}`,{name:'Local test circle',memberIds:uids.slice(0,2),memberCount:2,code:'ABCDEF123456'});
+    await seed(`bibledeptCircles/${group}`,{name:'Local test circle',memberIds:uids.slice(0,2),memberCount:2,code:'ABCDEF123456',lastMessageId:'message',lastMessageAt:new Date(1000)});
     await seed(`bibledeptCircles/${group}/bibledeptMessages/message`,{uid:uids[0],text:'Only members can read this.'});
     await seed(`bibledeptActivity/${event}`,{uid:uids[0],kind:'joined'});
     await seed(`bibledeptCircleCodes/ABCDEF123456`,{circleId:group});
@@ -37,9 +38,13 @@ test('Firestore rules isolate profiles, awards, invitations, and circle history'
     assert.equal((await getDocs(query(collection(dbs[1],'bibledeptCircles',group,'bibledeptMessages'),limit(50)))).size,1);
     assert.equal((await getDocs(query(collection(dbs[1],'bibledeptCircles'),where('memberIds','array-contains',uids[1]),limit(20)))).size,1);
     const readState=(index:number)=>doc(dbs[index],'bibledeptUsers',uids[index],'circleReads',group);
-    const marker={lastReadMessageId:'message',updatedAt:serverTimestamp()};
+    await setDoc(readState(1),{lastReadMessageId:'message',updatedAt:serverTimestamp()}); // Prior clients remain compatible.
+    const marker={lastReadMessageId:'message',lastReadMessageAt:Timestamp.fromMillis(1000),updatedAt:serverTimestamp()};
     await setDoc(readState(1),marker);
     assert.equal((await getDocFromServer(readState(1))).data()?.lastReadMessageId,'message');
+    assert.equal((await getDocFromServer(readState(1))).data()?.lastReadMessageAt.toMillis(),1000);
+    await assert.rejects(setDoc(readState(1),{...marker,lastReadMessageId:'not-the-latest'}),denied);
+    await assert.rejects(setDoc(readState(1),{...marker,lastReadMessageAt:Timestamp.fromMillis(2000)}),denied);
     await assert.rejects(getDocFromServer(doc(dbs[0],'bibledeptUsers',uids[1],'circleReads',group)),denied);
     await assert.rejects(setDoc(readState(2),marker),denied);
     await assert.rejects(setDoc(readState(1),{...marker,memberIds:[uids[1]]}),denied);

@@ -35,7 +35,8 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
   const applyDraft=useCallback((value:CircleDraft)=>{latestDraft.current=value;setText(value.text);setPending(value.pending);},[]);
   const draftKey=user?circleDraftKey(user.uid,circleId):'';
   const chat=useCircleMessages(circleId,active,count),readers=useCommunityProfiles(chat.circle?.memberIds||[],active);
-  const messages=useMemo(()=>[...chat.messages].reverse(),[chat.messages]),latestId=messages[0]?.id;
+  const available=!!chat.circle&&!chat.error;
+  const messages=useMemo(()=>[...chat.messages].reverse(),[chat.messages]),latestId=messages[0]?.id,latestMessageAt=messages[0]?.createdAt;
   const selectedMember=memberId?readers.get(memberId):undefined;
 
   useEffect(()=>{
@@ -49,12 +50,13 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
     const timer=setInterval(()=>setNow(Date.now()),60000);return()=>clearInterval(timer);
   },[active,foreground,memberId]);
   useEffect(()=>{
-    if(!active||!foreground||!atBottom||details||selectedMessage||chat.loading||!user||!latestId||chat.circle?.lastMessageId!==latestId)return;
-    const key=`${circleId}:${latestId}`;
+    if(!active||!foreground||!available){acknowledged.current='';return;}
+    if(!atBottom||details||selectedMessage||chat.loading||!user||!latestId||!latestMessageAt||chat.circle?.lastMessageId!==latestId)return;
+    const key=`${circleId}:${latestId}:${latestMessageAt.toMillis()}`;
     if(acknowledged.current===key)return;
     acknowledged.current=key;
-    void setDoc(doc(getFirebase().db,USER_COLLECTION,user.uid,'circleReads',circleId),{lastReadMessageId:latestId,updatedAt:serverTimestamp()}).catch(()=>{if(acknowledged.current===key)acknowledged.current='';});
-  },[active,foreground,atBottom,details,selectedMessage,chat.loading,user?.uid,latestId,chat.circle?.lastMessageId,circleId]);
+    void setDoc(doc(getFirebase().db,USER_COLLECTION,user.uid,'circleReads',circleId),{lastReadMessageId:latestId,lastReadMessageAt:latestMessageAt,updatedAt:serverTimestamp()}).catch(()=>{if(acknowledged.current===key)acknowledged.current='';});
+  },[active,foreground,atBottom,details,selectedMessage,chat.loading,available,user?.uid,latestId,latestMessageAt?.toMillis(),chat.circle?.lastMessageId,circleId]);
 
   function saveDraft() {
     if(!draftKey||!loaded.current)return Promise.resolve();
@@ -93,7 +95,7 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
   }
   async function send() {
     const value=latestDraft.current.pending||{id:randomUUID(),text:latestDraft.current.text.trim()};
-    if(!value.text||!chat.circle||!draftReady)return;
+    if(!value.text||!available||!draftReady)return;
     applyDraft({text:value.text,pending:value});
     await deliverCircleMessage(AsyncStorage,draftKey,value,draft=>community.perform('sendReadingCircleMessage',{circleId,messageId:draft.id,text:draft.text}));
     applyDraft({text:'',pending:null});setNotice('Message sent.');nearBottom.current=true;setAtBottom(true);
@@ -107,14 +109,18 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
         <View style={s.screen} pointerEvents={selectedMessage?'none':'auto'} aria-hidden={!!selectedMessage} accessibilityElementsHidden={!!selectedMessage} importantForAccessibility={selectedMessage?'no-hide-descendants':'auto'} {...(Platform.OS==='web'?{inert:!!selectedMessage}:{})}>
           <View style={s.header}>
             <IconButton name="chevronLeft" label={memberId?'Back to circle members':details?'Back to conversation':'Back to your circles'} onPress={back}/>
-            <View style={s.headerCopy}><Text accessibilityRole="header" numberOfLines={1} style={s.title}>{memberId?'Reader profile':details?'Circle details':chat.circle?.name||community.circles.find(circle=>circle.id===circleId)?.name||'Reading circle'}</Text><Text style={s.subtitle}>{chat.circle?`${chat.circle.memberCount} ${chat.circle.memberCount===1?'reader':'readers'} · Member-only conversation`:'Opening your circle…'}</Text></View>
-            {!details&&!memberId&&<IconButton name="more" label="Circle details and members" disabled={!!busy} onPress={()=>{Keyboard.dismiss();setDetails(true);setError('');setNotice('');}}/>}
+            <View style={s.headerCopy}><Text accessibilityRole="header" numberOfLines={1} style={s.title}>{memberId?'Reader profile':details?'Circle details':chat.circle?.name||community.circles.find(circle=>circle.id===circleId)?.name||'Reading circle'}</Text><Text style={s.subtitle}>{chat.error?'Conversation unavailable':chat.circle?`${chat.circle.memberCount} ${chat.circle.memberCount===1?'reader':'readers'} · Member-only conversation`:'Opening your circle…'}</Text></View>
+            {!details&&!memberId&&<IconButton name="more" label="Circle details and members" disabled={!!busy||!available} onPress={()=>{Keyboard.dismiss();setDetails(true);setError('');setNotice('');}}/>}
           </View>
+
+          {!!chat.error&&<View style={s.banner}><Notice error text={chat.error}/><ActionButton title="Retry conversation" secondary onPress={chat.retry}/></View>}
+          {chat.loading&&<ActivityIndicator color={c.orange} style={{padding:12}}/>}
 
           {memberId?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.detailContent}>
             {selectedMember?<><ReaderProfileDetails profile={selectedMember} now={now}/>{memberId!==user?.uid&&<ActionButton title="Hide this reader" secondary loading={busy==='hide-member'} disabled={!!busy} onPress={()=>void run('hide-member',async()=>{await community.perform('hideCommunityReader',{uid:memberId});setMemberId(null);setNotice('This reader’s activity and messages are hidden for you.');})}/>}</>:<Notice text="This reader isn’t sharing a profile right now."/>}
             <ActionButton title="Back to circle members" secondary onPress={()=>setMemberId(null)}/>
           </ScrollView>:details?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.detailContent}>
+            {available&&<>
             <Text accessibilityRole="header" style={s.section}>{chat.circle?.name}</Text>
             <Text style={s.body}>Read a little. Ask a question. Keep going together.</Text>
             {chat.circle&&<View style={s.invitation}>
@@ -127,16 +133,15 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
             {[...readers.values()].filter(reader=>!community.settings.blockedUids.includes(reader.id)).map(reader=><Pressable key={reader.id} accessibilityRole="button" accessibilityLabel={`View ${reader.displayName}’s profile`} disabled={!!busy} onPress={()=>setMemberId(reader.id)} style={s.member}><ProfileAvatar name={reader.displayName} photoData={reader.photoData} size={48} club={reader.badgeIds.includes('six-percent-club')}/><View style={{flex:1}}><Text style={s.label}>{reader.displayName}{reader.id===user?.uid?' (you)':''}</Text>{reader.badgeIds.includes('six-percent-club')&&<Text style={s.subtitle}>6% Club member</Text>}</View><Icon name="chevronRight" size={18} color={c.muted}/></Pressable>)}
             <Notice text="Only shared profiles appear here. Hiding a reader affects what you see; it doesn’t remove them from the circle."/>
             {confirmLeave?<View style={s.invitation}><Text style={s.label}>Leave this circle?</Text><Notice text="You’ll need an invitation code to return. Existing messages remain for other members."/><ActionButton title="Confirm leave circle" secondary loading={busy==='leave'} disabled={!!busy} onPress={()=>void run('leave',async()=>{await community.perform('leaveReadingCircle',{circleId});onClose();})}/><ActionButton title="Stay in circle" variant="ghost" disabled={!!busy} onPress={()=>setConfirmLeave(false)}/></View>:<ActionButton title="Leave circle" variant="ghost" onPress={()=>setConfirmLeave(true)}/>}
+            </>}
           </ScrollView>:<>
-            {!!chat.error&&<View style={s.banner}><Notice error text={chat.error}/><ActionButton title="Retry conversation" secondary onPress={chat.retry}/></View>}
-            {chat.loading&&<ActivityIndicator color={c.orange} style={{padding:12}}/>}
             <FlatList
               ref={list} data={messages} inverted keyExtractor={message=>message.id} style={{flex:1}}
               contentContainerStyle={s.messageList} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
               initialNumToRender={16} maxToRenderPerBatch={12} windowSize={7} scrollEventThrottle={64}
               accessibilityLabel="Circle messages" maintainVisibleContentPosition={{minIndexForVisible:0}}
               onScroll={event=>{const bottom=event.nativeEvent.contentOffset.y<80;nearBottom.current=bottom;setAtBottom(value=>value===bottom?value:bottom);}}
-              ListEmptyComponent={!chat.loading&&!chat.error?<View style={s.empty}><Icon name="chat" size={36} color={c.orange}/><Text style={s.section}>Start with a hello.</Text><Text style={s.body}>Share a thought from today’s reading or ask your circle a question.</Text></View>:null}
+              ListEmptyComponent={!chat.loading&&available?<View style={s.empty}><Icon name="chat" size={36} color={c.orange}/><Text style={s.section}>Start with a hello.</Text><Text style={s.body}>Share a thought from today’s reading or ask your circle a question.</Text></View>:null}
               ListFooterComponent={chat.loadedCount>=count?<View style={{paddingVertical:12}}>{count<200?<ActionButton title="Load earlier messages" secondary onPress={()=>setCount(value=>Math.min(value+50,200))}/>:<Text style={s.subtitle}>History is limited to the latest 200 messages.</Text>}</View>:null}
               renderItem={({item:message})=>{
                 const own=message.uid===user?.uid,reader=readers.get(message.uid),name=own?'You':reader?.displayName||'Reader';
@@ -149,8 +154,8 @@ export function CircleConversation({circleId,active,onClose}:{circleId:string;ac
             {!atBottom&&<View style={s.latest}><ActionButton title="Latest messages" secondary icon="chevronDown" onPress={()=>{nearBottom.current=true;setAtBottom(true);list.current?.scrollToOffset({offset:0,animated:!reduced});}}/></View>}
             <View style={s.composer}>
               {draftError?<><Notice error text="Your saved message draft couldn’t load. Retry before sending."/><ActionButton title="Retry saved draft" secondary onPress={()=>setLoadAttempt(value=>value+1)}/></>:<View style={s.composeRow}>
-                <TextInput ref={input} accessibilityLabel="Message your circle" placeholder="Message your circle…" placeholderTextColor={c.muted} value={pending?.text||text} onChangeText={value=>{if(latestDraft.current.pending)return;applyDraft({text:value,pending:null});setNotice('');}} multiline maxLength={2000} editable={draftReady&&!busy&&!pending&&!!chat.circle} style={s.input}/>
-                <Pressable accessibilityRole="button" accessibilityLabel={pending?'Retry message':'Send message'} accessibilityState={{disabled:!!busy||!draftReady||!chat.circle||!(pending?.text||text).trim(),busy:busy==='send'}} disabled={!!busy||!draftReady||!chat.circle||!(pending?.text||text).trim()} onPress={()=>void run('send',send)} style={[s.send,(!draftReady||!chat.circle||!(pending?.text||text).trim())&&{opacity:.45}]}>{busy==='send'?<ActivityIndicator color={c.onOrange}/>:<Icon name="send" color={c.onOrange} size={22}/>}</Pressable>
+                <TextInput ref={input} accessibilityLabel="Message your circle" placeholder="Message your circle…" placeholderTextColor={c.muted} value={pending?.text||text} onChangeText={value=>{if(latestDraft.current.pending)return;applyDraft({text:value,pending:null});setNotice('');}} multiline maxLength={2000} editable={draftReady&&!busy&&!pending&&available} style={s.input}/>
+                <Pressable accessibilityRole="button" accessibilityLabel={pending?'Retry message':'Send message'} accessibilityState={{disabled:!!busy||!draftReady||!available||!(pending?.text||text).trim(),busy:busy==='send'}} disabled={!!busy||!draftReady||!available||!(pending?.text||text).trim()} onPress={()=>void run('send',send)} style={[s.send,(!draftReady||!available||!(pending?.text||text).trim())&&{opacity:.45}]}>{busy==='send'?<ActivityIndicator color={c.onOrange}/>:<Icon name="send" color={c.onOrange} size={22}/>}</Pressable>
               </View>}
               {(pending?.text||text).length>1600&&<Text style={s.time}>{(pending?.text||text).length} / 2,000</Text>}
               {pending&&!busy&&<><Notice text="This message may already have arrived. Retrying won’t post it twice."/><ActionButton title="Keep text as a new draft" variant="ghost" onPress={()=>applyDraft({text:pending.text,pending:null})}/></>}

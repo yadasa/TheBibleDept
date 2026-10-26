@@ -94,6 +94,33 @@ test('circles enforce membership, stable retries, send pacing, and ownership of 
   }finally{await cleanup(owner,reader,outsider);}
 });
 
+test('message ordering follows transaction order across delayed sends, deletions, and concurrent senders',async()=>{
+  const owner=uid('order-owner'),peer=uid('order-peer'),third=uid('order-third');
+  try {
+    await Promise.all([owner,peer,third].map(user=>saveCommunityProfile(user,profile)));
+    const {id}=await createCircle(owner,{name:'Ordering test',requestId:uid('order-create')}),ref=db.collection('bibledeptCircles').doc(id);
+    const code=(await ref.get()).data()!.code;
+    await Promise.all([peer,third].map(user=>joinCircle(user,{code})));
+    await sendCircleMessage(owner,{circleId:id,messageId:'first',text:'An earlier committed message.'},now+10000);
+    await sendCircleMessage(peer,{circleId:id,messageId:'second',text:'A delayed request commits next.'},now+9990);
+    const secondAt=(await ref.collection('bibledeptMessages').doc('second').get()).data()!.createdAt.toMillis();
+    assert.equal(secondAt,now+10001);
+    await deleteCircleMessage(peer,{circleId:id,messageId:'second'});
+    await sendCircleMessage(third,{circleId:id,messageId:'third',text:'Another delayed request follows the deletion.'},now+9980);
+    assert.equal((await ref.collection('bibledeptMessages').doc('third').get()).data()!.createdAt.toMillis(),secondAt+1);
+    await Promise.all([
+      sendCircleMessage(owner,{circleId:id,messageId:'concurrent-owner',text:'One simultaneous thought.'},now+20000),
+      sendCircleMessage(peer,{circleId:id,messageId:'concurrent-peer',text:'Another simultaneous thought.'},now+19999),
+    ]);
+    const ordered=await ref.collection('bibledeptMessages').orderBy('createdAt','desc').get(),latest=(await ref.get()).data()!;
+    assert.equal(ordered.size,4);
+    assert.equal(new Set(ordered.docs.map(row=>row.data().createdAt.toMillis())).size,ordered.size);
+    assert.equal(latest.lastMessageId,ordered.docs[0].id);
+    assert.equal(latest.lastMessageAt.toMillis(),ordered.docs[0].data().createdAt.toMillis());
+    assert.equal(latest.lastSentAt.toMillis(),latest.lastMessageAt.toMillis());
+  }finally{await cleanup(owner,peer,third);}
+});
+
 test('simultaneous joins cannot exceed 50 readers and account memberships stop at 20',async()=>{
   const owner=uid('capacity-owner'),readers=Array.from({length:3},()=>uid('capacity-reader'));
   let groupId:string|undefined,code:string|undefined;

@@ -29,8 +29,11 @@ export type CommunityProfile = {id:string;displayName:string;photoData:string|nu
 export type CommunityActivity = {id:string;uid:string;kind:'joined'|'achievement';badgeId:string|null;cheerCount:number;createdAt:{toMillis:()=>number}|null};
 export type Circle = {id:string;name:string;code:string;memberCount:number;createdBy:string;lastMessageId?:string|null;lastSenderUid?:string|null;lastMessageAt?:{toMillis:()=>number}|null;unread?:boolean};
 export type CircleMessage = {id:string;uid:string;text:string;createdAt:{toMillis:()=>number}|null};
-export function circleHasUnread(circle:Circle,lastReadId:string|undefined,viewer:string,hidden:string[]) {
-  return !!circle.lastMessageId&&circle.lastMessageId!==lastReadId&&circle.lastSenderUid!==viewer&&!hidden.includes(circle.lastSenderUid||'');
+export function circleHasUnread(circle:Circle,lastReadId:string|undefined,viewer:string,hidden:string[],lastReadMessageAt?:number|null) {
+  if(!circle.lastMessageId||circle.lastMessageId===lastReadId||circle.lastSenderUid===viewer||hidden.includes(circle.lastSenderUid||''))return false;
+  // A removed latest message must not turn previously viewed history into unread.
+  if(typeof lastReadMessageAt==='number'&&Number.isFinite(lastReadMessageAt)&&circle.lastMessageAt&&circle.lastMessageAt.toMillis()<=lastReadMessageAt)return false;
+  return true;
 }
 export function visibleCommunityStreak(profile:CommunityProfile,now:number) {
   if(profile.streak===null)return null;

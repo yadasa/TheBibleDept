@@ -64,3 +64,11 @@ test('unread circles ignore empty rooms, acknowledged messages, own sends, and h
   assert.equal(circleHasUnread({...active,lastSenderUid:'me'},undefined,'me',[]),false);
   assert.equal(circleHasUnread(active,undefined,'me',['peer']),false);
 });
+
+test('deleting a read message does not make earlier history unread, while a later send does',()=>{
+  const circle:Circle={id:'room',name:'Readers',code:'ABCDEF123456',createdBy:'peer',memberCount:2,lastMessageId:'earlier',lastSenderUid:'peer',lastMessageAt:{toMillis:()=>1000}};
+  assert.equal(circleHasUnread(circle,'deleted-latest','me',[],1001),false);
+  assert.equal(circleHasUnread({...circle,lastMessageId:'newer',lastMessageAt:{toMillis:()=>1002}},'deleted-latest','me',[],1001),true);
+  assert.equal(circleHasUnread(circle,'legacy-read','me',[]),true);
+  assert.equal(circleHasUnread(circle,'legacy-read','me',[],NaN),true);
+});

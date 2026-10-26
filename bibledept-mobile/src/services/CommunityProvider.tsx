@@ -20,7 +20,7 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
   const [metricsReady,setMetricsReady]=useState(!owner),[awardsReady,setAwardsReady]=useState(!owner),[loadAttempt,setLoadAttempt]=useState(0);
   const [achievementErrors,setAchievementErrors]=useState<{metrics?:string;awards?:string}>({});
   const retryCommunity=useCallback(()=>setLoadAttempt(value=>value+1),[]);
-  const [circleDetails,setCircleDetails]=useState<Circle[]>([]),[circleReads,setCircleReads]=useState(()=>new Map<string,string>());
+  const [circleDetails,setCircleDetails]=useState<Circle[]>([]),[circleReads,setCircleReads]=useState(()=>new Map<string,{id:string;at:number|null}>());
   const [newlyEarned,setNewlyEarned]=useState<string[]>([]),knownAwards=useRef<Set<string>|null>(null);
   const dismissNewBadges=useCallback(()=>setNewlyEarned([]),[]);
   const perform=useCallback(async<T,>(name:string,data:unknown):Promise<T>=>{
@@ -64,13 +64,14 @@ function CommunitySession({owner,children}:{owner?:string;children:ReactNode}) {
     if(!owner||!settings.joined){setCircleDetails([]);setCircleReads(new Map());return;}
     const db=getFirebase().db;
     const stops=[onSnapshot(query(collection(db,'bibledeptCircles'),where('memberIds','array-contains',owner),limit(20)),snapshot=>setCircleDetails(snapshot.docs.map(d=>({id:d.id,...d.data()} as Circle))),()=>setCircleDetails([]))];
-    if(circleIds.length)stops.push(onSnapshot(query(collection(db,USER_COLLECTION,owner,'circleReads'),where(documentId(),'in',circleIds)),snapshot=>setCircleReads(new Map(snapshot.docs.map(d=>[d.id,d.data().lastReadMessageId as string]))),()=>setCircleReads(new Map())));
+    if(circleIds.length)stops.push(onSnapshot(query(collection(db,USER_COLLECTION,owner,'circleReads'),where(documentId(),'in',circleIds)),snapshot=>setCircleReads(new Map(snapshot.docs.map(d=>{const value=d.data();return [d.id,{id:value.lastReadMessageId as string,at:value.lastReadMessageAt?.toMillis?.()??null}];}))),()=>setCircleReads(new Map())));
     else setCircleReads(new Map());
     return()=>stops.forEach(stop=>stop());
   },[owner,settings.joined,circleKey]);
   const visibleCircles=useMemo(()=>circles.map(circle=>{
     const latest={...circle,...circleDetails.find(detail=>detail.id===circle.id)};
-    return {...latest,unread:!!owner&&settings.joined&&circleHasUnread(latest,circleReads.get(circle.id),owner,settings.blockedUids)};
+    const read=circleReads.get(circle.id);
+    return {...latest,unread:!!owner&&settings.joined&&circleHasUnread(latest,read?.id,owner,settings.blockedUids,read?.at)};
   }).sort((a,b)=>(b.lastMessageAt?.toMillis()||0)-(a.lastMessageAt?.toMillis()||0)||a.name.localeCompare(b.name)),[circles,circleDetails,circleReads,owner,settings.joined,settings.blockedUids]);
   const error=resourceErrors.profile||resourceErrors.circles||'',achievementsReady=metricsReady&&awardsReady,achievementError=achievementErrors.metrics||achievementErrors.awards||'';
   const value=useMemo(()=>({settings,ready,achievementsReady,achievementError,retryCommunity,metrics,earned,newlyEarned,dismissNewBadges,circles:visibleCircles,error,perform}),[settings,ready,achievementsReady,achievementError,retryCommunity,metrics,earned,newlyEarned,dismissNewBadges,visibleCircles,error,perform]);

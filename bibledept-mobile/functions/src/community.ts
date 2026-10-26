@@ -256,8 +256,11 @@ export async function sendCircleMessage(uid:string,input:unknown,now=Date.now())
       return {id:messageId};
     }
     if(now-(state.data()?.lastMessageAt?.toMillis()||0)<3000)throw new HttpsError('resource-exhausted','Give your last message a moment to arrive, then try again.');
-    tx.create(message,{uid,text:text!,createdAt:Timestamp.fromMillis(now)});
-    tx.update(ref,{lastMessageId:messageId,lastSenderUid:uid,lastMessageAt:Timestamp.fromMillis(now)});
+    // Requests can commit out of their start-time order. Retain the high-water
+    // timestamp through deletions so ordering and private read horizons agree.
+    const previous=group.data()!,sentAt=Timestamp.fromMillis(Math.max(now,(previous.lastSentAt?.toMillis()||previous.lastMessageAt?.toMillis()||0)+1));
+    tx.create(message,{uid,text:text!,createdAt:sentAt});
+    tx.update(ref,{lastMessageId:messageId,lastSenderUid:uid,lastMessageAt:sentAt,lastSentAt:sentAt});
     tx.set(userPath(uid).collection('settings').doc('communityRate'),{lastMessageAt:Timestamp.fromMillis(now)},{merge:true});
     return {id:messageId};
   });
